@@ -164,6 +164,9 @@
   function renderScene(ctx, scene, opts) {
     var width = opts.width, height = opts.height;
     var cols = opts.cols, viewRows = opts.viewRows, row0 = opts.row0 || 0;
+    // The simulation's hazard list. When supplied, the scene draws THESE and
+    // invents none, so the view cannot disagree with what kills.
+    var simHazards = opts.hazards;
     var tall = scene.id === 5 ? 2.3 : 1.5;
     I.frameViewWindow(cols, viewRows, width, height, row0, tall, 26, 0.44, 1);
 
@@ -185,19 +188,31 @@
 
     for (var t = 0; t < rows.length; t++) drawLaneTexture(ctx, scene, rows[t], cols);
 
-    // Hazards, painted back to front.
+    // Hazards, painted back to front. Drawn from the simulation's positions
+    // when available; the decorative fallback only runs if the game has not
+    // supplied a list, which is the case for the offline preview sheet.
     var hazards = [];
-    for (var h = 0; h < rows.length - 1; h++) {
-      var hr = rows[h], lk = laneOf(hr);
-      for (var hc = 0; hc < cols; hc++) {
-        if (lk === "road" && (hc * 3 + hr) % 7 === 0) hazards.push([hc, hr, "car"]);
-        else if (lk === "rail" && (hc + hr) % 4 === 0) hazards.push([hc, hr, "train"]);
-        else if (lk === "water" && (hc * 5 + hr) % 6 === 0) hazards.push([hc, hr, "log"]);
-        else if (lk === "water" && (hc * 7 + hr) % 11 === 0) hazards.push([hc, hr, "turtle"]);
+    if (simHazards && simHazards.length) {
+      for (var si = 0; si < simHazards.length; si++) {
+        var sh = simHazards[si];
+        if (sh.row < row0 || sh.row >= row0 + viewRows) continue;
+        hazards.push([sh.x, sh.row, sh.kind]);
+      }
+    } else {
+      for (var h = 0; h < rows.length - 1; h++) {
+        var hr = rows[h], lk = laneOf(hr);
+        for (var hc = 0; hc < cols; hc++) {
+          if (lk === "road" && (hc * 3 + hr) % 7 === 0) hazards.push([hc, hr, "car"]);
+          else if (lk === "rail" && (hc + hr) % 4 === 0) hazards.push([hc, hr, "train"]);
+          else if (lk === "water" && (hc * 5 + hr) % 6 === 0) hazards.push([hc, hr, "log"]);
+          else if (lk === "water" && (hc * 7 + hr) % 11 === 0) hazards.push([hc, hr, "turtle"]);
+        }
       }
     }
     hazards.sort(function (a, b) { return (b[0] + b[1]) - (a[0] + a[1]); });
-    hazards.forEach(function (x) { if (HAZARD_FNS[x[2]]) HAZARD_FNS[x[2]](ctx, x[0], x[1], scene); });
+    hazards.forEach(function (x) {
+      if (HAZARD_FNS[x[2]]) HAZARD_FNS[x[2]](ctx, x[0], x[1], scene);
+    });
 
     // Scenery.
     var sc = [];

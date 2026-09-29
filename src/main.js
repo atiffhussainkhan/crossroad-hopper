@@ -85,6 +85,7 @@
       cols: Math.max(5, Math.round(W / 42)),
       viewRows: Math.max(7, Math.round(H / 34)),
       row0: topRow,
+      hazards: s.hazards,
     });
 
     // Players, drawn in the same isometric space as the board.

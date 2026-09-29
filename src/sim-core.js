@@ -192,6 +192,12 @@
       stageScore: 0,
       endlessScore: 0,
       endlessMs: 0,
+      hazards: [],
+      hazardRow0: null,
+      hazardRows: 0,
+      hazardSeed: seed,
+      leadRow: 0,
+      cols: 9,
       playerCount: playerCount,
       activePlayer: 0,
       players: [],
@@ -229,6 +235,12 @@
       g.stageScore = 0;
       g.pursuer.reset();
       g.rng = createRng(seed + ":" + index);
+      // A fresh stage starts with an empty hazard window; it is rebuilt
+      // on the first tick, so nothing can spawn on top of a player.
+      g.hazards = [];
+      g.hazardRow0 = null;
+      g.hazardRows = 0;
+      g.leadRow = 0;
       for (var i = 0; i < g.players.length; i++) {
         var s = g.players[i].state();
         s.row = 0;
@@ -310,11 +322,36 @@
 
       // Pursuer applies to the leading player.
       var lead = 0;
+      g.leadRow = 0;
       for (var i = 0; i < g.players.length; i++) {
         var s = g.players[i].state();
-        if (s.alive && s.row > lead) lead = s.row;
+        if (s.alive && s.row > lead) { lead = s.row; g.leadRow = s.row; }
       }
-      var result = g.pursuer.tick(dt, lead, Stages.difficultyFor(g.stageIndex, g.elapsedInStageMs));
+      // Hazards tick and kill. Their positions live here, not in the view.
+      var diff = Stages.difficultyFor(g.stageIndex, g.elapsedInStageMs);
+      var H = global.Hazards;
+      if (H) {
+        // Rebuild the window when the player crosses into new rows, so lanes
+        // ahead exist before the player can reach them.
+        var want0 = Math.max(0, g.leadRow - 4);
+        var wantRows = 16;
+        if (g.hazardRow0 === null || want0 < g.hazardRow0 || want0 + wantRows > g.hazardRow0 + g.hazardRows) {
+          g.hazards = H.ensureSolvable(
+            H.buildHazards(g.hazardSeed + ":" + g.stageIndex, want0, wantRows,
+                           g.cols, diff, g.rng),
+            { needGap: 0.9 });
+          g.hazardRow0 = want0; g.hazardRows = wantRows;
+        }
+        H.tickHazards(g.hazards, dt, g.cols);
+        for (var hi = 0; hi < g.players.length; hi++) {
+          var hs = g.players[hi].state();
+          if (!hs.alive || hs.finished) continue;
+          var hitter = H.anyHits(g.hazards, hs.col, hs.row);
+          if (hitter) { applyDeath(hi); break; }
+        }
+      }
+
+      var result = g.pursuer.tick(dt, lead, diff);
       if (result === "DEAD") {
         // The leading player loses a life.
         for (var j = 0; j < g.players.length; j++) {
@@ -385,9 +422,52 @@
 
   // ---------- Headless simulation for the gate ---------------------------
 
-  /* Autoplay driver used by tools/check_vertical_slice.py. In one-player mode
-   * it hops forward at a fixed cadence, which is a competent but not perfect
-   * player: fast enough to beat the pursuer for a while, not forever. */
+  /* Autoplay driver used by tools/check_vertical_slice.py.
+   *
+   * This models a COMPETENT player, not a blind one. It looks at the row it
+   * is about to enter and waits while that row is occupied at its column. The
+   * earlier blind version hopped every 600ms regardless, so the moment hazards
+   * existed it walked into the first car and no campaign could be completed
+   * -- the campaign-reachability gate was really measuring a suicide bot.
+   *
+   * It waits only as long as it must and always hops if the row is clear, so
+   * it still outruns the pursuer. */
+  // Traverse window. How long the player is exposed while crossing one row.
+  // A player must judge a hazard's position over this window, not at the
+  // instant they press: a train two tiles away now can be on top of them by
+  // the time they land.
+  var TRAVERSE_S = 0.55;
+
+  function rowIsSafe(gstate, col, row) {
+    if (!gstate.hazards || !gstate.hazards.length) return true;
+    for (var i = 0; i < gstate.hazards.length; i++) {
+      var h = gstate.hazards[i];
+      if (h.row !== row) continue;
+      if (h.spec && h.spec.kind === "air") continue;   // steel does not rest
+      var half = h.spec.len / 2 + 0.30;
+      // Sample across the traverse window, not just the present instant.
+      for (var s = 0; s <= 6; s++) {
+        var futureX = h.x + h.speed * (TRAVERSE_S * s / 6);
+        if (Math.abs(futureX - col) < half) return false;
+      }
+    }
+    return true;
+  }
+
+  // Lateral escape. A player that only ever moves forward gets boxed in by
+  // its own predictability, so a competent player also slides sideways to
+  // reach a gap. Bounded to the board so it cannot leave it.
+  function pickLateral(gstate, row, cols) {
+    var p = gstate.players[0].state();
+    for (var off = 1; off <= 3; off++) {
+      for (var sgn = -1; sgn <= 1; sgn += 2) {
+        var c = p.col + sgn * off;
+        if (c < 0 || c > cols - 1) continue;
+        if (rowIsSafe(gstate, c, p.row) && rowIsSafe(gstate, c, p.row + 1)) return c;
+      }
+    }
+    return null;
+  }
   function simulateCampaign(seed, opts) {
     opts = opts || {};
     var maxSteps = opts.maxSteps || 200000;
@@ -403,8 +483,21 @@
     while (step < maxSteps) {
       if (gstate.phase === PHASES.READY || gstate.phase === PHASES.RUNNING) {
         if (step * dt - lastHopMs >= 600) {
-          g.hop("forward");
-          lastHopMs = step * dt;
+          var pst = gstate.players[0].state();
+          // Only step into a row that is clear. If it is not, wait: that is
+          // the decision a player makes, and it is what makes the stage
+          // solvable by timing rather than by luck.
+          if (pst.alive && !pst.finished) {
+            if (rowIsSafe(gstate, pst.col, pst.row + 1)) {
+              g.hop("forward");
+            } else {
+              // Blocked ahead: slide sideways to a column that is clear both
+              // here and one row on, rather than standing still and dying.
+              var esc = pickLateral(gstate, pst.row, gstate.cols);
+              if (esc !== null) g.hop(esc < pst.col ? "left" : "right");
+            }
+            lastHopMs = step * dt;
+          }
         }
         g.tick(dt);
       } else if (gstate.phase === PHASES.STAGE_CLEAR) {

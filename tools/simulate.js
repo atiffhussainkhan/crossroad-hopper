@@ -27,7 +27,7 @@ var GAME_DIR = gameDir();
 
 // stages.js must load before sim-core.js: the core reads its constants at
 // definition time.
-["src/stages.js", "src/sim-core.js"].forEach(function (rel) {
+["src/stages.js", "src/hazards.js", "src/sim-core.js"].forEach(function (rel) {
   var text = $.NSString.stringWithContentsOfFileEncodingError(
     GAME_DIR + "/" + rel, $.NSUTF8StringEncoding, null
   );
