@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hopper — stage campaign</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<main id="app">
+  <header id="topbar">
+    <span id="stage-name">1. Suburb</span>
+    <button id="mode" type="button">1 player</button>
+  </header>
+
+  <div id="stage-wrap">
+    <canvas id="board" width="300" height="420"
+            aria-label="Game board. Hop forward to reach the white line."></canvas>
+    <div id="banner" role="status" aria-live="polite"></div>
+  </div>
+
+  <footer id="hud">
+    <div class="stat"><span class="k">Time</span><span class="v" id="timer">90.0</span></div>
+    <div class="stat"><span class="k">Diff</span><span class="v" id="difficulty">0</span></div>
+    <div class="stat"><span class="k">Lives</span><span class="v" id="lives">4</span></div>
+    <div class="stat"><span class="k">Score</span><span class="v" id="score">0</span></div>
+  </footer>
+
+  <p id="hint">Tap to hop. Reach the white line before the clock runs out.</p>
+</main>
+
+<!-- Data first: the core reads stage constants at definition time. -->
+<script src="src/stages.js"></script>
+<!-- Pure-JS simulation: rng, player, pursuer, game state machine. -->
+<script src="src/sim-core.js"></script>
+<!-- DOM only: rendering, input, loop. -->
+<script src="src/main.js"></script>
+</body>
+</html>

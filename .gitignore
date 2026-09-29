@@ -1,0 +1,11 @@
+# Python bytecode from the gate scripts
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Nothing else. art/*.png is deliberately COMMITTED: the PNGs are the design
+# record of record, and tools/check_art_assets.py asserts they stay in step
+# with src/stages.js. Regenerate them with:
+#     python3 tools/render_art.py

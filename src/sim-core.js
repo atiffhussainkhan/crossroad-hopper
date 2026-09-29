@@ -1,0 +1,452 @@
+/* src/sim-core.js — pure-JS core for the lane-crossing arcade game.
+ *
+ * Runs unchanged in the browser (<script> tag) and in JXA (eval'd by
+ * tools/simulate.js), so the build gate exercises the bytes the player runs.
+ *
+ * Ground rules:
+ *   - No Math.random. Only the seeded PRNG.
+ *   - No setTimeout / setInterval / requestAnimationFrame. tick(dt) is the
+ *     only clock, and dt is always injected (NF-01, NF-05).
+ *   - No DOM. Browser concerns live in main.js.
+ *
+ * Phase 1 scope: the stage loop. A stage is won by reaching the goal row
+ * before the clock expires. Difficulty steps every 15 seconds. Two players
+ * play simultaneously on a shared clock. Four lives each; lives exhausted
+ * retries the stage, not the campaign.
+ */
+
+(function (global) {
+  "use strict";
+
+  // P-02: the pursuer arms on distance, never on a stopwatch. The row at which
+  // it becomes eligible. Verified against the spec by check_vertical_slice.py.
+  var PURSUER_DISTANCE_THRESHOLD = 20;
+
+  var Stages = global.Stages || (typeof require !== "undefined" ? require("./stages.js").Stages : null);
+
+  // ---------- Seeded PRNG -------------------------------------------------
+
+  function xmur3(str) {
+    var h = 1779033703 ^ str.length;
+    for (var i = 0; i < str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function () {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      h ^= h >>> 16;
+      return h >>> 0;
+    };
+  }
+
+  function sfc32(a, b, c, d) {
+    return function () {
+      a |= 0; b |= 0; c |= 0; d |= 0;
+      var t = (a + b | 0) + d | 0;
+      d = (d + 1) | 0;
+      a = b ^ (b >>> 9);
+      b = c + (c << 3) | 0;
+      c = (c << 21 | c >>> 11);
+      c = c + t | 0;
+      return (t >>> 0) / 4294967296;
+    };
+  }
+
+  function createRng(seed) {
+    var seedFn = xmur3(String(seed));
+    var rng = sfc32(seedFn(), seedFn(), seedFn(), seedFn());
+    return {
+      next: rng,
+      range: function (lo, hi) { return Math.floor(rng() * (hi - lo + 1)) + lo; },
+      bool: function () { return rng() < 0.5; },
+      chance: function (p) { return rng() < p; },
+    };
+  }
+
+  // ---------- Player -----------------------------------------------------
+
+  // A player is a row/column pair with a life count. Movement is discrete:
+  // one input, one tile, no mid-hop correction (M-04).
+  function createPlayer(col, lives) {
+    var state = {
+      col: col,
+      row: 0,
+      hops: 0,
+      lives: lives,
+      alive: true,
+      finished: false,
+    };
+    return {
+      state: function () { return state; },
+      hop: function (direction) {
+        if (!state.alive || state.finished) return false;
+        if (direction === "forward") { state.row += 1; state.hops += 1; }
+        else if (direction === "left") state.col -= 1;
+        else if (direction === "right") state.col += 1;
+        return true;
+      },
+      kill: function () {
+        if (!state.alive) return;
+        state.alive = false;
+        state.lives -= 1;
+      },
+      reachGoal: function (goalRow) {
+        if (state.row >= goalRow) { state.finished = true; return true; }
+        return false;
+      },
+      revive: function () {
+        state.alive = true;
+        state.row = 0;
+        state.col = state.startCol !== undefined ? state.startCol : state.col;
+      },
+    };
+  }
+
+  // ---------- Pursuer ----------------------------------------------------
+  //
+  // Three-state machine. Gated on distance, never on a stopwatch (P-02),
+  // and it has no defensive verb (P-03): it cannot be fought, blocked or
+  // outlasted, only outrun.
+
+  function createPursuer(opts) {
+    opts = opts || {};
+    var state = {
+      mode: "DISTANCE_LOCKED",
+      row: -999,
+      activeFor: 0,
+      spawnRow: 0,
+    };
+    var threshold = (opts.threshold === undefined) ? PURSUER_DISTANCE_THRESHOLD : opts.threshold;
+    var telegraphMs = (opts.telegraphMs === undefined) ? 1200 : opts.telegraphMs;
+    // Speed is scaled by difficulty at tick time; this is the base rate at
+    // difficulty 0. Without this the difficulty ladder is a HUD integer.
+    var speed = opts.speedRowsPerSec || 1.0;
+    return {
+      state: function () { return state; },
+      tick: function (dt, playerRow, difficulty) {
+        if (state.mode === "DISTANCE_LOCKED") {
+          if (playerRow >= threshold) {
+            state.mode = "SPAWNING";
+            state.spawnRow = playerRow;
+            state.elapsed = 0;
+          }
+          return "ALIVE";
+        }
+        if (state.mode === "SPAWNING") {
+          state.elapsed += dt;
+          if (state.elapsed >= telegraphMs) { state.mode = "ACTIVE"; state.activeFor = 0; }
+          return "ALIVE";
+        }
+        state.activeFor += dt;
+        // Difficulty now genuinely drives the pursuer: it closes faster at
+        // higher difficulty, which is what makes stage 10 harder than stage 1.
+        var d = (difficulty === undefined) ? 0 : difficulty;
+        // The player hops at most once per HOP_DURATION_MS, a ceiling of
+        // 1000/600 = 1.667 rows/sec. A pursuer at or above that makes the
+        // stage unwinnable, so the factor is chosen so difficulty 9 (the
+        // highest reachable in the campaign) stays at 1.63. Difficulty 10
+        // occurs only in Endless, where overtaking the player is the point.
+        state.row = state.spawnRow + (state.activeFor / 1000) * speed * (1 + d * 0.07);
+        return state.row >= playerRow ? "DEAD" : "ALIVE";
+      },
+      reset: function () {
+        state.mode = "DISTANCE_LOCKED";
+        state.row = -999;
+        state.activeFor = 0;
+        state.spawnRow = 0;
+        state.elapsed = 0;
+      },
+    };
+  }
+
+  // ---------- Game: the stage loop ---------------------------------------
+
+  // Phases:
+  //   READY       — stage shown, waiting for first input
+  //   RUNNING     — clock ticking, input accepted
+  //   STAGE_CLEAR — all players reached the goal row
+  //   STAGE_FAILED— a player exhausted their lives, or the clock expired
+  //   GAME_OVER   — the whole campaign is done
+  //   ENDLESS     — post-campaign, unbounded, for high-score chase
+
+  var PHASES = {
+    READY: "READY",
+    RUNNING: "RUNNING",
+    STAGE_CLEAR: "STAGE_CLEAR",
+    STAGE_FAILED: "STAGE_FAILED",
+    GAME_OVER: "GAME_OVER",
+    ENDLESS: "ENDLESS",
+  };
+
+  function createGame(opts) {
+    opts = opts || {};
+    var playerCount = opts.playerCount || 1;
+    var seed = opts.seed || "campaign";
+
+    var g = {
+      phase: PHASES.READY,
+      stageIndex: 0,
+      elapsedInStageMs: 0,
+      totalScore: 0,
+      stageScore: 0,
+      endlessScore: 0,
+      endlessMs: 0,
+      playerCount: playerCount,
+      activePlayer: 0,
+      players: [],
+      pursuer: createPursuer(),
+      rng: createRng(seed + ":0"),
+      goalRow: Stages.GOAL_ROW_OFFSET,
+    };
+
+    for (var i = 0; i < playerCount; i++) {
+      var p = createPlayer(i === 0 ? 0 : 2, Stages.STAGE_START_LIVES);
+      p.state().startCol = p.state().col;
+      g.players.push(p);
+    }
+
+    function currentStage() { return Stages.getStage(g.stageIndex); }
+
+    function allFinished() {
+      for (var i = 0; i < g.players.length; i++) {
+        if (!g.players[i].state().finished) return false;
+      }
+      return true;
+    }
+
+    function anyOutOfLives() {
+      for (var i = 0; i < g.players.length; i++) {
+        if (g.players[i].state().lives <= 0) return true;
+      }
+      return false;
+    }
+
+    function startStage(index) {
+      g.stageIndex = index;
+      g.phase = PHASES.READY;
+      g.elapsedInStageMs = 0;
+      g.stageScore = 0;
+      g.pursuer.reset();
+      g.rng = createRng(seed + ":" + index);
+      for (var i = 0; i < g.players.length; i++) {
+        var s = g.players[i].state();
+        s.row = 0;
+        s.hops = 0;
+        s.alive = true;
+        s.finished = false;
+        s.lives = Stages.STAGE_START_LIVES;
+        s.col = s.startCol;
+      }
+      g.activePlayer = 0;
+    }
+
+    // One input. In single player this is always player 0. In two player
+    // the input drives the active player; tap once to cycle if the active
+    // player is already finished.
+    // ST-12 / ST-14: both players act in the same tick. `playerIndex` names
+    // the player, so a tap in either half of the board moves that player.
+    // There is no queue and no turn order.
+    function hop(direction, playerIndex) {
+      if (g.phase === PHASES.READY) { g.phase = PHASES.RUNNING; }
+      var idx = (playerIndex === undefined || playerIndex === null)
+        ? 0 : playerIndex;
+      if (idx < 0 || idx >= g.players.length) return false;
+
+      if (g.phase === PHASES.ENDLESS) {
+        var ep = g.players[idx];
+        var moved = ep.hop(direction || "forward");
+        if (moved) { g.endlessScore += 1; g.activePlayer = idx; }
+        return moved;
+      }
+      if (g.phase !== PHASES.RUNNING) return false;
+      g.activePlayer = idx;
+      return g.players[idx].hop(direction || "forward");
+    }
+
+    // A single death for one player: lose a life, then respawn at the stage
+    // start. This is the only place a life is consumed, so the pursuer branch
+    // and any test drive the same code path. R-01: the respawn is immediate,
+    // with no menu and no input-blocking animation.
+    function applyDeath(playerIndex) {
+      var victim = g.players[playerIndex];
+      if (!victim) return false;
+      var s = victim.state();
+      if (!s.alive) return false;
+      victim.kill();
+      if (s.lives <= 0) {
+        g.phase = PHASES.STAGE_FAILED;
+        return true;
+      }
+      victim.revive();
+      g.pursuer.reset();
+      return true;
+    }
+
+    function tick(dt) {
+      if (g.phase === PHASES.ENDLESS) {
+        // No clock, no goal row, no stage end: difficulty simply keeps
+        // climbing and the pursuer never stops.
+        g.endlessMs += dt;
+        var el = g.players[0].state().row;
+        for (var q = 1; q < g.players.length; q++) {
+          if (g.players[q].state().row > el) el = g.players[q].state().row;
+        }
+        g.pursuer.tick(dt, el, 4 + Math.floor(g.endlessMs / 15000));
+        return g.phase;
+      }
+      // Failure by lives exhaustion is checked before the phase guard, so a
+      // player who runs out of lives in any phase (READY, STAGE_CLEAR, a
+      // direct hit) is always caught. Previously this sat behind the RUNNING
+      // guard and lives could silently reach zero.
+      if (anyOutOfLives() && g.phase !== PHASES.STAGE_CLEAR && g.phase !== PHASES.ENDLESS) {
+        g.phase = PHASES.STAGE_FAILED;
+        return g.phase;
+      }
+
+      if (g.phase !== PHASES.RUNNING) return g.phase;
+      g.elapsedInStageMs += dt;
+      g.stageScore += g.players.length * dt * 0.01;
+
+      // Pursuer applies to the leading player.
+      var lead = 0;
+      for (var i = 0; i < g.players.length; i++) {
+        var s = g.players[i].state();
+        if (s.alive && s.row > lead) lead = s.row;
+      }
+      var result = g.pursuer.tick(dt, lead, Stages.difficultyFor(g.stageIndex, g.elapsedInStageMs));
+      if (result === "DEAD") {
+        // The leading player loses a life.
+        for (var j = 0; j < g.players.length; j++) {
+          var vs = g.players[j].state();
+          // A player who has already reached the goal is immune and can no
+          // longer lose a life. Without this they could die standing on the
+          // finish line.
+          if (vs.alive && !vs.finished && vs.row === lead) { applyDeath(j); break; }
+        }
+      }
+
+      // Goal check.
+      for (var k = 0; k < g.players.length; k++) {
+        g.players[k].reachGoal(g.goalRow);
+      }
+      if (allFinished()) {
+        g.totalScore += Math.floor(g.stageScore);
+        if (g.stageIndex + 1 >= Stages.stageCount()) {
+          g.phase = PHASES.ENDLESS;
+        } else {
+          g.phase = PHASES.STAGE_CLEAR;
+        }
+        return g.phase;
+      }
+
+      // Clock expiry.
+      if (g.elapsedInStageMs >= Stages.STAGE_DURATION_MS) {
+        g.phase = PHASES.STAGE_FAILED;
+        return g.phase;
+      }
+
+      return g.phase;
+    }
+
+    function advance() {
+      if (g.phase === PHASES.STAGE_CLEAR) {
+        startStage(g.stageIndex + 1);
+        return g.phase;
+      }
+      if (g.phase === PHASES.STAGE_FAILED) {
+        // Retry THIS stage, not the campaign. This is the deliberate
+        // difference from Crossy Road Castle, which reset to the bottom
+        // of the tower and destroyed the high-score loop.
+        startStage(g.stageIndex);
+        return g.phase;
+      }
+      return g.phase;
+    }
+
+    function difficulty() {
+      return Stages.difficultyFor(g.stageIndex, g.elapsedInStageMs);
+    }
+
+    startStage(0);
+
+    return {
+      state: function () { return g; },
+      phases: PHASES,
+      currentStage: currentStage,
+      hop: hop,
+      tick: tick,
+      applyDeath: applyDeath,
+      advance: advance,
+      difficulty: difficulty,
+      startStage: startStage,
+    };
+  }
+
+  // ---------- Headless simulation for the gate ---------------------------
+
+  /* Autoplay driver used by tools/check_vertical_slice.py. In one-player mode
+   * it hops forward at a fixed cadence, which is a competent but not perfect
+   * player: fast enough to beat the pursuer for a while, not forever. */
+  function simulateCampaign(seed, opts) {
+    opts = opts || {};
+    var maxSteps = opts.maxSteps || 200000;
+    var dt = opts.dt || 16.667;
+    var g = createGame({ playerCount: opts.playerCount || 1, seed: seed });
+    var gstate = g.state();
+    var step = 0;
+    var lastHopMs = 0;
+    var stageResults = [];
+    var retries = 0;
+    var maxRetries = 3;
+
+    while (step < maxSteps) {
+      if (gstate.phase === PHASES.READY || gstate.phase === PHASES.RUNNING) {
+        if (step * dt - lastHopMs >= 600) {
+          g.hop("forward");
+          lastHopMs = step * dt;
+        }
+        g.tick(dt);
+      } else if (gstate.phase === PHASES.STAGE_CLEAR) {
+        stageResults.push({ stage: gstate.stageIndex, result: "CLEAR" });
+        g.advance();
+        lastHopMs = step * dt;
+      } else if (gstate.phase === PHASES.STAGE_FAILED) {
+        stageResults.push({ stage: gstate.stageIndex, result: "FAILED" });
+        retries += 1;
+        if (retries > maxRetries) {
+          stageResults.push({ stage: gstate.stageIndex, result: "STUCK" });
+          break;
+        }
+        g.advance();
+        lastHopMs = step * dt;
+      } else if (gstate.phase === PHASES.ENDLESS) {
+        stageResults.push({ stage: gstate.stageIndex, result: "ENDLESS" });
+        break;
+      } else {
+        break;
+      }
+      step++;
+    }
+
+    return {
+      seed: seed,
+      stages: stageResults,
+      finalPhase: gstate.phase,
+      totalScore: gstate.totalScore,
+      stageIndex: gstate.stageIndex,
+      maxDifficulty: g.difficulty(),
+    };
+  }
+
+  // ---------- Public API -------------------------------------------------
+
+  global.SimCore = {
+    PHASES: PHASES,
+    createRng: createRng,
+    createPlayer: createPlayer,
+    createPursuer: createPursuer,
+    createGame: createGame,
+    simulateCampaign: simulateCampaign,
+  };
+})(typeof window !== "undefined" ? window : (typeof global !== "undefined" ? global : this));
