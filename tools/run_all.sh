@@ -9,7 +9,8 @@
 #   1. check_requirements.py  — spec traceability + disposition integrity
 #   2. check_testability.py   — every Tier A requirement has a testable threshold
 #   3. check_art_assets.py — every declared stage asset has a renderer; the mock matches the game
-#   4. check_vertical_slice.py — the stage-loop campaign sweep and structural probes
+#   4. check_js_renderer.py — the playable actually loads the isometric renderer
+#   5. check_vertical_slice.py — the stage-loop campaign sweep and structural probes
 #
 # Future phases add: check_lane_invariants.py, check_hazard_reach.py,
 # check_content_schema.py, check_solvability.py, check_save_schema.py,
@@ -39,6 +40,7 @@ gate() {
 gate "check_requirements"   tools/check_requirements.py
 gate "check_testability"    tools/check_testability.py
 gate "check_art_assets"     tools/check_art_assets.py
+gate "check_js_renderer"     tools/check_js_renderer.py
 gate "check_vertical_slice" tools/check_vertical_slice.py
 
 echo

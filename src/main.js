@@ -72,103 +72,60 @@
     var stage = game.currentStage();
     if (!stage) return;
 
-    // Ground.
-    ctx.fillStyle = stage.ground;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    var W = canvas.width / (VIEW_SCALE || 1);
+    var H = canvas.height / (VIEW_SCALE || 1);
+    var dpr = canvas.width / (canvas.clientWidth || W);
 
-    var topRow = Math.max(0, s.players[s.activePlayer].state().row - PLAYER_ANCHOR);
-    var bottomRow = topRow + VISIBLE_ROWS;
+    // Isometric scene from the shared renderer. Everything below is drawn in
+    // the same projection, with the same face factors, so the game and the
+    // Python preview cannot diverge visually.
+    var topRow = Math.max(0, s.players[Math.min(s.activePlayer, s.players.length - 1)].state().row - 3);
+    Scene.renderScene(ctx, sceneFor(stage), {
+      width: W, height: H,
+      cols: Math.max(5, Math.round(W / 42)),
+      viewRows: Math.max(7, Math.round(H / 34)),
+      row0: topRow,
+    });
 
-    // Lanes. Alternating shades make rows readable (M-08).
-    for (var row = topRow; row < bottomRow; row++) {
-      var y = (bottomRow - row - 1) * ROW_PX;
-      ctx.fillStyle = (row % 2 === 0) ? stage.groundAlt : stage.ground;
-      ctx.fillRect(0, y, canvas.width, ROW_PX);
-      ctx.fillStyle = stage.seam;
-      ctx.fillRect(0, y + ROW_PX - 1, canvas.width, 1);
-    }
-
-    // Goal row: the line you must cross.
-    var goalY = (bottomRow - s.goalRow - 1) * ROW_PX;
-    if (goalY > -ROW_PX && goalY < canvas.height) {
-      ctx.fillStyle = "#ffffff";
-      ctx.globalAlpha = 0.25;
-      ctx.fillRect(0, goalY, canvas.width, ROW_PX);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, goalY + 0.5);
-      ctx.lineTo(canvas.width, goalY + 0.5);
-      ctx.stroke();
-    }
-
-    // Players. Square hitboxes (M-08). Player 2 is marked with a notch so
-    // the two are distinguishable without relying on colour (AC-01).
+    // Players, drawn in the same isometric space as the board.
     for (var i = 0; i < s.players.length; i++) {
       var ps = s.players[i].state();
       if (!ps.alive) continue;
-      var cx = canvas.width / 2 + (ps.col - (s.players.length - 1) / 2) * COL_PX;
-      var cy = (bottomRow - ps.row - 1) * ROW_PX;
-      if (cy < -ROW_PX || cy > canvas.height) continue;
-      var w = COL_PX - 8, h = ROW_PX - 8;
-      var x = cx - w / 2, y = cy + 4;
-      ctx.fillStyle = (i === s.activePlayer) ? "#8fe38f" : "#5fa8c8";
-      ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-      if (i > 0) {
-        // Notch: the second player has a cut corner.
-        ctx.fillStyle = "#000000";
-        ctx.beginPath();
-        ctx.moveTo(x + w, y);
-        ctx.lineTo(x + w, y + 8);
-        ctx.lineTo(x + w - 8, y);
-        ctx.closePath();
-        ctx.fill();
-      }
-      if (ps.finished) {
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x + 4, y + 4);
-        ctx.lineTo(x + w - 4, y + h - 4);
-        ctx.moveTo(x + w - 4, y + 4);
-        ctx.lineTo(x + 4, y + h - 4);
-        ctx.stroke();
-      }
+      var who = globalThis.__hopperChars
+        ? globalThis.__hopperChars[i % globalThis.__hopperChars.length]
+        : null;
+      var px = Math.round(W / 2 + (ps.col - (s.players.length - 1) / 2) * 26);
+      var py = Math.round(H * 0.62 + (ps.row - topRow) * 15);
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.scale(dpr * 0.62, dpr * 0.62);
+      CharacterRenderer.drawCharacter(ctx, 0, 0, 0.9, who || undefined);
+      ctx.restore();
     }
 
-    // Pursuer. Triangle while telegraphing, square once active.
+    // Pursuer: triangle while telegraphing, square once active.
     var pu = game.state().pursuer.state();
     if (pu.mode !== "DISTANCE_LOCKED") {
       var purRow = (pu.mode === "ACTIVE") ? pu.row : pu.spawnRow;
-      var py = (bottomRow - purRow - 1) * ROW_PX + 4;
+      var q = Iso.projectS(0, purRow - topRow, 0.4);
       ctx.fillStyle = "#e06060";
       if (pu.mode === "SPAWNING") {
         ctx.beginPath();
-        ctx.moveTo(canvas.width / 2, py);
-        ctx.lineTo(canvas.width / 2 - 12, py + 16);
-        ctx.lineTo(canvas.width / 2 + 12, py + 16);
-        ctx.closePath();
-        ctx.fill();
-      } else if (py > -ROW_PX && py < canvas.height) {
-        ctx.fillRect(canvas.width / 2 - 11, py, 22, 22);
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(canvas.width / 2 - 10, py + 1, 20, 20);
+        ctx.moveTo(q[0], q[1] - 14 * dpr);
+        ctx.lineTo(q[0] - 12 * dpr, q[1] + 4 * dpr);
+        ctx.lineTo(q[0] + 12 * dpr, q[1] + 4 * dpr);
+        ctx.closePath(); ctx.fill();
+      } else if (q[1] > -20 && q[1] < H) {
+        ctx.fillRect(q[0] - 11 * dpr, q[1], 22 * dpr, 22 * dpr);
       }
     }
 
-    // HUD.
     var remaining = Math.max(0, Stages.STAGE_DURATION_MS - s.elapsedInStageMs);
     elTimer.textContent = (remaining / 1000).toFixed(1);
     elDiff.textContent = String(game.difficulty());
     elStage.textContent = stage.id + ". " + stage.name;
     elScore.textContent = String(Math.floor(s.totalScore + s.stageScore));
 
-    // NF-02: no per-frame allocation. Build the string without map/join.
     var livesStr = "";
     for (var li = 0; li < s.players.length; li++) {
       if (li) livesStr += " / ";
@@ -176,8 +133,6 @@
     }
     elLives.textContent = livesStr;
 
-    // Banner: phase text. This is the only place the game blocks on input,
-    // and it never blocks a death-to-restart.
     if (s.phase === SimCore.PHASES.READY) {
       showBanner("Stage " + stage.id + " — " + stage.name, "Tap to start");
     } else if (s.phase === SimCore.PHASES.STAGE_CLEAR) {
@@ -187,6 +142,19 @@
     } else if (s.phase === SimCore.PHASES.ENDLESS) {
       showBanner("Campaign complete", "Endless mode — tap to chase a high score");
     }
+  }
+
+  // The game data file is the single source of truth for the palette.
+  function sceneFor(stage) {
+    return {
+      id: stage.id, name: stage.name,
+      ground: stage.ground, groundAlt: stage.alt,
+      road: stage.road, water: stage.water,
+      hazard: stage.hazard, hazard2: stage.hazard2,
+      log: stage.log, turtle: stage.turtle,
+      foliage: stage.foliage, foliage2: stage.foliage2,
+      trunk: stage.trunk,
+    };
   }
 
   function showBanner(title, sub) {
