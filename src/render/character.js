@@ -37,7 +37,11 @@
       earKind: "triangle", earScale: 1, eyeScale: 1,
     });
 
-    var body = ch.body, accent = ch.accent, earC = ch.ear;
+    // `ch.ear` never existed -- the roster key is `earColor`. Reading the
+    // wrong key gave every character an undefined ear colour, which a canvas
+    // accepts silently by keeping the PREVIOUS fillStyle, so all six had ears
+    // painted in whatever colour happened to be set last.
+    var body = ch.body, accent = ch.accent, earC = ch.earColor;
     var bw = ch.bodyW, bh = ch.bodyH, hw = ch.headW, hh = ch.headH;
     var es = ch.earScale, ys = ch.eyeScale;
     // A head wider than the body hides the body completely, which is how four

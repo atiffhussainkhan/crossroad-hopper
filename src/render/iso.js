@@ -145,6 +145,16 @@
     ctx.fill();
   }
 
+  function line(ctx, pts, stroke, width) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = width === undefined ? 2 : width;
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
+
   function cube(ctx, col, row, baseZ, height, colour) {
     cubeFrac(ctx, col, row, 1, 1, baseZ, height, colour);
   }
@@ -185,19 +195,22 @@
                projectS(col + 1, row + 1, 0), projectS(col, row + 1, 0)], colour);
   }
 
-  function castShadow(ctx, col, row, height, length) {
+  function castShadow(ctx, col, row, height, length, alpha) {
     // Light is upper-left frontal; +col moves right and up, +row left and up, so
     // "away from the light" is +col and -row.
     var dx = length === undefined ? 0.30 : length, dy = -dx;
     var reach = 0.16 + 0.30 * (height || 0.5);
+    // alpha scales the whole shadow. A reed should not lay down the same patch
+    // of black as a house. Default 0.18 preserves the previous look exactly.
+    var a = alpha === undefined ? 0.18 : alpha;
     var foot = [[0.26, 0.26], [0.74, 0.26], [0.74, 0.74], [0.26, 0.74]];
     var near = foot.map(function (f) { return projectS(col + f[0], row + f[1], 0); });
     var far = foot.map(function (f) {
       return projectS(col + f[0] + dx * reach, row + f[1] + dy * reach, 0);
     });
     ctx.save();
-    poly(ctx, near, "rgba(0,0,0,0.18)");
-    poly(ctx, far, "rgba(0,0,0,0.09)");
+    poly(ctx, near, "rgba(0,0,0," + a.toFixed(3) + ")");
+    poly(ctx, far, "rgba(0,0,0," + (a * 0.5).toFixed(3) + ")");
     ctx.restore();
   }
 
@@ -206,7 +219,7 @@
     LIGHT_TOP: LIGHT_TOP, LIGHT_LEFT: LIGHT_LEFT, LIGHT_RIGHT: LIGHT_RIGHT,
     project: project, projectS: projectS, setView: setView,
     frameViewWindow: frameViewWindow,
-    poly: poly, ellipse: ellipse,
+    poly: poly, ellipse: ellipse, line: line,
     cube: cube, cubeFrac: cubeFrac, blob: blob, tile: tile,
     castShadow: castShadow,
     shade: shade, mix: mix, rgba: rgba, hexToRgb: hexToRgb,

@@ -36,6 +36,76 @@
   };
   var TYPES = ["SOLID", "BREAKABLE", "SLIDE", "PHASE", "SPRING", "ONEWAY"];
 
+  // ---------- lane class -------------------------------------------------
+  //
+  // This lives here, not in the renderer, because BOTH the renderer and the
+  // hazard spawner have to agree on it. They used to disagree: the renderer
+  // derived a row's lane from the stage's laneMix while src/hazards.js picked
+  // a hazard from a fixed `row % 10`, so cars drove across rows that were
+  // drawn as lawn. A row that LOOKS safe and kills you is the worst bug this
+  // genre can ship, and it was reachable in all ten stages.
+  //
+  // laneMix is [road, rail, water]. Whatever it does not spend becomes
+  // "grass": ground the player can stand on and scenery can occupy. A stage
+  // whose weights sum to 1.0 has NO safe ground at all, which is why every
+  // stage used to render as an unbroken field of road with nowhere to rest.
+
+  function buildLaneCycle(laneMix) {
+    var w = laneMix || [0.6, 0.15, 0.25];
+    var slots = 20;
+    var road = Math.max(0, Math.round(w[0] * slots));
+    var rail = Math.max(0, Math.round(w[1] * slots));
+    var water = Math.max(0, Math.round(w[2] * slots));
+    var grass = slots - road - rail - water;
+    // Never let rounding leave a stage with zero ground, even if the data
+    // asks for it: at least one slot in five is standable.
+    if (grass < 4) {
+      var take = 4 - grass;
+      // Take from the largest hazard class first, so a road-heavy stage loses
+      // road rather than water.
+      while (take > 0) {
+        if (road >= water && road >= rail && road > 0) { road--; }
+        else if (water >= rail && water > 0) { water--; }
+        else if (rail > 0) { rail--; }
+        else break;
+        take--; grass++;
+      }
+    }
+    var out = [];
+    var quota = { road: road, rail: rail, water: water, grass: grass };
+    // Interleave rather than block, so no stage is a single solid band.
+    var order = ["road", "rail", "water", "grass"];
+    var guard = 0;
+    while (out.length < slots && guard++ < slots * 8) {
+      for (var o = 0; o < order.length; o++) {
+        var k = order[o];
+        if (quota[k] > 0) { out.push(k); quota[k]--; }
+      }
+    }
+    while (out.length < slots) out.push("grass");
+    return out;
+  }
+
+  // Lane class of a row. `laneMix` comes from the stage; the cycle is cached
+  // per stage id so a stage's rhythm is stable and learnable.
+  var CACHE = {};
+  function laneCycleFor(laneMix, key) {
+    var k = key === undefined ? "default" : String(key);
+    if (!CACHE[k]) CACHE[k] = buildLaneCycle(laneMix);
+    return CACHE[k];
+  }
+
+  function laneOf(row, laneMix, key) {
+    var cyc = laneCycleFor(laneMix, key);
+    return cyc[((row % cyc.length) + cyc.length) % cyc.length];
+  }
+
+  function isHazardLane(row, laneMix, key) {
+    var l = laneOf(row, laneMix, key);
+    return l === "road" || l === "rail" || l === "water";
+  }
+
+
   // A row's tile pattern is derived from its lane class and the stage's
   // difficulty, so early stages are mostly solid and later ones are not.
   // `density` is the chance a non-solid type appears at all; teaching stages
@@ -98,6 +168,8 @@
 
   global.Tiles = {
     TILE: TILE, TYPES: TYPES,
+    buildLaneCycle: buildLaneCycle, laneCycleFor: laneCycleFor,
+    laneOf: laneOf, isHazardLane: isHazardLane,
     buildTileRow: buildTileRow, tileType: tileType,
     isPassable: isPassable, onEnter: onEnter, wouldRefuse: wouldRefuse,
   };

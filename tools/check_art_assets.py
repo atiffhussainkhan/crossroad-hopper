@@ -8,7 +8,9 @@ mode a build failure instead of a thing you notice by eye.
 
 Asserts:
   1. Every hazard kind in every stage's `hazardKinds` has a draw function.
-  2. Every scenery kind in every stage's `scenery` has a draw function.
+  2. Every scenery kind in every stage's `scenery` has a draw function in the
+     Python preview AND a real object in the browser registry (src/scenery.js).
+     Asserting only the preview left the shipping renderer unverified.
   3. The preview SCENES table in render_art.py carries the same asset lists
      as the game's src/stages.js, so the mock cannot drift from the game.
   4. The roster in src/roster.js and in render_art.py list the same ids.
@@ -28,6 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 STAGES_JS = ROOT / "src" / "stages.js"
 ROSTER_JS = ROOT / "src" / "roster.js"
+SCENERY_JS = ROOT / "src" / "scenery.js"
 RENDER = ROOT / "tools" / "render_art.py"
 
 HAZARD_FNS = {
@@ -82,10 +85,33 @@ def parse_render_scenes(text: str) -> dict[int, dict]:
     return out
 
 
+def parse_browser_registry(text: str) -> set[str]:
+    """Keys of the REGISTRY object literal in src/scenery.js.
+
+    The gate previously proved only that the PYTHON PREVIEW could draw every
+    declared object. It said nothing about the browser, which is the thing that
+    actually ships. An empty or truncated registry in src/scenery.js would have
+    passed every gate while Suburb rendered as bare grass.
+    """
+    start = text.index("var REGISTRY = {")
+    depth, i = 0, text.index("{", start)
+    body_start = i
+    while i < len(text):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        i += 1
+    body = text[body_start + 1 : i]
+    return set(re.findall(r"([A-Za-z_][A-Za-z0-9_]*)\s*:", body))
+
+
 def main() -> int:
     failures: list[str] = []
 
-    for path in (STAGES_JS, ROSTER_JS, RENDER):
+    for path in (STAGES_JS, ROSTER_JS, SCENERY_JS, RENDER):
         if not path.exists():
             print(f"missing {path}", file=sys.stderr)
             return 1
@@ -118,6 +144,15 @@ def main() -> int:
             failures.append(f"scenery '{k}' is declared by a stage but has no renderer")
         elif f"def {SCENERY_FNS[k]}(" not in render_src:
             failures.append(f"scenery '{k}' maps to {SCENERY_FNS[k]}, which does not exist")
+
+    # 2b. ...and the BROWSER can draw them too, which is the copy that ships.
+    browser = parse_browser_registry(SCENERY_JS.read_text())
+    for k in scenery:
+        if k not in browser:
+            failures.append(
+                f"scenery '{k}' is declared by a stage but is missing from the "
+                f"src/scenery.js registry (the game would render it as nothing)"
+            )
 
     # 3. The mock's asset lists match the game's.
     if set(stages) != set(preview):

@@ -31,6 +31,14 @@
   var COL_PX = 26;            // horizontal pixels per column
   var VISIBLE_ROWS = 14;      // rows shown on screen
   var PLAYER_ANCHOR = 10;     // screen row the active player sits on
+  // Character size multiplier. Applied about the character's own projected point,
+  // never about the canvas origin -- see the pivot block in render().
+  //
+  // 1.0, so the character is drawn at the same world scale as every prop and
+  // tile. The old 1.45 was never actually visible (the unpivoted scale put it
+  // off-screen), so nobody had ever seen how oversized it made the player; once
+  // the pivot was fixed, Pip stood a tile and a half wide next to a mailbox.
+  var CHAR_SCALE = 1.0;
 
   var game = SimCore.createGame({ playerCount: 1, seed: "browser" });
 
@@ -170,13 +178,28 @@
       }
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // DPR only: no extra offset
-      ctx.scale(1.45, 1.45);
+
+      /* Every scale and shear below pivots ON THE CHARACTER, never on the
+       * canvas origin.
+       *
+       * This was a bare `ctx.scale(1.45, 1.45)` with no pivot, which scales
+       * about (0,0). The camera puts the character at 72% of the canvas
+       * height, so the 1.45 multiplier moved it to 104% -- past the bottom
+       * edge. The character was rendered every frame, correctly projected,
+       * entirely off screen. The board looked right and the one object the
+       * player is actually playing was invisible.
+       *
+       * tools/check_js_runtime.py now composes this transform and asserts the
+       * character lands inside the canvas, so the whole class is covered. */
+      var pivot = Iso.projectS(col, row, 0);
+      ctx.translate(pivot[0], pivot[1]);
+      ctx.scale(CHAR_SCALE * squash, CHAR_SCALE * (2 - squash));
       if (lift > 0) {
         // Lift along the arc and lean at the apex.
-        ctx.translate(0, -Iso.BLOCK_H * lift);
         ctx.transform(1, 0, swayNow, 1, 0, 0);
+        ctx.translate(0, -Iso.BLOCK_H * lift);
       }
-      ctx.scale(squash, 2 - squash);
+      ctx.translate(-pivot[0], -pivot[1]);
       CharacterRenderer.drawCharacter(ctx, col, row, 0.95, who || undefined);
       ctx.restore();
     }
@@ -226,9 +249,16 @@
   }
 
   // The game data file is the single source of truth for the palette.
+  /* Every field the renderer reads must be present here. This used to copy a
+   * hand-picked subset of palette colours and silently drop `laneMix` and
+   * `scenery`, so the renderer fell back to its DEFAULT lane mix -- which is
+   * why Suburb rendered with water and rail lanes -- and placed no scenery at
+   * all, in any stage, ever. A missing field here fails silently; the
+   * structural probe in tools/check_js_runtime.py now asserts it cannot. */
   function sceneFor(stage) {
     return {
       id: stage.id, name: stage.name,
+      laneMix: stage.laneMix, scenery: stage.scenery,
       ground: stage.ground, groundAlt: stage.groundAlt,
       road: stage.road, water: stage.water,
       hazard: stage.hazard, hazard2: stage.hazard2,

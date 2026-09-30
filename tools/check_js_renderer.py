@@ -22,8 +22,9 @@ JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/js
 
 # Load order matters: the palette, then the core, then the renderer, then
 # the game. The renderer reads the palette at load time.
-CHAIN = ["src/stages.js", "src/hazards.js", "src/sim-core.js", "src/render/iso.js",
-         "src/render/scene.js", "src/roster.js", "src/render/character.js"]
+CHAIN = ["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js",
+         "src/render/iso.js", "src/scenery.js", "src/render/scene.js",
+         "src/roster.js", "src/render/character.js"]
 
 
 def main() -> int:

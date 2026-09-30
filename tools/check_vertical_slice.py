@@ -288,6 +288,13 @@ ObjC.import('Foundation');
 });
 var r = {};
 var g = SimCore.createGame({playerCount: 1, seed: "hz"});
+// Stages one and two are TEACHING stages and generate no lethal hazard at all
+// (src/hazards.js: buildHazards returns empty for stageIndex < 2). This probe
+// used to run on whatever createGame defaulted to -- stage one -- so it
+// correctly reported "no hazards were ever generated" about a stage that is
+// SUPPOSED to be empty. The probe asks whether the hazard system works, so it
+// must run on the first stage that actually spawns one.
+g.startStage(2);
 g.hop("forward");
 
 var sawHazard = 0;

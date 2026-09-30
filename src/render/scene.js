@@ -14,49 +14,25 @@
   var I = global.Iso;
 
   // One row, one lane class. A repeating cycle the eye can learn.
-  /* The lane pattern is now DERIVED FROM EACH STAGE'S laneMix instead of a
-   * single fixed cycle. The fixed cycle meant all ten stages had an identical
-   * layout and differed only in colour, which is not ten different scenes --
-   * it is one scene recoloured. Each stage now builds its own repeating
-   * pattern from its own road/rail/water weights, so Suburb is road-heavy,
-   * River is water-heavy, Frozen Lake is mostly water, and so on.
+  /* The lane pattern is DERIVED FROM EACH STAGE'S laneMix instead of a single
+   * fixed cycle. The fixed cycle meant all ten stages had an identical layout
+   * and differed only in colour, which is not ten different scenes -- it is
+   * one scene recoloured.
    *
-   * The pattern stays a fixed cycle per stage rather than being resampled, so
-   * the player can learn a stage's rhythm, which is the whole point. */
-  function buildLaneCycle(laneMix) {
-    var w = laneMix || [0.6, 0.15, 0.25];
-    var slots = 20;
-    var road = Math.round(w[0] * slots);
-    var rail = Math.round(w[1] * slots);
-    var water = Math.round(w[2] * slots);
-    var grass = Math.max(0, slots - road - rail - water);
-    var out = [];
-    var made = 0;
-    // Interleave rather than block, so no stage is a single solid band.
-    var order = ["road", "rail", "water", "grass"];
-    var quota = { road: road, rail: rail, water: water, grass: grass };
-    while (out.length < slots) {
-      for (var o = 0; o < order.length; o++) {
-        var k = order[o];
-        if (quota[k] > 0) { out.push(k); quota[k]--; }
-      }
-    }
-    return out;
-  }
+   * The construction itself now lives in src/tiles.js, because src/hazards.js
+   * must derive the SAME lane class when it decides what spawns on a row. A
+   * second copy here is what let cars spawn on rows drawn as lawn. */
+  var T = global.Tiles;
 
-  var LANE_CYCLES = {};
+  function buildLaneCycle(laneMix) { return T.buildLaneCycle(laneMix); }
 
   function laneOf(row, scene) {
-    var key = (scene && scene.id !== undefined) ? scene.id : 0;
-    if (!LANE_CYCLES[key]) {
-      LANE_CYCLES[key] = buildLaneCycle(scene && scene.laneMix);
-    }
-    var cyc = LANE_CYCLES[key];
-    return cyc[((row % cyc.length) + cyc.length) % cyc.length];
+    if (!T) return "road";   // tiles.js missing; the gate reports the load failure
+    return T.laneOf(row, scene && scene.laneMix, scene && scene.id);
   }
   function isHazardLane(row, scene) {
-    var l = laneOf(row, scene);
-    return l === "road" || l === "rail" || l === "water";
+    if (!T) return true;
+    return T.isHazardLane(row, scene && scene.laneMix, scene && scene.id);
   }
 
   // ---------- props ------------------------------------------------------
@@ -159,6 +135,59 @@
     I.blob(ctx, col + 0.52, row + 0.56, 0.24, 0.22, 0.28, 0.20, I.shade(base, 1.10));
   }
 
+  // ---------- scenery placement ------------------------------------------
+  //
+  // The stage DECLARES its own objects (STAGES[].scenery, most common first).
+  // The old code ignored that list and placed tree/bush/rock on a fixed hash,
+  // which is why every stage was decorated identically and Suburb had no
+  // mailbox anywhere in it.
+  //
+  // Two invariants, both required for playability rather than for looks:
+  //   1. Scenery never lands on a hazard lane. The player must always be able
+  //      to read a crossing row as a crossing row.
+  //   2. Scenery never lands on the cell the player is standing in, or the
+  //      character disappears behind a hedge exactly when it matters.
+
+  // Integer hash. Deterministic across runs so the same tile always gets the
+  // same object -- a stage that reshuffles on every frame is unlearnable.
+  function hash2(col, row) {
+    var h = (col * 73856093) ^ (row * 19349663);
+    h = (h ^ (h >>> 13)) >>> 0;
+    return h;
+  }
+
+  // Bands of density along the view, so a stage has clearings and clumps
+  // instead of an even scatter. Purely cosmetic, so it is allowed to be crude.
+  function densityAt(col, row) {
+    var band = hash2(Math.floor(col / 4), Math.floor(row / 3)) % 100;
+    var jitter = hash2(col, row) % 100;
+    if (jitter > 34) return 0;                       // a guaranteed clearing
+    if (band < 22) return jitter < 20 ? 0 : 1;       // a sparse stretch
+    return 1;
+  }
+
+  // Weighted pick from the stage's list, most-common-first. A stage listing
+  // ["tree","hedge","mailbox"] gets mostly trees, some hedges, few mailboxes,
+  // which is what a suburb actually looks like.
+  function pickScenery(kinds, col, row) {
+    if (!kinds || !kinds.length) return null;
+    var total = 0, i;
+    for (i = 0; i < kinds.length; i++) total += Math.max(1, kinds.length - i);
+    var r = hash2(col * 3 + 11, row * 7 + 5) % total;
+    for (i = 0; i < kinds.length; i++) {
+      r -= Math.max(1, kinds.length - i);
+      if (r < 0) return kinds[i];
+    }
+    return kinds[0];
+  }
+
+  function sceneryFor(scene, row, col, focusCol, focusRow) {
+    if (isHazardLane(row, scene)) return null;
+    if (col === focusCol && row === focusRow) return null;
+    if (!densityAt(col, row)) return null;
+    return pickScenery(scene.scenery, col, row);
+  }
+
   // ---------- lane texture ----------------------------------------------
   //
   // AC-01: lane class must survive desaturation. These are geometry, so no
@@ -198,7 +227,6 @@
   // ---------- scene ------------------------------------------------------
 
   var HAZARD_FNS = { car: drawCar, train: drawTrain, log: drawLog, turtle: drawTurtle };
-  var SCENERY_FNS = { tree: drawTree, bush: drawBush, rock: drawRock };
 
   function renderScene(ctx, scene, opts) {
     var width = opts.width, height = opts.height;
@@ -248,7 +276,10 @@
       }
     } else {
       for (var h = 0; h < rows.length - 1; h++) {
-        var hr = rows[h], lk = laneOf(hr);
+        // scene must be passed here. Calling laneOf(hr) with no scene keyed
+        // every stage's decorative preview to stage 1's lane cycle, so the
+        // offline sheet showed cars on rows that are water in the real stage.
+        var hr = rows[h], lk = laneOf(hr, scene);
         for (var hc = 0; hc < cols; hc++) {
           if (lk === "road" && (hc * 3 + hr) % 7 === 0) hazards.push([hc, hr, "car"]);
           else if (lk === "rail" && (hc + hr) % 4 === 0) hazards.push([hc, hr, "train"]);
@@ -262,20 +293,29 @@
       if (HAZARD_FNS[x[2]]) HAZARD_FNS[x[2]](ctx, x[0], x[1], scene);
     });
 
-    // Scenery.
+    // Scenery, placed from the stage's own declared object vocabulary.
+    var S = global.Scenery;
     var sc = [];
     for (var s = 0; s < rows.length - 1; s++) {
       var sr = rows[s];
-      if (isHazardLane(sr, scene)) continue;
       for (var scn = 0; scn < cols; scn++) {
-        var hv = (scn * 7 + sr * 5) % 13;
-        if (hv === 0) sc.push([scn, sr, "tree"]);
-        else if (hv === 3) sc.push([scn, sr, "bush"]);
-        else if (hv === 5) sc.push([scn, sr, "rock"]);
+        var kind = sceneryFor(scene, sr, scn, opts.focusCol, opts.focusRow);
+        if (kind) sc.push([scn, sr, kind]);
       }
     }
     sc.sort(function (a, b) { return (b[0] + b[1]) - (a[0] + a[1]); });
-    sc.forEach(function (x) { if (SCENERY_FNS[x[2]]) SCENERY_FNS[x[2]](ctx, x[0], x[1], scene); });
+    if (S) {
+      sc.forEach(function (x) { S.draw(x[2], ctx, x[0], x[1], scene); });
+    } else {
+      // Only reachable if src/scenery.js failed to load. Draw the old generic
+      // objects rather than nothing, and let check_js_renderer catch the load
+      // failure -- a stage that silently loses its scenery is worse than one
+      // that loses its detail.
+      var FALLBACK = { tree: drawTree, bush: drawBush, rock: drawRock };
+      sc.forEach(function (x) {
+        if (FALLBACK[x[2]]) FALLBACK[x[2]](ctx, x[0], x[1], scene);
+      });
+    }
 
     return { rows: rows, hazards: hazards, scenery: sc };
   }
@@ -283,6 +323,7 @@
   global.Scene = {
     laneOf: laneOf, isHazardLane: isHazardLane, buildLaneCycle: buildLaneCycle,
     renderScene: renderScene, drawLaneTexture: drawLaneTexture,
+    sceneryFor: sceneryFor, hash2: hash2,
     drawCar: drawCar, drawTrain: drawTrain, drawLog: drawLog, drawTurtle: drawTurtle,
     drawTree: drawTree, drawBush: drawBush, drawRock: drawRock,
   };

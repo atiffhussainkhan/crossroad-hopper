@@ -45,9 +45,11 @@ tall upright ears, stepped horns, a leafy sprig, round ears. Distinguishable in 
 Right: a car at five positions along its lane, so its travel on the plane is visible.</p>
 
 <script src="src/stages.js"></script>
+<script src="src/tiles.js"></script>
 <script src="src/hazards.js"></script>
 <script src="src/sim-core.js"></script>
 <script src="src/render/iso.js"></script>
+<script src="src/scenery.js"></script>
 <script src="src/render/scene.js"></script>
 <script src="src/roster.js"></script>
 <script src="src/render/character.js"></script>
@@ -79,10 +81,14 @@ Right: a car at five positions along its lane, so its travel on the plane is vis
 
     Scene.renderScene(ctx, {
       id: st.id, name: st.name,
+      // laneMix and scenery are what the renderer reads to decide the lane
+      // class and which objects to place. This literal used to omit both, so
+      // every stage here rendered with the default lane mix and no scenery.
+      laneMix: st.laneMix, scenery: st.scenery,
       ground: st.ground, groundAlt: st.groundAlt, road: st.road, water: st.water,
       hazard: st.hazard, hazard2: st.hazard2, log: st.log, turtle: st.turtle,
       foliage: st.foliage, foliage2: st.foliage2, trunk: st.trunk,
-      hazardKinds: st.hazardKinds, scenery: st.scenery,
+      hazardKinds: st.hazardKinds,
     }, {
       width: 260, height: 300, cols: 7, viewRows: 11, row0: 0, col0: 0,
       focusCol: 3, focusRow: 8, hazards: haz,

@@ -18,6 +18,10 @@
 (function (global) {
   "use strict";
 
+  // src/tiles.js loads before this file (see index.html and every gate's
+  // CHAIN), so the shared lane classification is available here.
+  var T = global.Tiles;
+
   var KINDS = {
     car:      { len: 0.86, speed: [1.5, 2.4], kind: "ground" },
     tractor:  { len: 0.80, speed: [1.1, 1.7], kind: "ground" },
@@ -55,20 +59,53 @@
     var out = [];
     // Teaching stages carry no lethal hazard at all. The player learns the
     // lane rhythm, the hop and the goal line with the clock as the only
-    // pressure, and meets a car for the first time in stage two.
+    // pressure, and meets a car for the first time in stage THREE. (The
+    // original comment here said "stage two", which contradicted this guard:
+    // stageIndex < 2 covers stages one AND two.)
     if (stageIndex !== undefined && stageIndex < 2) return out;
     // Density ramps with difficulty but never reaches 1: a lane that is
     // always occupied is not a puzzle, it is a wall.
-    var density = Math.min(0.26, 0.09 + difficulty * 0.016);
+    var baseDensity = Math.min(0.26, 0.09 + difficulty * 0.016);
+    // Lane class decides which hazards can appear, and only one is possible
+    // per row, so a log can never share a row with a train. The class comes
+    // from the SAME function the renderer draws with (Tiles.laneOf), keyed on
+    // this stage's own laneMix. The previous `row % 10` switch was a second,
+    // independent opinion about what a row was, which put cars and trains on
+    // rows the renderer drew as lawn -- ground that looked safe and killed the
+    // player, in all ten stages.
+    var laneMix = null, laneKey = stageIndex;
+    if (stageIndex !== undefined && global.Stages && global.Stages.getStage) {
+      var st = global.Stages.getStage(stageIndex);
+      if (st) { laneMix = st.laneMix; laneKey = st.id; }
+    }
+    // Difficulty is a property of the STAGE, not of the row. Applying one
+    // per-row density to every stage made a stage that is 90 percent road
+    // nearly three times as many crossings as a stage that is 30 percent
+    // road, purely as a side effect of its lane mix -- the difficulty ladder
+    // and the art direction became the same knob. Scaling by the share of the
+    // board that is actually hazardous keeps the expected number of CROSSINGS
+    // comparable between stages, so a stage's difficulty comes from its
+    // baseline and its speed, not from how much asphalt its palette happened
+    // to include. The floor stops a sparse stage from becoming empty.
+    var share = 1.0;
+    if (T && laneMix !== null) {
+      var cyc = T.laneCycleFor(laneMix, laneKey);
+      var haz = 0;
+      for (var ci = 0; ci < cyc.length; ci++) {
+        if (cyc[ci] !== "grass") haz++;
+      }
+      share = Math.max(0.45, haz / cyc.length);
+    }
+    var density = baseDensity * share;
+
     for (var r = 0; r < viewRows; r++) {
       var row = row0 + r;
       var k = null;
-      // Lane class decides which hazards can appear, and only one is possible
-      // per row, so a log can never share a row with a train.
-      var phase = ((row % 10) + 10) % 10;
-      if (phase === 4 || phase === 5) k = "car";
-      else if (phase === 6) k = "train";
-      else if (phase >= 7) k = (rng.bool() ? "log" : "turtle");
+      var lane = T ? T.laneOf(row, laneMix, laneKey) : "road";
+      if (lane === "grass") continue;               // never spawn on open ground
+      if (lane === "road") k = "car";
+      else if (lane === "rail") k = "train";
+      else if (lane === "water") k = (rng.bool() ? "log" : "turtle");
       if (!k || !KINDS[k]) continue;
       if (rng.next() > density) continue;
       var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1

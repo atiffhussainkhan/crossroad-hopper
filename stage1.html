@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stage 1 — Suburb look sheet</title>
+<link rel="stylesheet" href="src/style.css">
+<style>
+  body { background:#15161a; color:#e8e6e0; font:13px/1.45 -apple-system, sans-serif;
+         margin:0; padding:14px 18px 24px; }
+  h1 { font-size:20px; margin:0 0 4px; font-weight:600; }
+  .sub { color:#8f96a3; margin:0 0 12px; font-size:12px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.09em;
+       color:#8f96a3; margin:16px 0 8px; font-weight:600; }
+  #errors { background:#4a1414; border:1px solid #a33; color:#ffd7d7;
+            padding:10px 14px; border-radius:6px; margin-bottom:16px;
+            font-family:ui-monospace, Menlo, monospace; font-size:12px;
+            white-space:pre-wrap; display:none; }
+  .board { display:block; border-radius:10px; background:#000; }
+  .strip { display:flex; gap:8px; flex-wrap:wrap; }
+  .obj { text-align:center; }
+  .obj canvas { display:block; background:#000; border-radius:8px; }
+  .obj .cap { font-size:10px; color:#9aa2b0; margin-top:5px; }
+  .facts { color:#8f96a3; font-size:12px; font-family:ui-monospace, Menlo, monospace; }
+  .facts b { color:#cfd6e2; font-weight:600; }
+</style>
+</head>
+<body>
+
+<!-- Errors are surfaced ON THE PAGE. Safari will not let a headless tool read
+     its console, so a renderer that throws would otherwise fail silently and
+     this sheet would look fine while being blank. -->
+<div id="errors"></div>
+
+<h1>Stage 1 — Suburb</h1>
+<p class="sub">Drawn by the real renderer from the real stage data, driven by a real
+simulation. Nothing here is mocked.</p>
+
+<h2>Every object Stage 1 can place</h2>
+<div class="strip" id="strip"></div>
+
+<h2>The board in play</h2>
+<canvas id="board" class="board" width="560" height="600"></canvas>
+<p class="facts" id="facts"></p>
+
+<!-- Canonical load order. Must match index.html and every gate's CHAIN. -->
+<script src="src/stages.js"></script>
+<script src="src/tiles.js"></script>
+<script src="src/hazards.js"></script>
+<script src="src/sim-core.js"></script>
+<script src="src/render/iso.js"></script>
+<script src="src/scenery.js"></script>
+<script src="src/render/scene.js"></script>
+<script src="src/roster.js"></script>
+<script src="src/render/character.js"></script>
+<script>
+(function () {
+  "use strict";
+  var errBox = document.getElementById("errors");
+  var errs = [];
+  function fail(e) {
+    errs.push((e && e.message) || String(e));
+    errBox.style.display = "block";
+    errBox.textContent = "RENDER ERRORS (" + errs.length + ")\n" + errs.join("\n");
+  }
+  window.addEventListener("error", function (e) { fail(e.error || e.message); });
+
+  try {
+    var stage = Stages.getStage(0);
+
+    // ---- drive a real game until the player is out on the board ---------
+    // A stage-1 board is a teaching stage, so it has no lethal hazard; the
+    // player is moved forward by the same rule the autoplay gate uses, so the
+    // picture shows a game in progress rather than a fresh spawn.
+    var g = SimCore.createGame({ playerCount: 1, seed: "look-sheet" });
+    var st = g.state();
+    var steps = 0;
+    while (st.players[0].state().row < 14 && steps++ < 4000) {
+      var ps = st.players[0].state();
+      var blocked = st.hazards.some(function (h) { return h.row === ps.row + 1; });
+      if (!blocked) g.hop("forward", 0);
+      g.tick(16.667);
+    }
+    var ps = st.players[0].state();
+
+    // ---- the board ------------------------------------------------------
+    var cv = document.getElementById("board");
+    var ctx = cv.getContext("2d");
+    var COLS = 9;
+    var VROWS = 13;
+    var anchor = ps;
+    Scene.renderScene(ctx, {
+      id: stage.id, name: stage.name,
+      laneMix: stage.laneMix, scenery: stage.scenery,
+      ground: stage.ground, groundAlt: stage.groundAlt,
+      road: stage.road, water: stage.water,
+      hazard: stage.hazard, hazard2: stage.hazard2,
+      log: stage.log, turtle: stage.turtle,
+      foliage: stage.foliage, foliage2: stage.foliage2, trunk: stage.trunk,
+    }, {
+      width: cv.width, height: cv.height, cols: COLS, viewRows: VROWS,
+      row0: Math.max(0, anchor.row - 7), col0: 0,
+      focusCol: anchor.col, focusRow: anchor.row,
+      hazards: st.hazards,
+    });
+
+    // The player, through the same projection the simulation collides in.
+    CharacterRenderer.drawCharacter(ctx, anchor.col, anchor.row, 1,
+                                    Roster.getCharacter("pip"));
+
+    // ---- the object sheet ------------------------------------------------
+    var host = document.getElementById("strip");
+    // Every object this biome can place, not just the three the stage
+    // samples, so a new one cannot be added without appearing here.
+    var SUBURB = ["tree", "hedge", "mailbox", "house", "fence", "streetlamp",
+                  "flowerbed", "parkedcar", "bush", "rock"];
+    SUBURB.forEach(function (kind) {
+      var cell = document.createElement("div");
+      cell.className = "obj";
+      var c = document.createElement("canvas");
+      c.width = 138; c.height = 128;
+      cell.appendChild(c);
+      var cap = document.createElement("div");
+      cap.className = "cap";
+      cap.textContent = kind;
+      cell.appendChild(cap);
+      host.appendChild(cell);
+
+      var cx2 = c.getContext("2d");
+      // ONE camera for the ground and the object. Setting the view twice --
+      // once for the lawn, once for the object -- put the lawn in the corner
+      // and the object in the middle, so every tile showed an object floating
+      // on black.
+      Iso.setView(66, 118, 1, 0);
+      // A patch of lawn for the object to stand on, in the same isometric
+      // convention as the board.
+      for (var r = -2; r <= 2; r++) {
+        for (var cc = -2; cc <= 2; cc++) {
+          Iso.tile(cx2, cc, r, (r + cc) % 2 === 0 ? stage.ground
+                                                  : stage.groundAlt);
+        }
+      }
+      if (Scenery.has(kind)) {
+        Scenery.draw(kind, cx2, 0, 0, stage);
+      } else {
+        cx2.fillStyle = "#a33";
+        cx2.font = "13px monospace";
+        cx2.fillText("NO OBJECT", 22, 100);
+      }
+    });
+
+    // ---- facts -----------------------------------------------------------
+    var counts = {};
+    for (var r2 = 0; r2 < 40; r2++) {
+      for (var c2 = 0; c2 < COLS; c2++) {
+        var k = Scene.sceneryFor(stage, r2, c2, -1, -1);
+        if (k) counts[k] = (counts[k] || 0) + 1;
+      }
+    }
+    var lanes = {};
+    for (var r3 = 0; r3 < 20; r3++) {
+      var L = Scene.laneOf(r3, stage);
+      lanes[L] = (lanes[L] || 0) + 1;
+    }
+    document.getElementById("facts").innerHTML =
+      "player at col <b>" + ps.col + "</b> row <b>" + ps.row + "</b>" +
+      " &nbsp; hazards on board: <b>" + st.hazards.length + "</b>" +
+      " &nbsp; lane cycle: <b>" + JSON.stringify(lanes) + "</b>" +
+      " &nbsp; scenery over 40 rows: <b>" + JSON.stringify(counts) + "</b>";
+
+  } catch (e) {
+    fail(e);
+  }
+})();
+</script>
+</body>
+</html>
