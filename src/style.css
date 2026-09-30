@@ -73,10 +73,27 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: rgba(10, 10, 10, 0.72);
+  /* The banner sits in the MIDDLE, not across the whole board. At inset:0
+     with 72% black it dimmed the entire canvas, so the character and the
+     lanes were invisible behind the "Tap to start" prompt -- a first-time
+     player sees a dark screen and no avatar at all. */
+  background: none;
   text-align: center;
   pointer-events: none;
 }
+
+#banner::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 38%;
+  bottom: 38%;
+  background: rgba(10, 10, 10, 0.66);
+  border-radius: 10px;
+}
+
+.banner-title, .banner-sub { position: relative; }
 
 .banner-title { font-size: 20px; font-weight: 700; }
 .banner-sub { font-size: 14px; color: #cfcfcf; }
