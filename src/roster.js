@@ -72,13 +72,19 @@
    *   squash  1.0 is neutral; below 1 squashes on landing, above stretches
    *   sway    horizontal lean at the apex, a personality tell
    */
+  /* The hop durations were 520-700ms. Long enough that each step read as a
+   * pause rather than a movement, which is most of why the game felt like it
+   * was jerking: a slow step cannot hide any roughness in the transition.
+   * Shortening them and easing the interpolation (see main.js playerPose) is
+   * what makes a hop read as smooth AND responsive. The relative order is
+   * preserved, so each character still moves in its own way. */
   var MOTION = {
-    pip:   { hopMs: 600, arc: 0.55, squash: 1.00, sway: 0.00 },
-    bloop: { hopMs: 560, arc: 0.68, squash: 1.06, sway: 0.04 },
-    nib:   { hopMs: 520, arc: 0.80, squash: 0.96, sway: -0.03 },
-    cob:   { hopMs: 700, arc: 0.32, squash: 1.12, sway: 0.00 },
-    fizz:  { hopMs: 620, arc: 0.62, squash: 0.98, sway: 0.07 },
-    mozz:  { hopMs: 580, arc: 0.46, squash: 1.08, sway: -0.05 },
+    pip:   { hopMs: 400, arc: 0.55, squash: 1.00, sway: 0.00 },
+    bloop: { hopMs: 375, arc: 0.68, squash: 1.06, sway: 0.04 },
+    nib:   { hopMs: 350, arc: 0.80, squash: 0.96, sway: -0.03 },
+    cob:   { hopMs: 470, arc: 0.32, squash: 1.12, sway: 0.00 },
+    fizz:  { hopMs: 415, arc: 0.62, squash: 0.98, sway: 0.07 },
+    mozz:  { hopMs: 390, arc: 0.46, squash: 1.08, sway: -0.05 },
   };
 
   function motionFor(id) { return MOTION[id] || MOTION.pip; }

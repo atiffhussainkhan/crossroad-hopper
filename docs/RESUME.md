@@ -282,3 +282,68 @@ Two more gates, each proved non-vacuous: one refuses a `startHop` that never
 resolves the player's `state()` (stripping comments and excluding
 `game.state()`, because both otherwise satisfy a naive substring check), and
 one asserts the death beat actually freezes the world and puts the player back.
+
+
+---
+
+## UPDATE — the player is centred, and the motion is smooth
+
+### Why the player was in the corner
+
+Three attempts, each fixing one thing and breaking another:
+
+1. **Centre the board.** The player starts on the board's edge, so they were
+   pinned to the left of the frame for the whole stage.
+2. **Centre the player, unclamped.** At column 0 two thirds of the board went
+   off the right edge, so the lanes ahead were invisible.
+3. **Centre the player, clamped so the board stays inside.** The board came out
+   almost exactly as wide as the frame, so the clamp had nowhere to go: it
+   pinned the board and the player slid around inside a fixed window, still
+   off to one side.
+
+The way out is that a follow camera can only centre the player if there is
+**board on both sides of them**, which means the board must be WIDER than the
+view. So:
+
+- the board is **14 columns**; the player moves within the middle **6**
+  (`playMin` 4, `playMax` 9), and lateral movement is clamped to that band
+  rather than to the board;
+- the camera fits **6 columns** to the width and pans freely, because a board
+  wider than the frame covers the view at any offset;
+- traffic is confined to the playable band, so every car on screen is a car
+  that can actually hit you. The margin columns are never occupied and never
+  appear in frame.
+
+Note the trade-off, honestly: the playable road is now 6 columns wide rather
+than 9, so each lane is easier to cross than it was. That is a real difficulty
+reduction, not a free camera change -- and it is why P-12 went from 62% to
+**96%**, so the gate is now green for the first time in the project's history.
+If the curve later reads too flat, widening `playMin`/`playMax` is the dial.
+
+### Why the motion jerked
+
+The camera focused on the **simulated** cell, which moves instantly, while the
+character was still animating toward it. The board therefore snapped a whole
+row forward on the frame the key was pressed and the character caught up
+afterwards -- a jolt, not a step. Measured after the fix, the camera row walks
+`3.000 -> 3.233 -> 3.786 -> 4.000` across a hop instead of jumping.
+
+Three changes:
+
+- `playerPose()` computes one shared pose -- position, lift, squash, sway --
+  and **both the camera and the character read it**, so the frame moves as one
+  thing.
+- the interpolation is **eased** with a smoothstep. Linear interpolation starts
+  and stops abruptly, which reads as a snap at both ends of every hop. The arc
+  deliberately keeps the linear progress so its apex stays mid-hop.
+- hop durations came down from 520-700ms to 350-470ms. A slow step cannot hide
+  any roughness in the transition, so most of the "jerk" was really "slowness".
+
+### Gates
+
+Two new, each proved non-vacuous: one drives the camera to every column of the
+playable band and asserts the board still COVERS the frame and the player is
+centred within 2px; one asserts the player starts on a whole cell in the
+middle of the playable band. The camera check deliberately asserts the board
+*covers* the frame rather than fitting inside it -- those are opposite
+requirements, and a check written for one rejects the other.

@@ -127,23 +127,57 @@
      * lane they cannot time. The number of visible rows then falls out of
      * whatever height is left over, which is the right way round for a game
      * about reading distance. */
+    /* Fit the WIDTH to a few columns, not to the whole board, and let the
+     * camera pan across the rest.
+     *
+     * Fitting the board's own width made it come out almost exactly as wide as
+     * the frame, so there was no room for the camera to go anywhere: the
+     * clamp pinned it and the player slid around inside a fixed window,
+     * still stuck near the edge. The board has to be WIDER than the view for a
+     * follow camera to have anything to follow.
+     *
+     * All nine columns have to be reachable and the lanes in front of the
+     * player have to be readable, which is what the visible width buys: a few
+     * columns either side of the player, at a size you can still see a car in.
+     */
+    var visibleCols = Math.max(5, Math.min(cols, 6));
     var boardW = cols * TILE_W;
-    var scale = (width - margin * 2) / boardW * zoom;
+    var scale = (width - margin * 2) / (visibleCols * TILE_W) * zoom;
     if (scale > 1.5) scale = 1.5;          // never blow a small board up huge
     if (scale < 0.2) scale = 0.2;
-    /* Centre the BOARD horizontally, put the PLAYER low.
+    /* Follow the PLAYER horizontally, but never let the board leave the frame.
      *
-     * Centring the player was wrong: at column 0 it pushed two thirds of the
-     * nine-column board off the right edge, so the lanes the player had not
-     * reached were invisible and the traffic on them was unjudgeable. The
-     * board is what has to be fully on screen -- a vehicle can arrive in any
-     * column. The player drifts within the frame as they move, which is what
-     * the genre does. */
+     * Two earlier attempts each broke something. Centring the BOARD put the
+     * player in the left-hand corner for the whole game, because they start at
+     * the board's edge. Centring the PLAYER with no clamp pushed two thirds of
+     * the board off the right edge at column 0, so the lanes the player had
+     * not reached were invisible and the traffic on them was unjudgeable.
+     *
+     * So: follow the player, then clamp the result so the board's edges stay
+     * inside the frame. The player is centred wherever there is board on both
+     * sides, and slides toward the edge only when they walk to it -- which is
+     * how every game with a bounded play area behaves. */
     if (focusCol !== null && focusCol !== undefined) {
-      var boardMid = project(cols / 2 - (col0 || 0), 0, 0)[0];
+      var boardL = project(0 - (col0 || 0), 0, 0)[0];
+      var boardR = project(cols - (col0 || 0), 0, 0)[0];
+      var boardW = (boardR - boardL) * scale;
+      var fpX = project(focusCol - (col0 || 0), 0, 0)[0];
+      var want = width / 2 - fpX * scale;
+      var ox;
+      if (boardW >= width - margin * 2) {
+        // The board is wider than the frame, so it covers it at any offset.
+        // Clamping here would pin it and defeat the whole point: follow the
+        // player freely, and the board always fills the view.
+        ox = want;
+      } else {
+        // Board narrower than the frame: clamp so its edges stay inside,
+        // otherwise walking to one side would show empty space.
+        var lo = margin - boardL * scale;
+        var hi = width - margin - boardR * scale;
+        ox = want < lo ? lo : (want > hi ? hi : want);
+      }
       var fp = project(focusCol - (col0 || 0), focusRow, 0);
-      setView(width / 2 - boardMid * scale,
-              height * biasY - fp[1] * scale, scale, col0);
+      setView(ox, height * biasY - fp[1] * scale, scale, col0);
       return;
     }
     var mid = project(cols / 2 - (col0 || 0), row0 + viewRows / 2, 0);

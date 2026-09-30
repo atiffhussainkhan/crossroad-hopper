@@ -43,7 +43,7 @@
   };
 
   // Per-column speed variance, so two hazards in the same row are not a wall.
-  function makeHazard(kind, row, cols, rng, difficulty) {
+  function makeHazard(kind, row, cols, rng, difficulty, xMin) {
     var spec = KINDS[kind];
     if (!spec) return null;
     var dir = rng.bool() ? 1 : -1;
@@ -54,7 +54,7 @@
     return {
       kind: kind, spec: spec, row: row, dir: dir,
       speed: sp * dir,
-      x: rng.range(-cols, cols),        // fractional column position
+      x: rng.range(xMin === undefined ? -cols : xMin - 0.5, cols + 0.5),
       wobble: rng.range(0.5, 1.5),      // log drift phase
       dead: false,
     };
@@ -128,7 +128,7 @@
    *
    * Generating per row and keeping the result means: existing cars keep
    * driving, new rows appear ahead, and nothing behind is disturbed. */
-  function buildRow(row, cols, density, Rng, stageIndex, laneMixIn, laneKeyIn) {
+  function buildRow(row, cols, density, Rng, stageIndex, laneMixIn, laneKeyIn, xMin) {
     var rng = Rng;
     var out = [];
     var laneMix = laneMixIn, laneKey = laneKeyIn;
@@ -153,7 +153,7 @@
     if (!k || !KINDS[k]) return out;
     if (rng.next() > density) return out;
     var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1
-    var h = makeHazard(k, row, cols, rng, 0);
+    var h = makeHazard(k, row, cols, rng, 0, xMin);
     if (!h) return out;
     if (dirHint === 0) h.dir = 1;       // guarantee some direction variety
     h.speed = Math.abs(h.speed) * h.dir;
@@ -164,12 +164,17 @@
   /* The same row, generated on demand, from its own seed. Deterministic:
    * asking twice gives the same car in the same place, so a row can be
    * re-queried without the board jumping. */
-  function hazardsForRow(seed, row, cols, difficulty, Rng, stageIndex) {
+  /* `xMin` is the leftmost column the player can occupy. Traffic is confined
+   * to the playable band, because the board is deliberately wider than the
+   * view (so the camera can follow the player) and a car in a column the player
+   * can never reach is a car that is neither a threat nor worth rendering. */
+  function hazardsForRow(seed, row, cols, difficulty, Rng, stageIndex, xMin) {
     var base = Math.min(0.26 + 0.26, 0.22 + difficulty * 0.022);
+    var lo = xMin === undefined ? 0 : xMin;
     var rowRng = (Rng && Rng.fork) ? Rng.fork(String(row))
             : (global.SimCore && global.SimCore.createRng
                ? global.SimCore.createRng(seed + ":r" + row) : Rng);
-    var made = buildRow(row, cols, base, rowRng, stageIndex);
+    var made = buildRow(row, cols, base, rowRng, stageIndex, null, null, lo);
     for (var i = 0; i < made.length; i++) {
       // Speed depends on the difficulty at the moment the row comes into view.
       made[i].speed *= 1 + Math.min(12, difficulty) * 0.020;

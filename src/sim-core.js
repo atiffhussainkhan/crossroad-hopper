@@ -94,11 +94,12 @@
          * genre, so this path has to be right. */
         if (direction === "forward") { state.row += 1; state.hops += 1; return true; }
         if (direction === "left") {
-          if (state.col <= 0) return false;
+          if (state.col <= (state.minCol === undefined ? 0 : state.minCol)) return false;
           state.col -= 1; return true;
         }
         if (direction === "right") {
-          if (state.col >= state.cols - 1) return false;
+          var far = state.maxCol === undefined ? state.cols - 1 : state.maxCol;
+          if (state.col >= far) return false;
           state.col += 1; return true;
         }
         if (direction === "back") {
@@ -229,7 +230,18 @@
       hazardRows: 0,
       hazardSeed: seed,
       leadRow: 0,
-      cols: 9,
+      /* The board is WIDER than the frame on purpose.
+       *
+       * A follow camera can only centre the player if there is board on both
+       * sides of them, which means the board has to be wider than the view --
+       * otherwise centring one of them pushes the other off the edge, and
+       * every arrangement is wrong somewhere. So the board is 14 columns and
+       * the player moves within the middle 6. The outer columns are never
+       * occupied and never carry traffic; they are the margin that lets the
+       * camera follow. */
+      cols: 14,
+      playMin: 4,
+      playMax: 9,
       playerCount: playerCount,
       activePlayer: 0,
       players: [],
@@ -239,7 +251,18 @@
     };
 
     for (var i = 0; i < playerCount; i++) {
-      var p = createPlayer(i === 0 ? 0 : 2, Stages.STAGE_START_LIVES, g.cols);
+      /* Start in the MIDDLE of the board, not on its edge.
+       *
+       * A player who begins at column 0 is pinned to the left of the frame
+       * for the whole stage, and it reads as the character having been left
+       * behind rather than as the game being ready. Two players start either
+       * side of the centre so they are not fighting for one lane. */
+      // Rounded: a player must start on a whole cell, not on a half one.
+      var mid = Math.round((g.playMin + g.playMax) / 2);
+      var startCol = g.playerCount < 2 ? mid : (i === 0 ? mid - 2 : mid + 2);
+      var p = createPlayer(startCol, Stages.STAGE_START_LIVES, g.cols);
+      p.state().minCol = g.playMin;
+      p.state().maxCol = g.playMax;
       p.state().startCol = p.state().col;
       g.players.push(p);
     }
@@ -426,7 +449,8 @@
           if (gen[nr]) continue;
           gen[nr] = true;
           var made = H.hazardsForRow(g.hazardSeed + ":" + g.stageIndex, nr,
-                                     g.cols, diff, g.rng, g.stageIndex);
+                                     g.playMax, diff, g.rng, g.stageIndex,
+                                     g.playMin);
           for (var mk = 0; mk < made.length; mk++) g.hazards.push(made[mk]);
           added = true;
         }

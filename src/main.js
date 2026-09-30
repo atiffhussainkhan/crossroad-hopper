@@ -89,7 +89,7 @@
     if (p >= 1) { var done = hopAnim; hopAnim = null; return { p: 1, done: done }; }
     return { p: Math.max(0, p), done: hopAnim };
   }
-  var BOARD_COLS = 9;    // must match SimCore's g.cols
+  var BOARD_COLS = 14;   // must match SimCore's g.cols
   var DPR_CAP = 3;   // above 3x the pixels are invisible and cost frame time
   function sizeCanvas() {
     var dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -120,6 +120,40 @@
     }
     render();
     requestAnimationFrame(frame);
+  }
+
+  /* Where a player is RIGHT NOW, in world coordinates.
+   *
+   * The simulation moves a player instantly from one cell to the next; the hop
+   * is presentation. The camera used to focus on the SIMULATED cell while the
+   * character was still animating toward it, so the board snapped a whole row
+   * forward on the frame the key was pressed and then the character caught up
+   * -- the single biggest source of jerk in the game, and the reason a hop
+   * felt like a jolt rather than a step.
+   *
+   * Both the camera and the drawing now read THIS, so they move together and
+   * the whole frame glides. The position is also eased: linear interpolation
+   * starts and stops abruptly, which reads as a snap at both ends of every
+   * hop, so a smoothstep is applied on top of the linear progress. */
+  function playerPose(index) {
+    var s = game.state();
+    var ps = s.players[index].state();
+    var pose = { col: ps.col, row: ps.row, lift: 0, squash: 1, sway: 0, dead: !ps.alive };
+    if (pose.dead) { pose.squash = 0.30; return pose; }
+    var prog = hopProgress();
+    if (!prog) return pose;
+    var a = prog.done, p = prog.p;
+    // Smoothstep: zero velocity at both ends, so the hop eases in and out.
+    var e = p * p * (3 - 2 * p);
+    pose.col = a.fc + (a.tc - a.fc) * e;
+    pose.row = a.fr + (a.tr - a.fr) * e;
+    // The arc uses the linear progress so its apex stays at the midpoint of
+    // the hop; smoothing it too would make the character hang at the top.
+    pose.lift = Math.sin(p * Math.PI) * a.arc;
+    pose.squash = a.squash * (1 + Math.sin(p * Math.PI) * 0.10);
+    if (p > 0.86) pose.squash -= (p - 0.86) * 1.2;   // flatten on landing
+    pose.sway = a.sway;
+    return pose;
   }
 
   // ---------- Rendering --------------------------------------------------
@@ -159,8 +193,10 @@
     // Isometric scene from the shared renderer. Everything below is drawn in
     // the same projection, with the same face factors, so the game and the
     // Python preview cannot diverge visually.
-    var anchor = s.players[Math.min(s.activePlayer, s.players.length - 1)].state();
-    var topRow = Math.max(0, anchor.row - 3);
+    var activeIdx = Math.min(s.activePlayer, s.players.length - 1);
+    var anchor = s.players[activeIdx].state();
+    var camPose = playerPose(activeIdx);
+    var topRow = Math.max(0, Math.floor(camPose.row) - 3);
     // The camera focuses on the player's own cell; the view slides so the
     // character sits at the bottom-centre of the frame.
     var colCentre = 0;
@@ -172,8 +208,10 @@
       viewRows: Math.max(9, Math.round(H / 34)),
       row0: topRow,
       col0: colCentre,
-      focusCol: anchor.col,
-      focusRow: anchor.row,
+      // The camera follows the ANIMATED position, not the simulated one, so
+      // the board and the character move as one thing.
+      focusCol: camPose.col,
+      focusRow: camPose.row,
       hazards: s.hazards,
       // The destination. Until this was passed, the finish line was
       // simulated but never drawn: the player was asked to cross an endless
@@ -205,18 +243,10 @@
       // Interpolate along the hop arc instead of teleporting. The simulation
       // has already moved the player; this is presentation only and cannot
       // change where anyone lands.
-      var col = ps.col, row = ps.row, lift = 0, squash = 1, swayNow = 0;
-      var prog = deadNow ? null : hopProgress();
-      if (deadNow) squash = 0.30;      // pressed flat by whatever hit them
-      if (prog) {
-        var a = prog.done, e = prog.p;
-        col = a.fc + (a.tc - a.fc) * e;
-        row = a.fr + (a.tr - a.fr) * e;
-        lift = Math.sin(e * Math.PI) * a.arc;      // 0 at both ends, peak mid
-        squash = a.squash * (1 + Math.sin(e * Math.PI) * 0.10);
-        if (e > 0.86) squash -= (e - 0.86) * 1.2;  // flatten on landing
-        swayNow = a.sway;
-      }
+      // Same pose the camera used, so the character never lags the board.
+      var pose = playerPose(i);
+      var col = pose.col, row = pose.row, lift = pose.lift;
+      var squash = pose.squash, swayNow = pose.sway;
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // DPR only: no extra offset
 

@@ -543,6 +543,7 @@ out.push("right-clamp=" + p.state().col);
 for (var i = 0; i < 30; i++) p.hop("left");
 out.push("left-clamp=" + p.state().col);
 out.push("cols=" + g.state().cols);
+out.push("band=" + g.state().playMin + "-" + g.state().playMax);
 out.push("goal=" + g.state().goalRow);
 print(out.join(" | "));
 """
@@ -554,15 +555,19 @@ print(out.join(" | "));
             kv[k.strip()] = v.strip()
     try:
         cols = int(kv["cols"])
-        if kv.get("right-clamp") != str(cols - 1):
+        band = kv.get("band", "0-%d" % (cols - 1))
+        lo_s, _, hi_s = band.partition("-")
+        lo, hi = int(lo_s), int(hi_s)
+        if kv.get("right-clamp") != str(hi):
             problems.append(
                 f"lateral movement is not bounded: hopping right 30 times leaves "
-                f"the player at column {kv.get('right-clamp')}, not {cols - 1}"
+                f"the player at column {kv.get('right-clamp')}, not {hi} "
+                f"(the edge of the playable band)"
             )
-        if kv.get("left-clamp") != "0":
+        if kv.get("left-clamp") != str(lo):
             problems.append(
                 f"hopping left 30 times leaves the player at column "
-                f"{kv.get('left-clamp')}, not 0"
+                f"{kv.get('left-clamp')}, not {lo}"
             )
         if kv.get("back-at-zero") != "false":
             problems.append("hopping back from the start row is not refused")
@@ -906,6 +911,123 @@ print(out.join(" | "));
     return problems
 
 
+def assert_camera_follows_and_stays_in_frame() -> list[str]:
+    """The camera must follow the player, and the board must always fill the
+    frame.
+
+    Three defects, one after another:
+      - centring the BOARD left the player pinned in the left-hand corner;
+      - centring the PLAYER with no clamp pushed two thirds of the board off
+        the right edge at column 0, so the lanes ahead were invisible;
+      - the board was made almost exactly as wide as the frame, so the clamp
+        pinned it and the player still could not be centred.
+
+    The board is now deliberately WIDER than the view, with a playable band
+    inside it, so there is always road on both sides of the player and the
+    camera can pan freely. That means the board must COVER the frame rather
+    than fit inside it -- the two are opposite requirements and a gate that
+    checks for one will reject the other.
+    """
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+var W = 440;
+var g = SimCore.createGame({ playerCount: 1, seed: "cam" });
+var lo = g.state().playMin, hi = g.state().playMax, COLS = g.state().cols;
+out.push("cols=" + COLS);
+out.push("band=" + lo + "-" + hi);
+for (var fc = lo; fc <= hi; fc++) {
+  Iso.frameViewWindow(COLS, 16, W, 537, 10, 1.5, 18, 0.72, 1, 0, fc, 10);
+  var xs = [];
+  for (var c = 0; c <= COLS; c++) xs.push(Iso.projectS(c, 10, 0)[0]);
+  var bl = Math.min.apply(null, xs), br = Math.max.apply(null, xs);
+  var p = Iso.projectS(fc, 10, 0)[0];
+  out.push("c" + fc + "=" + bl.toFixed(0) + "," + br.toFixed(0) + "," + p.toFixed(0));
+}
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    W = 440
+    cols = band = None
+    rows = []
+    for chunk in text.split(" | "):
+        if chunk.startswith("cols="):
+            cols = int(chunk.split("=")[1])
+        elif chunk.startswith("band="):
+            band = tuple(int(v) for v in chunk.split("=")[1].split("-"))
+        elif chunk.startswith("c") and "=" in chunk:
+            key, _, v = chunk.partition("=")
+            bl, br, px = (float(n) for n in v.split(","))
+            rows.append((int(key[1:]), bl, br, px))
+    if not rows or band is None:
+        return [f"could not parse the camera probe: {text[:200]}"]
+    for fc, bl, br, px in rows:
+        if bl > 1 or br < W - 1:
+            problems.append(
+                f"at column {fc} the board spans {bl:.0f}..{br:.0f} in a {W}px "
+                f"frame: it no longer covers the view, so the player would see "
+                f"empty space beside the road"
+            )
+        if abs(px - W / 2) > 2:
+            problems.append(
+                f"at column {fc} the player is at x={px:.0f} in a {W}px frame; "
+                f"the camera should keep them centred (within 2px)"
+            )
+    return problems
+
+
+def assert_player_starts_in_the_middle() -> list[str]:
+    """A player who begins on the board's edge is pinned to the edge of the
+    frame for the whole stage, which reads as the character having been left
+    behind rather than as the game being ready."""
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var g = SimCore.createGame({playerCount: 1, seed: "start"});
+var g2 = SimCore.createGame({playerCount: 2, seed: "start2"});
+var mid = (g.state().cols - 1) / 2;
+print("cols=" + g.state().cols +
+      " p0=" + g.state().players[0].state().col +
+      " p1=" + g2.state().players[1].state().col +
+      " lo=" + g.state().playMin +
+      " hi=" + g.state().playMax +
+      " mid=" + mid);
+"""
+    text = run_jsc(script).strip()
+    kv = dict()
+    for part in text.split():
+        if "=" in part:
+            k, _, v = part.partition("=")
+            kv[k] = v
+    try:
+        cols = int(kv["cols"])
+        mid = (int(kv["lo"]) + int(kv["hi"])) / 2
+        if float(kv["p0"]) % 1 != 0:
+            problems.append(
+                f"the player starts at column {kv['p0']}, which is not a whole "
+                f"cell; it would be drawn between two lanes"
+            )
+        lo_i, hi_i = int(kv["lo"]), int(kv["hi"])
+        # An even-width band has TWO middle cells (4..9 -> 6 and 7); either is
+        # centred as far as the band allows.
+        half = (hi_i - lo_i) // 2
+        middles = [lo_i + half, hi_i - half]
+        if float(kv["p0"]) not in middles:
+            problems.append(
+                f"the single player starts at column {kv['p0']}, not the middle "
+                f"of the playable band ({kv['lo']}-{kv['hi']}); they will sit "
+                f"off to one side of the frame"
+            )
+        if abs(float(kv["p1"]) - mid) < 0.01:
+            problems.append(
+                "both players start in the same column in two-player mode"
+            )
+    except (KeyError, ValueError):
+        return [f"could not parse the start-column probe: {text[:160]}"]
+    return problems
+
+
 def main() -> int:
     problems = (assert_undeclared() + assert_chain_runs()
                 + assert_scene_contract()
@@ -917,7 +1039,9 @@ def main() -> int:
                 + assert_face_is_on_the_head()
                 + assert_hazards_survive_a_hop()
                 + assert_hop_never_blanks_the_player()
-                + assert_death_freezes_the_board())
+                + assert_death_freezes_the_board()
+                + assert_camera_follows_and_stays_in_frame()
+                + assert_player_starts_in_the_middle())
     files = [ROOT / rel for rel in CHAIN] + [ROOT / DOM_ENTRY]
     print(f"files scanned        : {len(files)}")
     print(f"module chain         : {len(CHAIN)}")
