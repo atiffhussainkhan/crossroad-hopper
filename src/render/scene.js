@@ -173,7 +173,8 @@
     // runs only when explicitly requested by the offline preview sheet.
     var simHazards = Array.isArray(opts.hazards) ? opts.hazards : null;
     var tall = scene.id === 5 ? 2.3 : 1.5;
-    I.frameViewWindow(cols, viewRows, width, height, row0, tall, 26, 0.44, 1);
+    I.frameViewWindow(cols, viewRows, width, height, row0, tall, 18, 0.46, 1,
+                     opts.col0 || 0);
 
     var rows = [];
     for (var r = row0; r < row0 + viewRows; r++) rows.push(r);

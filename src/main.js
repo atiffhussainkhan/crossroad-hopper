@@ -75,19 +75,24 @@
     // CSS pixels. VIEW_SCALE was a leftover from an earlier draft and was
     // never declared: reading it threw on frame 1, which killed the
     // requestAnimationFrame chain permanently.
-    var dpr = canvas.width / (canvas.clientWidth || canvas.width);
+    var dpr = canvas.width / (canvas.clientWidth || 1);
+    if (!isFinite(dpr) || dpr <= 0) dpr = 1;
     var W = canvas.width / dpr;
     var H = canvas.height / dpr;
 
     // Isometric scene from the shared renderer. Everything below is drawn in
     // the same projection, with the same face factors, so the game and the
     // Python preview cannot diverge visually.
-    var topRow = Math.max(0, s.players[Math.min(s.activePlayer, s.players.length - 1)].state().row - 3);
+    var anchor = s.players[Math.min(s.activePlayer, s.players.length - 1)].state();
+    var topRow = Math.max(0, anchor.row - 3);
+    // Slide the view so the player's own column is bottom-centre.
+    var colCentre = Math.max(0, anchor.col - Math.round((W / 42) / 2 - 1));
     Scene.renderScene(ctx, sceneFor(stage), {
       width: W, height: H,
       cols: Math.max(5, Math.round(W / 42)),
       viewRows: Math.max(7, Math.round(H / 34)),
       row0: topRow,
+      col0: colCentre,
       hazards: s.hazards,
     });
 

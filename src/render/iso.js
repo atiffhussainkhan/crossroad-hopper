@@ -77,7 +77,9 @@
 
   var VIEW = { ox: 0, oy: 0, scale: 1 };
 
-  function setView(ox, oy, scale) { VIEW.ox = ox; VIEW.oy = oy; VIEW.scale = scale; }
+  function setView(ox, oy, scale, col0) {
+    VIEW.ox = ox; VIEW.oy = oy; VIEW.scale = scale; VIEW.col0 = col0 || 0;
+  }
 
   function project(col, row, z) {
     z = z || 0;
@@ -85,11 +87,13 @@
   }
 
   function projectS(col, row, z) {
-    var p = project(col, row, z);
+    // VIEW.col0 slides the board along the diagonal so the player can sit at
+    // the bottom-centre of a portrait frame while far columns crop off.
+    var p = project(col - (VIEW.col0 || 0), row, z);
     return [p[0] * VIEW.scale + VIEW.ox, p[1] * VIEW.scale + VIEW.oy];
   }
 
-  function frameViewWindow(cols, viewRows, width, height, row0, zmax, margin, biasY, zoom) {
+  function frameViewWindow(cols, viewRows, width, height, row0, zmax, margin, biasY, zoom, col0) {
     zmax = zmax || 0; margin = margin || 20; biasY = biasY === undefined ? 0.54 : biasY;
     zoom = zoom || 1;
     var xs = [], ys = [];
@@ -103,9 +107,14 @@
     var minx = Math.min.apply(null, xs), maxx = Math.max.apply(null, xs);
     var miny = Math.min.apply(null, ys), maxy = Math.max.apply(null, ys);
     var bw = Math.max(maxx - minx, 1e-6), bh = Math.max(maxy - miny, 1e-6);
-    var scale = Math.min((width - margin * 2) / bw, (height - margin * 2) / bh) * zoom;
+    // Fit HEIGHT, not width. A 2:1 isometric diamond cannot fill a portrait
+    // frame by fitting, and fitting to width left the board a small band in
+    // the middle with dead space above and below. Let the columns crop.
+    var scale = (height - margin * 2) / bh * zoom;
+    var maxScale = (width - margin) / (TILE_W * 1.2);
+    if (scale > maxScale) scale = maxScale;
     setView(width / 2 - (minx + maxx) / 2 * scale,
-            height * biasY - (miny + maxy) / 2 * scale, scale);
+            height * biasY - (miny + maxy) / 2 * scale, scale, col0);
   }
 
   // ---------- primitives -------------------------------------------------
