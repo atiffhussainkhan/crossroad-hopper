@@ -38,7 +38,7 @@
     var sp = spec.speed[0] + (spec.speed[1] - spec.speed[0]) * rng.next();
     // Difficulty raises the ceiling only. The floor never drops, so stage one
     // is never faster than its slowest vehicle.
-    sp *= 1 + Math.min(difficulty, 12) * 0.018;
+    sp *= 1 + Math.min(difficulty, 12) * 0.016;
     return {
       kind: kind, spec: spec, row: row, dir: dir,
       speed: sp * dir,
@@ -55,7 +55,7 @@
     var out = [];
     // Density ramps with difficulty but never reaches 1: a lane that is
     // always occupied is not a puzzle, it is a wall.
-    var density = Math.min(0.30, 0.07 + difficulty * 0.012);
+    var density = Math.min(0.22, 0.05 + difficulty * 0.010);
     for (var r = 0; r < viewRows; r++) {
       var row = row0 + r;
       var k = null;
@@ -130,7 +130,12 @@
     return out;
   }
 
-  function tickHazards(list, dt, cols) {
+  /* dt is in MILLISECONDS. speed is in tiles per SECOND. The conversion below
+   * is the whole reason collision is a timing puzzle rather than a coin flip;
+   * without it a hazard crosses the entire board roughly 2.7 times per frame
+   * and the autoplay's safety model, which uses seconds, is wrong by 1000x. */
+  function tickHazards(list, dtMs, cols) {
+    var dt = dtMs / 1000;
     for (var i = 0; i < list.length; i++) {
       var h = list[i];
       if (h.spec.kind === "air") continue;          // steel is suspended

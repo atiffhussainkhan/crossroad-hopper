@@ -91,20 +91,22 @@
       hazards: s.hazards,
     });
 
-    // Players, drawn in the same isometric space as the board.
+    // Players, drawn through the SAME projection the simulation collides in.
+    // A hand-tuned screen offset drifted further the further the player
+    // travelled -- 10 tiles at row 12, 79 at row 40 -- so the player was
+    // drawn 5.8 to 21 tiles from the hazard that killed it.
     for (var i = 0; i < s.players.length; i++) {
       var ps = s.players[i].state();
       if (!ps.alive) continue;
-      // The roster owns the cast. __hopperChars was never assigned, so
-      // every player silently fell back to the default character.
       var who = (typeof Roster !== "undefined" && Roster.ROSTER)
-        ? Roster.ROSTER[i % Roster.ROSTER.length]
-        : null;
-      var px = Math.round(W / 2 + (ps.col - (s.players.length - 1) / 2) * 26);
-      var py = Math.round(H * 0.62 + (ps.row - topRow) * 15);
+        ? Roster.ROSTER[i % Roster.ROSTER.length] : null;
+      // The board is centred on the player's own column, so draw every player
+      // at its true (col, row) and let the projection place it.
+      var here = Iso.projectS(ps.col, ps.row, 0);
+      var mid = Iso.projectS((s.players.length - 1) / 2, ps.row, 0);
       ctx.save();
-      ctx.translate(px, py);
-      ctx.scale(dpr * 0.62, dpr * 0.62);
+      ctx.translate(here[0] + (W / 2 - mid[0]), here[1]);
+      ctx.scale(dpr * 0.9, dpr * 0.9);
       CharacterRenderer.drawCharacter(ctx, 0, 0, 0.9, who || undefined);
       ctx.restore();
     }
@@ -113,7 +115,10 @@
     var pu = game.state().pursuer.state();
     if (pu.mode !== "DISTANCE_LOCKED") {
       var purRow = (pu.mode === "ACTIVE") ? pu.row : pu.spawnRow;
-      var q = Iso.projectS(0, purRow - topRow, 0.4);
+      // Absolute row, same projection as the player, and centred on the
+      // board rather than pinned to column 0: the kill rule is row-only, so a
+      // column-0 marker misrepresents where it will actually get you.
+      var q = Iso.projectS((s.players.length - 1) / 2, purRow, 0.4);
       ctx.fillStyle = "#e06060";
       if (pu.mode === "SPAWNING") {
         ctx.beginPath();

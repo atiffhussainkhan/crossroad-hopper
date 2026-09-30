@@ -166,7 +166,12 @@
     var cols = opts.cols, viewRows = opts.viewRows, row0 = opts.row0 || 0;
     // The simulation's hazard list. When supplied, the scene draws THESE and
     // invents none, so the view cannot disagree with what kills.
-    var simHazards = opts.hazards;
+    // opts.hazards is authoritative when it is a real array, INCLUDING an
+    // empty one. The previous test was `simHazards && simHazards.length`,
+    // so an empty simulation list fell through to the decorative path and the
+    // player saw hazards that could not kill them. The decorative path now
+    // runs only when explicitly requested by the offline preview sheet.
+    var simHazards = Array.isArray(opts.hazards) ? opts.hazards : null;
     var tall = scene.id === 5 ? 2.3 : 1.5;
     I.frameViewWindow(cols, viewRows, width, height, row0, tall, 26, 0.44, 1);
 
@@ -192,7 +197,7 @@
     // when available; the decorative fallback only runs if the game has not
     // supplied a list, which is the case for the offline preview sheet.
     var hazards = [];
-    if (simHazards && simHazards.length) {
+    if (simHazards) {
       for (var si = 0; si < simHazards.length; si++) {
         var sh = simHazards[si];
         if (sh.row < row0 || sh.row >= row0 + viewRows) continue;

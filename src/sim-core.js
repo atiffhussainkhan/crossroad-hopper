@@ -267,6 +267,14 @@
 
       if (g.phase === PHASES.ENDLESS) {
         var ep = g.players[idx];
+        // A player who finished a stage arrives here with finished=true, and
+        // hop() refuses finished players -- so endless was a frozen screen.
+        // Clear the flag on entry: endless has no goal row.
+        if (ep.state().finished) {
+          ep.state().finished = false;
+          ep.state().row = 0;
+          ep.state().alive = true;
+        }
         var moved = ep.hop(direction || "forward");
         if (moved) { g.endlessScore += 1; g.activePlayer = idx; }
         return moved;
@@ -363,9 +371,17 @@
         }
       }
 
-      // Goal check.
+      // Goal check. A player who lost their last life this tick must not also
+      // be credited with reaching the goal: death wins the tick, and a stage
+      // cleared on the same frame the player died is a state-machine lie.
+      var stillAlive = true;
       for (var k = 0; k < g.players.length; k++) {
-        g.players[k].reachGoal(g.goalRow);
+        if (g.players[k].state().lives <= 0) stillAlive = false;
+      }
+      if (stillAlive) {
+        for (var m2 = 0; m2 < g.players.length; m2++) {
+          g.players[m2].reachGoal(g.goalRow);
+        }
       }
       if (allFinished()) {
         g.totalScore += Math.floor(g.stageScore);
