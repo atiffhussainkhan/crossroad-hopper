@@ -27,67 +27,16 @@
    * `ground` and `groundAlt` alternate per row to make lanes readable
    * (requirement M-08: hitboxes must be judgeable). */
   var STAGES = [
-    {
-      id: 1, name: "Suburb", turtle: "#d5e8cf", log: "#f0e0d1", scene: "suburb", baseline: 0,
-      ground: "#7ba05b", groundAlt: "#6f9450", seam: "#5d7d42",
-      scenery: ["tree", "hedge", "mailbox"], sceneryDensity: 0.22,
-      hazardKinds: ["car"], laneMix: [1, 0, 0],   // road / rail / water weights
-    },
-    {
-      id: 2, name: "River", turtle: "#b3d5a8", log: "#e4c6a9", scene: "river", baseline: 0,
-      ground: "#3f7fb5", groundAlt: "#37719f", seam: "#2d5c85",
-      scenery: ["reed", "rock"], sceneryDensity: 0.12,
-      hazardKinds: ["log", "turtle"], laneMix: [0.2, 0, 0.8],
-    },
-    {
-      id: 3, name: "Desert", turtle: "#d5e8cf", log: "#f0e0d1", scene: "desert", baseline: 1,
-      ground: "#d9b168", groundAlt: "#cfa45c", seam: "#b98c4a",
-      scenery: ["cactus", "rock", "bone"], sceneryDensity: 0.14,
-      hazardKinds: ["car", "tumbleweed"], laneMix: [0.8, 0, 0.2],
-    },
-    {
-      id: 4, name: "Farmland", turtle: "#d5e8cf", log: "#f0e0d1", scene: "farm", baseline: 1,
-      ground: "#a8bf5e", groundAlt: "#9bb254", seam: "#869a46",
-      scenery: ["haybale", "fence", "tree"], sceneryDensity: 0.24,
-      hazardKinds: ["tractor", "car"], laneMix: [0.9, 0.1, 0],
-    },
-    {
-      id: 5, name: "Night City", turtle: "#609f4b", log: "#c38140", scene: "night", baseline: 2,
-      ground: "#2b2f3a", groundAlt: "#262a34", seam: "#1d2028",
-      scenery: ["neon", "building"], sceneryDensity: 0.3,
-      hazardKinds: ["car", "tram"], laneMix: [0.85, 0.15, 0],
-    },
-    {
-      id: 6, name: "Frozen Lake", turtle: "#3f6932", log: "#855629", scene: "ice", baseline: 2,
-      ground: "#b8d8e8", groundAlt: "#aecfe0", seam: "#9cbdd0",
-      scenery: ["pine", "iceberg"], sceneryDensity: 0.1,
-      hazardKinds: ["crack", "sled"], laneMix: [0.3, 0, 0.7],
-    },
-    {
-      id: 7, name: "Rainforest", turtle: "#aed2a1", log: "#e2c2a2", scene: "jungle", baseline: 3,
-      ground: "#3f7a4a", groundAlt: "#387044", seam: "#2d5c38",
-      scenery: ["vine", "fern", "tree"], sceneryDensity: 0.4,
-      hazardKinds: ["log", "animal", "car"], laneMix: [0.4, 0, 0.6],
-    },
-    {
-      id: 8, name: "Construction", turtle: "#acd19f", log: "#e2c2a2", scene: "construction", baseline: 3,
-      ground: "#8a8f96", groundAlt: "#7f848b", seam: "#6d7278",
-      scenery: ["scaffold", "cone", "crate"], sceneryDensity: 0.26,
-      hazardKinds: ["steel", "forklift"], laneMix: [0.9, 0.1, 0],
-    },
-    {
-      id: 9, name: "Storm", turtle: "#7fb96c", log: "#d2a06f", scene: "storm", baseline: 4,
-      ground: "#4a5560", groundAlt: "#434d57", seam: "#373f48",
-      scenery: ["pylon", "debris"], sceneryDensity: 0.16,
-      hazardKinds: ["car", "tram", "lightning"], laneMix: [0.7, 0.3, 0],
-    },
-    {
-      id: 10, name: "Volcano", turtle: "#7db869", log: "#d2a06f", scene: "volcano", baseline: 4,
-      ground: "#5a3a34", groundAlt: "#52342e", seam: "#432a25",
-      scenery: ["lavaVent", "obsidian", "boulder"], sceneryDensity: 0.2,
-      hazardKinds: ["car", "tram", "log", "steel", "lava"],
-      laneMix: [0.4, 0.2, 0.4],
-    },
+      { id: 1, name: "Suburb", baseline: 0, ground: "#7ba05b", groundAlt: "#6f9450", road: "#4a4a52", water: "#3f7fb5", hazard: "#ff4d3d", hazard2: "#f2a03d", foliage: "#3f8a3d", foliage2: "#57a84f", trunk: "#7a5433", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["car"], scenery: ["tree", "hedge", "mailbox"] },
+      { id: 2, name: "River", baseline: 0, ground: "#3f7fb5", groundAlt: "#37719f", road: "#4a4a52", water: "#2f6f9f", hazard: "#ff4d3d", hazard2: "#8a5a2b", foliage: "#2f6b40", foliage2: "#438a52", trunk: "#6b4a2b", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["log", "turtle"], scenery: ["reed", "rock"] },
+      { id: 3, name: "Desert", baseline: 1, ground: "#d9b168", groundAlt: "#cfa45c", road: "#5a5048", water: "#3f7fb5", hazard: "#ff4d3d", hazard2: "#a89a3a", foliage: "#5f8a3f", foliage2: "#7aa84f", trunk: "#8a6a3a", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["car", "tumbleweed"], scenery: ["cactus", "rock", "bone"] },
+      { id: 4, name: "Farmland", baseline: 1, ground: "#d9d264", groundAlt: "#cbbc58", road: "#54585e", water: "#3f7fb5", hazard: "#ff4d3d", hazard2: "#e8b53d", foliage: "#4a7a3a", foliage2: "#5f9c48", trunk: "#7a5433", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["tractor", "car"], scenery: ["haybale", "fence", "tree"] },
+      { id: 5, name: "Night City", baseline: 2, ground: "#2b3040", groundAlt: "#262b39", road: "#1e222c", water: "#26405e", hazard: "#ff4d3d", hazard2: "#4ad9ff", foliage: "#2a3a4a", foliage2: "#365068", trunk: "#2a2f38", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["car", "tram"], scenery: ["neon", "building"] },
+      { id: 6, name: "Frozen Lake", baseline: 2, ground: "#c8e4f0", groundAlt: "#bcd9e8", road: "#262b33", water: "#5aa0c0", hazard: "#ff4d3d", hazard2: "#6b4a8a", foliage: "#3d6b5a", foliage2: "#4f8570", trunk: "#5a4636", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["crack", "sled"], scenery: ["pine", "iceberg"] },
+      { id: 7, name: "Rainforest", baseline: 3, ground: "#3f7a4a", groundAlt: "#387044", road: "#4a4438", water: "#2f6f8a", hazard: "#ff4d3d", hazard2: "#7ac94f", foliage: "#24522f", foliage2: "#357a42", trunk: "#5a4028", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["log", "animal", "car"], scenery: ["vine", "fern", "tree"] },
+      { id: 8, name: "Construction", baseline: 3, ground: "#9aa0a8", groundAlt: "#8f959d", road: "#6b7078", water: "#4a6a8a", hazard: "#ff4d3d", hazard2: "#e05c4b", foliage: "#7a8a4a", foliage2: "#8fa85a", trunk: "#8a6a3a", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["steel", "forklift"], scenery: ["scaffold", "cone", "crate"] },
+      { id: 9, name: "Storm", baseline: 4, ground: "#4a5560", groundAlt: "#434d57", road: "#333a44", water: "#38566b", hazard: "#ff4d3d", hazard2: "#7ac9e8", foliage: "#2f3742", foliage2: "#3d4a58", trunk: "#33383f", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["car", "tram", "lightning"], scenery: ["pylon", "debris"] },
+      { id: 10, name: "Volcano", baseline: 4, ground: "#5a3a34", groundAlt: "#52342e", road: "#3a2a26", water: "#8a3a1a", hazard: "#ff4d3d", hazard2: "#ffd23d", foliage: "#2a1a18", foliage2: "#3f2622", trunk: "#3a2a26", log: "#ffffff", turtle: "#4a7a3a", hazardKinds: ["car", "tram", "log", "steel", "lava"], scenery: ["lavaVent", "obsidian", "boulder"] },
   ];
 
   /* Difficulty is two-dimensional:

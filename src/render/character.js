@@ -32,9 +32,9 @@
   function drawCharacter(ctx, col, row, scale, ch) {
     scale = scale === undefined ? 1 : scale;
     ch = ch || (global.Roster ? global.Roster.getCharacter("pip") : {
-      body: "#f7e3c8", accent: "#2fbfa0", ear: "#f0b9c0", mark: "#ffffff",
+      body: "#f7e3c8", accent: "#2fbfa0", earColor: "#f0b9c0", mark: "#ffffff",
       bodyW: 0.56, bodyH: 0.28, headW: 0.64, headH: 0.36,
-      ear: "triangle", earScale: 1, eyeScale: 1,
+      earKind: "triangle", earScale: 1, eyeScale: 1,
     });
 
     var body = ch.body, accent = ch.accent, earC = ch.ear;
@@ -60,10 +60,10 @@
     var hcx = I.projectS(col + 0.5, row + 0.5, headZ)[0];
     var hcy = I.projectS(col + 0.5, row + 0.5, headZ)[1];
     var spread = (hw / 2) * 32 * scale +
-                 (ch.ear === "round" ? 7 * scale : 3);
+                 (ch.earKind === "round" ? 7 * scale : 3);
 
     // --- silhouette-defining feature -------------------------------------
-    if (ch.ear === "triangle") {
+    if (ch.earKind === "triangle") {
       [-1, 1].forEach(function (sx) {
         var ex = hcx + sx * spread * 0.92, h = 21 * es * scale;
         I.poly(ctx, [[ex, hcy - h], [ex - 10 * es * scale, hcy + 3 * scale],
@@ -71,19 +71,19 @@
         I.poly(ctx, [[ex, hcy - h * 0.62], [ex - 5 * es * scale, hcy + 2 * scale],
                      [ex + 5 * es * scale, hcy + 2 * scale]], earC);
       });
-    } else if (ch.ear === "tall") {
+    } else if (ch.earKind === "tall") {
       [-1, 1].forEach(function (sx) {
         var ex = hcx + sx * spread * 0.66, h = 40 * es * scale;
         I.ellipse(ctx, ex, hcy - h * 0.5, 8 * es * scale, h * 0.5, body);
         I.ellipse(ctx, ex, hcy - h * 0.5, 4 * es * scale, h * 0.34, earC);
       });
-    } else if (ch.ear === "round") {
+    } else if (ch.earKind === "round") {
       [-1, 1].forEach(function (sx) {
         var ex = hcx + sx * spread * 0.95;
         I.ellipse(ctx, ex, hcy - 5 * scale, 10 * es * scale, 10 * es * scale, body);
         I.ellipse(ctx, ex, hcy - 5 * scale, 5 * es * scale, 5 * es * scale, earC);
       });
-    } else if (ch.ear === "horn") {
+    } else if (ch.earKind === "horn") {
       [-1, 1].forEach(function (sx) {
         var ex = hcx + sx * spread * 0.78;
         // A stepped block, not a triangle. Pip has triangles; giving Cob one
@@ -98,7 +98,7 @@
                  I.shade(body, 1.0 - k * 0.06));
         });
       });
-    } else if (ch.ear === "flop") {
+    } else if (ch.earKind === "flop") {
       [[-20, 34, 11], [-48, 26, 9]].forEach(function (L) {
         var a = L[0] * Math.PI / 180, ln = L[1], lw = L[2];
         var ax = hcx + Math.cos(a) * ln * es * scale;
@@ -109,7 +109,7 @@
                      [ax + (ax - hcx) * 0.35, ay + (ay - hcy) * 0.35],
                      [ax - px * lw * es * scale, ay - py * lw * es * scale]], accent);
       });
-    } else if (ch.ear === "antenna") {
+    } else if (ch.earKind === "antenna") {
       I.poly(ctx, [[hcx, hcy + 2 * scale], [hcx + 1 * scale, hcy - 30 * es * scale],
                    [hcx + 3 * scale, hcy - 30 * es * scale], [hcx + 2 * scale, hcy + 2 * scale]], OUTLINE);
       I.ellipse(ctx, hcx + 2 * scale, hcy - 33 * es * scale, 4.5 * scale, 4.5 * scale, accent);

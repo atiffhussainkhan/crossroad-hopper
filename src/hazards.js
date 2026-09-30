@@ -38,7 +38,7 @@
     var sp = spec.speed[0] + (spec.speed[1] - spec.speed[0]) * rng.next();
     // Difficulty raises the ceiling only. The floor never drops, so stage one
     // is never faster than its slowest vehicle.
-    sp *= 1 + Math.min(difficulty, 12) * 0.055;
+    sp *= 1 + Math.min(difficulty, 12) * 0.018;
     return {
       kind: kind, spec: spec, row: row, dir: dir,
       speed: sp * dir,
@@ -55,7 +55,7 @@
     var out = [];
     // Density ramps with difficulty but never reaches 1: a lane that is
     // always occupied is not a puzzle, it is a wall.
-    var density = Math.min(0.55, 0.18 + difficulty * 0.03);
+    var density = Math.min(0.30, 0.07 + difficulty * 0.012);
     for (var r = 0; r < viewRows; r++) {
       var row = row0 + r;
       var k = null;

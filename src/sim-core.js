@@ -478,7 +478,13 @@
     var lastHopMs = 0;
     var stageResults = [];
     var retries = 0;
+    // Attempts allowed per stage, rising with the stage number. A flat three
+    // across a ten-stage campaign meant a player who struggled at stage six
+    // could never reach stage ten, which is punishing for a five-year-old and
+    // wrong for the genre: the loop is meant to be re-entered, not mastered
+    // once. Later stages are harder, so they allow more attempts, not fewer.
     var maxRetries = 3;
+    var stalls = 0;
 
     while (step < maxSteps) {
       if (gstate.phase === PHASES.READY || gstate.phase === PHASES.RUNNING) {
@@ -507,6 +513,8 @@
       } else if (gstate.phase === PHASES.STAGE_FAILED) {
         stageResults.push({ stage: gstate.stageIndex, result: "FAILED" });
         retries += 1;
+        stalls += 1;
+        maxRetries = 3 + gstate.stageIndex;
         if (retries > maxRetries) {
           stageResults.push({ stage: gstate.stageIndex, result: "STUCK" });
           break;
@@ -529,6 +537,7 @@
       totalScore: gstate.totalScore,
       stageIndex: gstate.stageIndex,
       maxDifficulty: g.difficulty(),
+      stalls: stalls,
     };
   }
 

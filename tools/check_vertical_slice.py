@@ -164,6 +164,15 @@ console.log("@@P@@" + JSON.stringify(rows));
     for stage, rows in by_stage.items():
         rows.sort(key=lambda r: r["t"])
         diffs = [r["d"] for r in rows]
+        # JSON null arrives here as None when the probe could not evaluate the
+        # formula. That is a probe defect, not a game defect, and it must not
+        # crash the gate.
+        if any(d is None for d in diffs):
+            out.append(
+                f"difficulty probe returned null for stage {stage}; the probe "
+                "could not evaluate Stages.difficultyFor"
+            )
+            continue
         if diffs != sorted(diffs):
             out.append(f"difficulty is not monotonic within stage {stage}: {diffs}")
         if diffs[-1] - diffs[0] != 6:
@@ -178,13 +187,16 @@ console.log("@@P@@" + JSON.stringify(rows));
                 )
     # Stage 1 floor must be lower than stage 10 floor, and the campaign must
     # span at least 10 difficulty levels end to end.
-    first = min(r["d"] for r in by_stage[0])
-    last = min(r["d"] for r in by_stage[max(by_stage)])
+    vals = [r["d"] for rs in by_stage.values() for r in rs if r["d"] is not None]
+    if not vals:
+        return out
+    first = min(r["d"] for r in by_stage[0] if r["d"] is not None)
+    last = min(r["d"] for r in by_stage[max(by_stage)] if r["d"] is not None)
     if first != 0:
         out.append(f"stage 1 should start at difficulty 0, got {first}")
     if last <= first:
         out.append(f"stage 10 baseline {last} is not above stage 1 baseline {first}")
-    campaign_span = max(r["d"] for r in d) - min(r["d"] for r in d)
+    campaign_span = max(vals) - min(vals)
     if campaign_span < 10:
         out.append(f"campaign difficulty span is only {campaign_span}, want >= 10")
 
@@ -427,6 +439,8 @@ def main() -> int:
 
     reached_endless = 0
     stalls = 0
+    clock_stalls = 0
+    life_stalls = 0
     final_phases: dict[str, int] = {}
     for r in runs:
         final_phases[r["finalPhase"]] = final_phases.get(r["finalPhase"], 0) + 1
@@ -434,8 +448,14 @@ def main() -> int:
             reached_endless += 1
         # ST-07: a stage failure must never REWIND the campaign. A stall is a
         # different thing from a rewind and is reported separately below.
-        if r["stageIndex"] < 9 and r["finalPhase"] == "STAGE_FAILED":
-            stalls += 1
+        if r["finalPhase"] == "STAGE_FAILED" and r.get("stages"):
+            last_fail = [s for s in r["stages"] if s.get("result") == "FAILED"]
+            if last_fail:
+                stalls += 1
+                if last_fail[-1].get("elapsed", 0) > 88000:
+                    clock_stalls += 1
+                else:
+                    life_stalls += 1
 
     # 6-8. Structural probes.
     probe_result = probe_failures()
@@ -457,8 +477,9 @@ def main() -> int:
     # tuned, because a gate that always fails trains people to ignore it.
     if rate < 90.0:
         failures.append(
-            "P-12 campaign reachability %.0f%% (%d/%d stalled on the stage "
-            "clock while waiting for a gap); target 90%%" % (rate, stalls, len(runs))
+            "P-12 campaign reachability %.0f%%: %d of %d final failures were a "
+            "CLOCK timeout (elapsed > 88s of 90s), %d were four lives lost. "
+            "Target 90%%" % (rate, clock_stalls, stalls, life_stalls)
         )
 
     if failures:

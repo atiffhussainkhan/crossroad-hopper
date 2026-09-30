@@ -41,6 +41,7 @@ gate "check_requirements"   tools/check_requirements.py
 gate "check_testability"    tools/check_testability.py
 gate "check_art_assets"     tools/check_art_assets.py
 gate "check_js_renderer"     tools/check_js_renderer.py
+gate "check_js_runtime"       tools/check_js_runtime.py
 gate "check_vertical_slice" tools/check_vertical_slice.py
 
 echo

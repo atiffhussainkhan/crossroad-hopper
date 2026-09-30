@@ -72,9 +72,12 @@
     var stage = game.currentStage();
     if (!stage) return;
 
-    var W = canvas.width / (VIEW_SCALE || 1);
-    var H = canvas.height / (VIEW_SCALE || 1);
-    var dpr = canvas.width / (canvas.clientWidth || W);
+    // CSS pixels. VIEW_SCALE was a leftover from an earlier draft and was
+    // never declared: reading it threw on frame 1, which killed the
+    // requestAnimationFrame chain permanently.
+    var dpr = canvas.width / (canvas.clientWidth || canvas.width);
+    var W = canvas.width / dpr;
+    var H = canvas.height / dpr;
 
     // Isometric scene from the shared renderer. Everything below is drawn in
     // the same projection, with the same face factors, so the game and the
@@ -92,8 +95,10 @@
     for (var i = 0; i < s.players.length; i++) {
       var ps = s.players[i].state();
       if (!ps.alive) continue;
-      var who = globalThis.__hopperChars
-        ? globalThis.__hopperChars[i % globalThis.__hopperChars.length]
+      // The roster owns the cast. __hopperChars was never assigned, so
+      // every player silently fell back to the default character.
+      var who = (typeof Roster !== "undefined" && Roster.ROSTER)
+        ? Roster.ROSTER[i % Roster.ROSTER.length]
         : null;
       var px = Math.round(W / 2 + (ps.col - (s.players.length - 1) / 2) * 26);
       var py = Math.round(H * 0.62 + (ps.row - topRow) * 15);
@@ -149,7 +154,7 @@
   function sceneFor(stage) {
     return {
       id: stage.id, name: stage.name,
-      ground: stage.ground, groundAlt: stage.alt,
+      ground: stage.ground, groundAlt: stage.groundAlt,
       road: stage.road, water: stage.water,
       hazard: stage.hazard, hazard2: stage.hazard2,
       log: stage.log, turtle: stage.turtle,
@@ -228,7 +233,7 @@
     lastFrameMs = performance.now();
     // NF-06: drop any in-flight pointer so a gesture begun before the tab
     // was hidden cannot resolve after it returns.
-    pointerDownT = 0; downX = 0; downY = 0;
+    downT = 0; downX = 0; downY = 0;
   });
   requestAnimationFrame(function (t) { lastFrameMs = t; frame(t); });
 })();
