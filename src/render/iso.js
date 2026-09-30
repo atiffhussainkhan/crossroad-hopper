@@ -93,7 +93,8 @@
     return [p[0] * VIEW.scale + VIEW.ox, p[1] * VIEW.scale + VIEW.oy];
   }
 
-  function frameViewWindow(cols, viewRows, width, height, row0, zmax, margin, biasY, zoom, col0) {
+  function frameViewWindow(cols, viewRows, width, height, row0, zmax, margin, biasY, zoom,
+                          col0, focusCol, focusRow) {
     zmax = zmax || 0; margin = margin || 20; biasY = biasY === undefined ? 0.54 : biasY;
     zoom = zoom || 1;
     var xs = [], ys = [];
@@ -113,6 +114,15 @@
     var scale = (height - margin * 2) / bh * zoom;
     var maxScale = (width - margin) / (TILE_W * 1.2);
     if (scale > maxScale) scale = maxScale;
+    // Focus the camera on a specific cell when asked. Fitting the whole
+    // board's bounding box leaves the player wherever the projection happens
+    // to put it; a game camera has to put the player where the thumb is.
+    if (focusCol !== null && focusCol !== undefined) {
+      var fp = project(focusCol - (col0 || 0), focusRow, 0);
+      setView(width / 2 - fp[0] * scale,
+              height * biasY - fp[1] * scale, scale, col0);
+      return;
+    }
     setView(width / 2 - (minx + maxx) / 2 * scale,
             height * biasY - (miny + maxy) / 2 * scale, scale, col0);
   }

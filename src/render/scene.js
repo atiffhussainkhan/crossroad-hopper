@@ -173,8 +173,11 @@
     // runs only when explicitly requested by the offline preview sheet.
     var simHazards = Array.isArray(opts.hazards) ? opts.hazards : null;
     var tall = scene.id === 5 ? 2.3 : 1.5;
-    I.frameViewWindow(cols, viewRows, width, height, row0, tall, 18, 0.46, 1,
-                     opts.col0 || 0);
+    // The camera focuses on the player's own cell, so the character always
+    // sits at the bottom-centre under the thumb rather than wherever the
+    // board's bounding box happens to place it.
+    I.frameViewWindow(cols, viewRows, width, height, row0, tall, 18, 0.72, 1,
+                      opts.col0 || 0, opts.focusCol, opts.focusRow);
 
     var rows = [];
     for (var r = row0; r < row0 + viewRows; r++) rows.push(r);

@@ -85,14 +85,17 @@
     // Python preview cannot diverge visually.
     var anchor = s.players[Math.min(s.activePlayer, s.players.length - 1)].state();
     var topRow = Math.max(0, anchor.row - 3);
-    // Slide the view so the player's own column is bottom-centre.
-    var colCentre = Math.max(0, anchor.col - Math.round((W / 42) / 2 - 1));
+    // The camera focuses on the player's own cell; the view slides so the
+    // character sits at the bottom-centre of the frame.
+    var colCentre = 0;
     Scene.renderScene(ctx, sceneFor(stage), {
       width: W, height: H,
       cols: Math.max(5, Math.round(W / 42)),
       viewRows: Math.max(7, Math.round(H / 34)),
       row0: topRow,
       col0: colCentre,
+      focusCol: anchor.col,
+      focusRow: anchor.row,
       hazards: s.hazards,
     });
 
@@ -105,14 +108,18 @@
       if (!ps.alive) continue;
       var who = (typeof Roster !== "undefined" && Roster.ROSTER)
         ? Roster.ROSTER[i % Roster.ROSTER.length] : null;
-      // The board is centred on the player's own column, so draw every player
-      // at its true (col, row) and let the projection place it.
-      var here = Iso.projectS(ps.col, ps.row, 0);
-      var mid = Iso.projectS((s.players.length - 1) / 2, ps.row, 0);
+      // Draw the character at its TRUE world position and let the projection
+      // place it, exactly as the board is drawn.
+      //
+      // The previous version called ctx.translate() with an already-projected
+      // screen coordinate and then called drawCharacter at (0,0), which
+      // projected AGAIN and added the board offset a second time. The player
+      // was drawn at roughly twice the board offset, which is off the canvas
+      // entirely -- so the game rendered with no visible character at all.
       ctx.save();
-      ctx.translate(here[0] + (W / 2 - mid[0]), here[1]);
-      ctx.scale(dpr * 0.9, dpr * 0.9);
-      CharacterRenderer.drawCharacter(ctx, 0, 0, 0.9, who || undefined);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // DPR only: no extra offset
+      ctx.scale(1.45, 1.45);
+      CharacterRenderer.drawCharacter(ctx, ps.col, ps.row, 0.95, who || undefined);
       ctx.restore();
     }
 
