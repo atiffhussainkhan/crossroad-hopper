@@ -51,7 +51,10 @@
     I.castShadow(ctx, col, row, 0.90, 0.42);
 
     // Feet, body, scarf, head: strictly increasing z, decreasing occlusion.
-    I.cubeFrac(ctx, col + (1 - bw * 0.7) / 2, row + (1 - bw * 0.7) / 2, bw * 0.7, bw * 0.7,
+    // The feet are the same width as the body. Narrower, they peek out from
+    // under the front face as a stray wedge -- a small pale shard hanging
+    // below the character that reads as a rendering fault rather than a foot.
+    I.cubeFrac(ctx, col + (1 - bw) / 2, row + (1 - bw) / 2, bw, bw,
                zz(0, 0, scale), 0.10 * scale, I.shade(body, 0.66));
     I.cubeFrac(ctx, col + (1 - bw) / 2, row + (1 - bw) / 2, bw, bw,
                zz(0, 0.10, scale), (bh - 0.10) * scale, body);
@@ -61,10 +64,28 @@
                zz(0, bh + 0.09, scale), (hh - 0.09) * scale, I.shade(body, 1.10));
 
     var headZ = bh + hh;
-    var hcx = I.projectS(col + 0.5, row + 0.5, headZ)[0];
-    var hcy = I.projectS(col + 0.5, row + 0.5, headZ)[1];
-    var spread = (hw / 2) * 32 * scale +
-                 (ch.earKind === "round" ? 7 * scale : 3);
+    /* Everything on the head -- ears, eyes, mouth -- is placed relative to the
+     * head's PROJECTED BOX, not to hard-coded pixel offsets.
+     *
+     * The face used to be positioned at the head's left edge plus a fixed
+     * `+-9.2` pixel pair, and the ears used a hard-coded half-tile of 32. Both
+     * assumed the old 2:1 dimetric. When the grid became orthogonal the tile
+     * became 56 wide, the head's centre moved 17.9px from where the code
+     * expected, and the face was left hanging off the side of the head with
+     * both eyes outside the silhouette.
+     *
+     * Measuring the head's box on screen and working from that is correct in
+     * any projection, and it cannot drift when the camera changes again. */
+    var headL = I.projectS(col + (1 - hw) / 2, row + 0.5, headZ)[0];
+    var headR = I.projectS(col + (1 + hw) / 2, row + 0.5, headZ)[0];
+    var hcx = (headL + headR) / 2;                 // head centre, horizontally
+    var headHalf = Math.abs(headR - headL) / 2;    // head half-width, on screen
+    var headTop = I.projectS(col + 0.5, row + 0.5, headZ)[1];
+    var headBot = I.projectS(col + 0.5, row + 0.5, bh + 0.09)[1];
+    var hcy = headTop;                             // top of the head
+    var hMid = (headTop + headBot) / 2;            // middle of the head
+    var hSpan = Math.abs(headBot - headTop) || 1;
+    var spread = headHalf + (ch.earKind === "round" ? 3 * scale : 1);
 
     // --- silhouette-defining feature -------------------------------------
     if (ch.earKind === "triangle") {
@@ -119,26 +140,35 @@
       I.ellipse(ctx, hcx + 2 * scale, hcy - 33 * es * scale, 4.5 * scale, 4.5 * scale, accent);
     }
 
-    // --- face: eyes above, smile below ---------------------------------
-    var f = I.projectS(col + (1 - hw) / 2, row + (1 - hw) / 2 + 0.16,
-                       bh + hh * 0.62);
-    var eyeR = 4.3 * ys * scale;
+    // --- face: eyes on the head, mouth below them ------------------------
+    // Placed inside the measured head box: eyes across the upper third, mouth
+    // just under. Both scale with the head, so the face stays on the face
+    // whatever size the sprite is drawn at.
+    var eyeSep = headHalf * 0.52;
+    var eyeR = headHalf * 0.24 * ys;
+    var eyeY = headTop + hSpan * 0.34;
     [-1, 1].forEach(function (sx) {
-      var ex = f[0] + sx * 9.2 * ys * scale, ey = f[1];
-      I.ellipse(ctx, ex, ey, eyeR, eyeR * 1.12, "#ffffff");
-      I.ellipse(ctx, ex + 1.0 * scale, ey + 0.6 * scale, eyeR * 0.5, eyeR * 0.58, "#1b1b1b");
-      I.ellipse(ctx, ex - 1.4 * scale, ey - 1.8 * scale, eyeR * 0.22, eyeR * 0.23, "#ffffff");
+      var ex = hcx + sx * eyeSep;
+      I.ellipse(ctx, ex, eyeY, eyeR, eyeR * 1.12, "#ffffff");
+      I.ellipse(ctx, ex + eyeR * 0.24, eyeY + eyeR * 0.14, eyeR * 0.5, eyeR * 0.58, "#1b1b1b");
+      I.ellipse(ctx, ex - eyeR * 0.34, eyeY - eyeR * 0.44, eyeR * 0.22, eyeR * 0.23, "#ffffff");
     });
     // Smile. An arc, so the curve is wider at the bottom.
-    var m = I.projectS(col + (1 - hw) / 2, row + (1 - hw) / 2 + 0.16, bh + hh * 0.28);
+    var mouthY = headTop + hSpan * 0.62;
     ctx.strokeStyle = "#8a3a1a";
-    ctx.lineWidth = 1.4 * scale;
+    ctx.lineWidth = Math.max(1, headHalf * 0.06);
     ctx.beginPath();
-    ctx.arc(m[0], m[1] - 1 * scale, 5.0 * scale, 0.25, Math.PI - 0.25);
+    ctx.arc(hcx, mouthY - headHalf * 0.12, headHalf * 0.30, 0.25, Math.PI - 0.25);
     ctx.stroke();
 
-    var b = I.projectS(col + (1 - bw) / 2, row + (1 - bw) / 2, bh * 0.62);
-    I.ellipse(ctx, b[0], b[1], 4.6 * scale, 2.6 * scale, ch.mark || "#ffffff");
+    // A chest mark, on the body rather than the head.
+    var bodyTop = I.projectS(col + 0.5, row + 0.5, bh)[1];
+    var bodyBot = I.projectS(col + 0.5, row + 0.5, 0.10)[1];
+    var bMid = (bodyTop + bodyBot) / 2;
+    var bodyHalf = Math.abs(
+      I.projectS(col + (1 + bw) / 2, row + 0.5, bh)[0] -
+      I.projectS(col + (1 - bw) / 2, row + 0.5, bh)[0]) / 2;
+    I.ellipse(ctx, hcx, bMid, bodyHalf * 0.30, bodyHalf * 0.17, ch.mark || "#ffffff");
   }
 
   global.CharacterRenderer = { drawCharacter: drawCharacter, OUTLINE: OUTLINE };

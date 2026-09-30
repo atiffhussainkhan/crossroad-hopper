@@ -172,3 +172,54 @@ it now reports. Reaching 90% across ten stages needs every stage at ~99.5%.
 The target was almost certainly written to mean *per-stage* solvability. Either
 the requirement should be re-worded, or the campaign figure should be
 re-baselined to something like 10%. This is a spec question, not a tuning one.
+
+
+---
+
+## UPDATE — the two things the player reported next
+
+### 1. The eyes were outside the player
+
+`character.js` placed the face from the head's **left edge** plus fixed pixel
+offsets (`+-9.2`, and a hard-coded half-tile of `32`) that assumed the old 2:1
+dimetric. When the grid became orthogonal the tile got wider, the head's centre
+moved 17.9px from where the code expected, and both eyes ended up outside the
+silhouette.
+
+The whole face is now derived from the head's **projected box** — left, right,
+top and bottom measured through `Iso.projectS` — so it is correct in any
+projection and cannot drift again when the camera changes. A gate draws all six
+characters into a recording context and asserts the eye ellipses land inside
+the head box; reintroducing the old placement fails it with exact numbers.
+
+The feet were also 0.7x the body width, which made them poke out from under the
+front face as a stray pale wedge. They are now full width.
+
+### 2. The scene reset itself on every hop
+
+This was the big one, and it was also the real cause of the terrible campaign
+numbers.
+
+`sim-core.js` kept a 16-row window and, whenever the player advanced far enough
+that the window no longer contained the required rows, **regenerated the entire
+hazard list**. That happened on *every single hop*. Every car on the board
+vanished and a fresh set appeared somewhere else, so the scene visibly reset
+under the player's feet. In a timing game that destroys the one thing the whole
+design depends on: that what you judged is still there when you commit to it.
+
+Rows are now generated once, on first sight, keyed in `g.generatedRows`, and
+then left running. New rows appear ahead, existing cars keep driving, rows
+behind are retired. Measured: a tracked hazard survives 120 ticks with **zero
+position discontinuities** and moves 3.5 tiles; two frames 2 seconds apart now
+differ by **0.6% of pixels** (only the cars move), where before a hop rewrote
+the board.
+
+**P-12 went from 1% to 72%** (target 90%) on the fix alone. The autoplay bot
+looks one row ahead and hops if it looks clear -- it could never commit to a
+decision, because the board changed the instant it did. This was never a
+difficulty-tuning problem.
+
+The gate for this one checks hazard **object identity**, not position. With a
+per-row seed a full rebuild would place the same cars in the same places, so a
+positional check passes while the board is being thrown away and remade -- a
+check that looks green and proves nothing.

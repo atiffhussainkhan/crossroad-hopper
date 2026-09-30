@@ -22,6 +22,14 @@
   // CHAIN), so the shared lane classification is available here.
   var T = global.Tiles;
 
+  /* The aprons, at module scope so the window builder and the per-row
+   * builder agree on them.
+   *   SAFE_START_ROWS  always clear, so the player learns the hop without
+   *                    being killed before they have moved
+   *   SAFE_GOAL_ROWS   always clear, so the stage can actually be finished */
+  var SAFE_START_ROWS = 3;
+  var SAFE_GOAL_ROWS = 2;
+
   var KINDS = {
     car:      { len: 0.86, speed: [1.2, 1.9], kind: "ground" },
     tractor:  { len: 0.80, speed: [1.1, 1.7], kind: "ground" },
@@ -71,9 +79,6 @@
      * and the last two are guaranteed clear. The player is set down on safe
      * ground, learns the hop on their first press, and then meets the first
      * car on their own terms. That is a tutorial. An empty board is not. */
-    var SAFE_START_ROWS = 3;
-    var goalRow = (global.Stages && global.Stages.GOAL_ROW_OFFSET) || 40;
-    var SAFE_GOAL_ROWS = 2;
 
     // Density ramps with difficulty but never reaches 1: a lane that is
     // always occupied is not a puzzle, it is a wall. ensureSolvable() enforces
@@ -107,27 +112,69 @@
     var density = baseDensity;
 
     for (var r = 0; r < viewRows; r++) {
-      var row = row0 + r;
-      // The aprons. Absolute rows, not window-relative: row0 is the camera
-      // window and moves as the player advances.
-      if (row < SAFE_START_ROWS) continue;
-      if (row >= goalRow - SAFE_GOAL_ROWS) continue;
-      var k = null;
-      var lane = T ? T.laneOf(row, laneMix, laneKey) : "road";
-      if (lane === "grass") continue;               // never spawn on open ground
-      if (lane === "road") k = "car";
-      else if (lane === "rail") k = "train";
-      else if (lane === "water") k = (rng.bool() ? "log" : "turtle");
-      if (!k || !KINDS[k]) continue;
-      if (rng.next() > density) continue;
-      var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1
-      var h = makeHazard(k, row, cols, rng, difficulty);
-      if (!h) continue;
-      if (dirHint === 0) h.dir = 1;       // guarantee some direction variety
-      h.speed = Math.abs(h.speed) * h.dir;
-      out.push(h);
+      var made = buildRow(row0 + r, cols, density, rng, stageIndex, laneMix, laneKey);
+      for (var m = 0; m < made.length; m++) out.push(made[m]);
     }
     return out;
+  }
+
+  /* ONE ROW of hazards, as a pure function of the row.
+   *
+   * This exists so the running game can generate a row once and then LEAVE IT
+   * ALONE. Previously the whole visible window was thrown away and rebuilt
+   * every time the player advanced one row, so every car on the board vanished
+   * and reappeared somewhere else on each hop -- the board visibly reset
+   * itself under the player's feet, which is not a game, it is a flicker.
+   *
+   * Generating per row and keeping the result means: existing cars keep
+   * driving, new rows appear ahead, and nothing behind is disturbed. */
+  function buildRow(row, cols, density, Rng, stageIndex, laneMixIn, laneKeyIn) {
+    var rng = Rng;
+    var out = [];
+    var laneMix = laneMixIn, laneKey = laneKeyIn;
+    if (laneMix === undefined) {
+      laneMix = null; laneKey = stageIndex;
+      if (stageIndex !== undefined && global.Stages && global.Stages.getStage) {
+        var st = global.Stages.getStage(stageIndex);
+        if (st) { laneMix = st.laneMix; laneKey = st.id; }
+      }
+    }
+    var goalRow = (global.Stages && global.Stages.GOAL_ROW_OFFSET) || 40;
+    // The aprons. Absolute rows, not window-relative: row0 is the camera
+    // window and moves as the player advances.
+    if (row < SAFE_START_ROWS) return out;
+    if (row >= goalRow - SAFE_GOAL_ROWS) return out;
+    var k = null;
+    var lane = T ? T.laneOf(row, laneMix, laneKey) : "road";
+    if (lane === "grass") return out;               // never spawn on open ground
+    if (lane === "road") k = "car";
+    else if (lane === "rail") k = "train";
+    else if (lane === "water") k = (rng.bool() ? "log" : "turtle");
+    if (!k || !KINDS[k]) return out;
+    if (rng.next() > density) return out;
+    var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1
+    var h = makeHazard(k, row, cols, rng, 0);
+    if (!h) return out;
+    if (dirHint === 0) h.dir = 1;       // guarantee some direction variety
+    h.speed = Math.abs(h.speed) * h.dir;
+    out.push(h);
+    return out;
+  }
+
+  /* The same row, generated on demand, from its own seed. Deterministic:
+   * asking twice gives the same car in the same place, so a row can be
+   * re-queried without the board jumping. */
+  function hazardsForRow(seed, row, cols, difficulty, Rng, stageIndex) {
+    var base = Math.min(0.26 + 0.26, 0.22 + difficulty * 0.022);
+    var rowRng = (Rng && Rng.fork) ? Rng.fork(String(row))
+            : (global.SimCore && global.SimCore.createRng
+               ? global.SimCore.createRng(seed + ":r" + row) : Rng);
+    var made = buildRow(row, cols, base, rowRng, stageIndex);
+    for (var i = 0; i < made.length; i++) {
+      // Speed depends on the difficulty at the moment the row comes into view.
+      made[i].speed *= 1 + Math.min(12, difficulty) * 0.020;
+    }
+    return ensureSolvable(made, { needGap: 0.9 });
   }
 
   /* Solvability filter. P-12 requires that every generated stage be
@@ -218,6 +265,7 @@
   }
 
   global.Hazards = {
+    buildRow: buildRow, hazardsForRow: hazardsForRow, SAFE_START_ROWS: 3,
     KINDS: KINDS, makeHazard: makeHazard, buildHazards: buildHazards,
     tickHazards: tickHazards, hits: hits, anyHits: anyHits,
     laneHasGap: laneHasGap, ensureSolvable: ensureSolvable,

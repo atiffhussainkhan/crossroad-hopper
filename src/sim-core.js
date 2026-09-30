@@ -263,6 +263,10 @@
       g.hazards = [];
       g.hazardRow0 = null;
       g.hazardRows = 0;
+      // Which rows have been dealt. A new stage is a new board: without this
+      // the old ledger would suppress generation and the stage would open on
+      // an empty road.
+      g.generatedRows = {};
       g.leadRow = 0;
       for (var i = 0; i < g.players.length; i++) {
         var s = g.players[i].state();
@@ -362,17 +366,46 @@
       var diff = Stages.difficultyFor(g.stageIndex, g.elapsedInStageMs);
       var H = global.Hazards;
       if (H) {
-        // Rebuild the window when the player crosses into new rows, so lanes
-        // ahead exist before the player can reach them.
+        /* Extend the board AHEAD, and never rebuild what is already there.
+         *
+         * The old code kept a window and, whenever the player advanced far
+         * enough that the window no longer contained the required rows,
+         * REGENERATED THE WHOLE LIST. That happened on every single hop, so
+         * every car on the board vanished and a fresh set appeared somewhere
+         * else: the scene visibly reset itself under the player's feet. It is
+         * the single most disorienting thing that could happen to a timing
+         * game, because the thing the player is judging changes the instant
+         * they commit to it.
+         *
+         * Rows are now generated once, on first sight, and then left running.
+         * `generatedRows` records which rows have been dealt so a re-query
+         * can never duplicate or move a car. Rows behind the window are
+         * pruned to keep the list bounded; want0 only ever increases, so a
+         * pruned row is never asked for again. */
         var want0 = Math.max(0, g.leadRow - 4);
         var wantRows = 16;
-        if (g.hazardRow0 === null || want0 < g.hazardRow0 || want0 + wantRows > g.hazardRow0 + g.hazardRows) {
-          g.hazards = H.ensureSolvable(
-            H.buildHazards(g.hazardSeed + ":" + g.stageIndex, want0, wantRows,
-                           g.cols, diff, g.rng, g.stageIndex),
-            { needGap: 0.9 });
-          g.hazardRow0 = want0; g.hazardRows = wantRows;
+        var wantEnd = want0 + wantRows;
+        if (!g.generatedRows) g.generatedRows = {};
+        var gen = g.generatedRows;
+        var added = false;
+        for (var nr = want0; nr < wantEnd; nr++) {
+          if (gen[nr]) continue;
+          gen[nr] = true;
+          var made = H.hazardsForRow(g.hazardSeed + ":" + g.stageIndex, nr,
+                                     g.cols, diff, g.rng, g.stageIndex);
+          for (var mk = 0; mk < made.length; mk++) g.hazards.push(made[mk]);
+          added = true;
         }
+        // Retire rows the player has left behind.
+        if (g.hazards.length) {
+          var kept = [];
+          for (var pr = 0; pr < g.hazards.length; pr++) {
+            if (g.hazards[pr].row >= want0) kept.push(g.hazards[pr]);
+            else delete gen[g.hazards[pr].row];
+          }
+          if (kept.length !== g.hazards.length) g.hazards = kept;
+        }
+        g.hazardRow0 = want0; g.hazardRows = wantRows;
         H.tickHazards(g.hazards, dt, g.cols);
         for (var hi = 0; hi < g.players.length; hi++) {
           var hs = g.players[hi].state();

@@ -623,6 +623,166 @@ def assert_canvas_transform_is_balanced() -> list[str]:
     return problems
 
 
+def assert_face_is_on_the_head() -> list[str]:
+    """The eyes and mouth must be drawn inside the head's projected box.
+
+    The face used to be positioned from the head's LEFT EDGE plus fixed pixel
+    offsets that assumed the old 2:1 dimetric. When the grid became orthogonal
+    the tile got wider, the head's centre moved, and the face was left hanging
+    off the side of the head with both eyes outside the silhouette. Drawing
+    correctly and looking correct are different things, so this measures where
+    the eyes actually land rather than trusting the arithmetic.
+    """
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+// Record every ellipse the character renderer draws, with its fill.
+var calls = [];
+function RecCtx() { this.calls = calls; }
+// The canvas ellipse() takes (cx, cy, rx, ry, rotation, start, end). Iso
+// calls it with all seven, so a five-parameter stub silently records the
+// ROTATION as the fill colour and the probe then finds no eyes at all.
+RecCtx.prototype.ellipse = function (x, y, rx, ry) {
+  var st = this.fillStyle;
+  calls.push({ x: x, y: y, rx: rx, ry: ry, fill: st });
+};
+RecCtx.prototype.beginPath = function () {}; RecCtx.prototype.moveTo = function () {};
+RecCtx.prototype.lineTo = function () {}; RecCtx.prototype.closePath = function () {};
+RecCtx.prototype.fill = function () {}; RecCtx.prototype.stroke = function () {};
+RecCtx.prototype.save = function () {}; RecCtx.prototype.restore = function () {};
+RecCtx.prototype.setTransform = function () {}; RecCtx.prototype.scale = function () {};
+RecCtx.prototype.translate = function () {}; RecCtx.prototype.transform = function () {};
+RecCtx.prototype.arc = function (x, y) { calls.push({ x: x, y: y, arc: true }); };
+var _fill = "", _stroke = "";
+Object.defineProperty(RecCtx.prototype, "fillStyle", {
+  set: function (v) { _fill = v; }, get: function () { return _fill; },
+});
+Object.defineProperty(RecCtx.prototype, "strokeStyle", {
+  set: function (v) { _stroke = v; }, get: function () { return _stroke; },
+});
+["lineWidth","lineCap"].forEach(function (p) {
+  Object.defineProperty(RecCtx.prototype, p, { set: function () {}, get: function () { return 1; } });
+});
+Roster.ROSTER.forEach(function (ch) {
+  calls = [];
+  Iso.setView(300, 400, 1, 0);
+  CharacterRenderer.drawCharacter(new RecCtx(), 4, 10, 1, ch);
+  // The head box, measured the same way the renderer should measure it.
+  var hw = ch.headW, bh = ch.bodyH, hh = ch.headH;
+  var L = Iso.projectS(4 + (1 - hw) / 2, 10.5, bh + hh)[0];
+  var R = Iso.projectS(4 + (1 + hw) / 2, 10.5, bh + hh)[0];
+  var T = Iso.projectS(4.5, 10.5, bh + hh)[1];
+  var B = Iso.projectS(4.5, 10.5, bh + 0.09)[1];
+  var eyes = calls.filter(function (c) {
+    return !c.arc && c.fill === "#ffffff" && c.rx < (R - L) * 0.4;
+  });
+  if (eyes.length < 2) {
+    out.push(ch.id + " eyes=" + eyes.length);
+    return;
+  }
+  for (var i = 0; i < 2; i++) {
+    var e = eyes[i];
+    if (e.x < L - 1 || e.x > R + 1) {
+      out.push(ch.id + " eyeX=" + e.x.toFixed(1) + " off[" + L.toFixed(1) + "," + R.toFixed(1) + "]");
+      break;
+    }
+    if (e.y < Math.min(T, B) - 1 || e.y > Math.max(T, B) + 1) {
+      out.push(ch.id + " eyeY=" + e.y.toFixed(1) + " off[" + T.toFixed(1) + "," + B.toFixed(1) + "]");
+      break;
+    }
+  }
+});
+out.push("checked=" + Roster.ROSTER.length);
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    if "checked=" not in text:
+        return [f"could not parse the face probe output: {text[:160]}"]
+    chunks = [c.strip() for c in text.split(" | ")]
+    checked = next((c for c in chunks if c.startswith("checked=")), "checked=0")
+    bad = [c for c in chunks if " eyes=" in c or " eyeX=" in c or " eyeY=" in c]
+    if bad:
+        problems.append(
+            "the character's face is drawn outside its head: "
+            + "; ".join(bad) + ". The eyes must sit inside the head box."
+        )
+    if checked.endswith("=0"):
+        problems.append("the face probe drew no characters at all")
+    return problems
+
+
+def assert_hazards_survive_a_hop() -> list[str]:
+    """The board must not rebuild itself when the player moves.
+
+    The window was thrown away and regenerated every time the player advanced
+    a row, so every car vanished and a new set appeared somewhere else on each
+    hop. The board visibly reset under the player's feet, which destroys the
+    one thing a timing game depends on: that what you judged is still there
+    when you commit.
+
+    Checked by OBJECT IDENTITY, not position. With a per-row seed a full
+    rebuild would place the same cars in the same places, so a positional
+    comparison passes even when the board is being thrown away and remade --
+    which is exactly the kind of check that looks green and proves nothing.
+    A hazard that is still on the board must be the SAME hazard.
+    """
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+var g = SimCore.createGame({ playerCount: 1, seed: "persist" });
+g.hop("forward", 0);
+for (var i = 0; i < 300; i++) g.tick(16.667);
+g.hop("forward", 0);
+for (var k = 0; k < 120; k++) g.tick(16.667);
+// Hold references to the hazards that are on the board right now.
+var held = g.state().hazards.filter(function (h) { return h.row > 3; });
+out.push("held=" + held.length);
+g.hop("forward", 0);
+g.hop("forward", 0);
+for (var t = 0; t < 60; t++) g.tick(16.667);
+var live = g.state().hazards;
+var replaced = 0, dropped = 0;
+held.forEach(function (h) {
+  var found = false;
+  for (var j = 0; j < live.length; j++) {
+    if (live[j] === h) { found = true; break; }   // identity, not equality
+  }
+  // A hazard behind the window is retired on purpose; only count the ones the
+  // player could still see.
+  if (!found && h.row >= g.state().hazardRow0) replaced++;
+  if (!found && h.row < g.state().hazardRow0) dropped++;
+});
+out.push("replaced=" + replaced);
+out.push("retired=" + dropped);
+out.push("window0=" + g.state().hazardRow0);
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    kv = dict()
+    for chunk in text.split(" | "):
+        if "=" in chunk:
+            k, _, v = chunk.partition("=")
+            kv[k.strip()] = v.strip()
+    if not kv:
+        return [f"could not parse the hazard-persistence probe: {text[:160]}"]
+    try:
+        if int(kv.get("held", 0)) == 0:
+            problems.append(
+                "the board carried no hazards to hold; stage one is empty again"
+            )
+        if int(kv.get("replaced", 0)) > 0:
+            problems.append(
+                f"{kv['replaced']} hazards on screen were REPLACED by different "
+                f"objects while the player was playing. The board is being "
+                f"rebuilt from scratch; cars must keep their identity across a hop."
+            )
+    except ValueError:
+        problems.append(f"could not parse the hazard-persistence probe: {text[:160]}")
+    return problems
+
+
 def main() -> int:
     problems = (assert_undeclared() + assert_chain_runs()
                 + assert_scene_contract()
@@ -630,7 +790,9 @@ def main() -> int:
                 + assert_player_is_on_screen()
                 + assert_canvas_transform_is_balanced()
                 + assert_stage_one_is_playable()
-                + assert_playable_controls())
+                + assert_playable_controls()
+                + assert_face_is_on_the_head()
+                + assert_hazards_survive_a_hop())
     files = [ROOT / rel for rel in CHAIN] + [ROOT / DOM_ENTRY]
     print(f"files scanned        : {len(files)}")
     print(f"module chain         : {len(CHAIN)}")
