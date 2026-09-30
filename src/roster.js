@@ -62,6 +62,27 @@
     },
   ];
 
+  /* Per-character MOTION profile, applied in the render, not the simulation
+   * and never in collision. These change how a hop LOOKS, not whether it
+   * lands. Requirement X-06 forbids an unlock that alters difficulty, so no
+   * value here may change a hitbox, a speed that affects survival, or the
+   * distance a hazard can reach the player.
+   *   hopMs   duration of one hop
+   *   arc     peak height of the hop arc, in world units
+   *   squash  1.0 is neutral; below 1 squashes on landing, above stretches
+   *   sway    horizontal lean at the apex, a personality tell
+   */
+  var MOTION = {
+    pip:   { hopMs: 600, arc: 0.55, squash: 1.00, sway: 0.00 },
+    bloop: { hopMs: 560, arc: 0.68, squash: 1.06, sway: 0.04 },
+    nib:   { hopMs: 520, arc: 0.80, squash: 0.96, sway: -0.03 },
+    cob:   { hopMs: 700, arc: 0.32, squash: 1.12, sway: 0.00 },
+    fizz:  { hopMs: 620, arc: 0.62, squash: 0.98, sway: 0.07 },
+    mozz:  { hopMs: 580, arc: 0.46, squash: 1.08, sway: -0.05 },
+  };
+
+  function motionFor(id) { return MOTION[id] || MOTION.pip; }
+
   function getCharacter(id) {
     for (var i = 0; i < ROSTER.length; i++) {
       if (ROSTER[i].id === id) return ROSTER[i];
@@ -73,6 +94,8 @@
 
   global.Roster = {
     ROSTER: ROSTER,
+    MOTION: MOTION,
+    motionFor: motionFor,
     getCharacter: getCharacter,
     count: count,
   };

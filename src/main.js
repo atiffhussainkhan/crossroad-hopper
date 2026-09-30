@@ -33,6 +33,44 @@
   var PLAYER_ANCHOR = 10;     // screen row the active player sits on
 
   var game = SimCore.createGame({ playerCount: 1, seed: "browser" });
+
+  /* Hop animation. The simulation moves the player instantly from one cell to
+   * the next; the VIEW interpolates along an arc so the hop reads as motion
+   * rather than a teleport. This is presentation only: collision has already
+   * happened, and nothing here can change where the player lands.
+   *
+   * Each character has its own arc height and hop duration in
+   * Roster.MOTION, so the six feel different in motion without differing in
+   * outcome. */
+  var hopAnim = null;   // { fc, fr, tc, tr, t0, dur, arc, sway }
+
+  function startHop(playerIndex, dir, fromCol, fromRow) {
+    var st = game.state();
+    var ps = st.players[playerIndex];
+    if (!ps) return;
+    if (fromCol === undefined) return;
+    var m = (typeof Roster !== "undefined" && Roster.motionFor)
+      ? Roster.motionFor((typeof Roster !== "undefined" && Roster.ROSTER[
+          playerIndex % Roster.ROSTER.length] || { id: "pip" }).id) : null;
+    var fc = fromCol, fr = fromRow;
+    var tc = ps.col, tr = ps.row;
+    if (fc === tc && fr === tr) return;      // not a hop
+    hopAnim = {
+      fc: fc, fr: fr, tc: tc, tr: tr,
+      t0: performance.now(),
+      dur: m ? m.hopMs : 600,
+      arc: m ? m.arc : 0.55,
+      sway: m ? m.sway : 0,
+      squash: m ? m.squash : 1,
+    };
+  }
+
+  function hopProgress() {
+    if (!hopAnim) return null;
+    var p = (performance.now() - hopAnim.t0) / hopAnim.dur;
+    if (p >= 1) { var done = hopAnim; hopAnim = null; return { p: 1, done: done }; }
+    return { p: Math.max(0, p), done: hopAnim };
+  }
   var DPR_CAP = 3;   // above 3x the pixels are invisible and cost frame time
   function sizeCanvas() {
     var dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -116,10 +154,30 @@
       // projected AGAIN and added the board offset a second time. The player
       // was drawn at roughly twice the board offset, which is off the canvas
       // entirely -- so the game rendered with no visible character at all.
+      // Interpolate along the hop arc instead of teleporting. The simulation
+      // has already moved the player; this is presentation only and cannot
+      // change where anyone lands.
+      var col = ps.col, row = ps.row, lift = 0, squash = 1, swayNow = 0;
+      var prog = hopProgress();
+      if (prog) {
+        var a = prog.done, e = prog.p;
+        col = a.fc + (a.tc - a.fc) * e;
+        row = a.fr + (a.tr - a.fr) * e;
+        lift = Math.sin(e * Math.PI) * a.arc;      // 0 at both ends, peak mid
+        squash = a.squash * (1 + Math.sin(e * Math.PI) * 0.10);
+        if (e > 0.86) squash -= (e - 0.86) * 1.2;  // flatten on landing
+        swayNow = a.sway;
+      }
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // DPR only: no extra offset
       ctx.scale(1.45, 1.45);
-      CharacterRenderer.drawCharacter(ctx, ps.col, ps.row, 0.95, who || undefined);
+      if (lift > 0) {
+        // Lift along the arc and lean at the apex.
+        ctx.translate(0, -Iso.BLOCK_H * lift);
+        ctx.transform(1, 0, swayNow, 1, 0, 0);
+      }
+      ctx.scale(squash, 2 - squash);
+      CharacterRenderer.drawCharacter(ctx, col, row, 0.95, who || undefined);
       ctx.restore();
     }
 
@@ -221,6 +279,7 @@
       // R-02: one input restarts. hop() then moves the player in the same
       // tick, so resuming never costs an extra beat.
       game.advance();
+      hopAnim = null;
       hideBanner();
       return;
     }
@@ -228,7 +287,10 @@
     if (s.phase === SimCore.PHASES.READY) { hideBanner(); }
     var idx = (game.state().playerCount < 2) ? 0
       : (e.clientX < canvas.getBoundingClientRect().left + canvas.clientWidth / 2 ? 0 : 1);
+    var st0 = game.state().players[idx].state();
+    var pc = st0.col, pr = st0.row;
     game.hop("forward", idx);
+    if (game.state().players[idx].state().row !== pr) startHop(idx, "forward", pc, pr);
   });
   canvas.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
 
