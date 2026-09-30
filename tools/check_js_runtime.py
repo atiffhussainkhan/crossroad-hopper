@@ -159,16 +159,32 @@ def referenced_names(src: str) -> set[str]:
 
 
 def assert_undeclared() -> list[str]:
+    """Every name a module references must be declared in that module, or be a
+    known module global.
+
+    This used to pool the declared names from every file in the chain and
+    accept a reference if ANY file declared it. src/scenery.js has `var I =
+    global.Iso;` as a local alias, which meant an undeclared `I` in
+    src/main.js passed the check -- and main.js really did have one, so the
+    first frame threw a ReferenceError and the render loop died. The gate was
+    not merely weak, it was actively masking the bug because an unrelated
+    module happened to use the same letter.
+
+    Each file is now checked against its OWN declarations plus the known
+    module globals, so a name has to be legitimate where it is used.
+    """
     files = [ROOT / rel for rel in CHAIN] + [ROOT / DOM_ENTRY]
-    all_declared: set[str] = set(GLOBALS)
-    for f in files:
-        all_declared |= declared_names(f.read_text())
     problems: list[str] = []
     for f in files:
-        for name in sorted(referenced_names(f.read_text())):
-            if name in BUILTINS or name in all_declared:
+        src = f.read_text()
+        local = declared_names(src) | GLOBALS | BUILTINS
+        for name in sorted(referenced_names(src)):
+            if name in RESERVED or name in local:
                 continue
-            problems.append(f"{f.relative_to(ROOT)}: undeclared identifier '{name}'")
+            problems.append(
+                f"{f.relative_to(ROOT)}: undeclared identifier '{name}' "
+                f"(declared only in another file, or nowhere)"
+            )
     return problems
 
 
@@ -429,11 +445,192 @@ def assert_player_is_on_screen() -> list[str]:
     return problems
 
 
+def assert_stage_one_is_playable() -> list[str]:
+    """Stage one must be a lane-crossing game, not a walking sim.
+
+    src/hazards.js once returned an empty list for the first two stages
+    ("teaching stages carry no lethal hazard at all"). The player reported
+    the consequence directly: no moving objects, nothing to protect yourself
+    from. A stage with no traffic is not a tutorial, it is the absence of the
+    game, and it is indistinguishable from a build that failed to load.
+
+    So: stage one spawns lethal hazards, the launch apron is clear so the
+    first hop is a decision rather than a reflex, and the finish apron is
+    clear so the stage can actually be completed.
+    """
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+var goal = Stages.GOAL_ROW_OFFSET;
+var kinds = {}, rows = {};
+for (var w = 0; w < 6; w++) {
+  var hs = Hazards.ensureSolvable(
+    Hazards.buildHazards("p1", w * 12, 12, 9, 0, SimCore.createRng("p1:" + w), 0),
+    { needGap: 0.9 });
+  hs.forEach(function (h) { kinds[h.kind] = 1; rows[h.row] = 1; });
+}
+out.push("stage1-kinds=" + Object.keys(kinds).sort().join("+"));
+var n = Object.keys(rows).length;
+out.push("stage1-hazards=" + n);
+var apron = Object.keys(rows).filter(function (r) { return +r < 3; }).length;
+out.push("launch-apron=" + apron);
+var fin = Object.keys(rows).filter(function (r) { return +r >= goal - 2; }).length;
+out.push("finish-apron=" + fin);
+out.push("goal-row=" + goal);
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    kv = dict()
+    for chunk in text.split(" | "):
+        if "=" in chunk:
+            k, _, v = chunk.partition("=")
+            kv[k.strip()] = v.strip()
+    if not kv.get("stage1-kinds"):
+        problems.append(
+            "stage one spawns NO hazards; the player has nothing to dodge and "
+            "nothing that can kill them (this shipped once)"
+        )
+    elif "car" not in kv["stage1-kinds"]:
+        problems.append(
+            f"stage one spawns no cars (kinds: {kv['stage1-kinds']}); a suburb "
+            f"with no traffic is not a lane-crossing stage"
+        )
+    try:
+        if int(kv.get("stage1-hazards", 0)) < 4:
+            problems.append(
+                f"stage one has only {kv.get('stage1-hazards')} hazards across the "
+                f"whole board; it would be possible to walk the stage without "
+                f"meeting one"
+            )
+        if kv.get("launch-apron") != "0":
+            problems.append(
+                "a hazard spawns in the launch apron (rows 0-2); the player's "
+                "first hop would be unavoidable"
+            )
+        if kv.get("finish-apron") != "0":
+            problems.append(
+                "a hazard spawns in the finish apron; the stage could become "
+                "impossible to complete"
+            )
+    except ValueError:
+        problems.append(f"could not parse the stage-one probe output: {text[:160]}")
+    return problems
+
+
+def assert_playable_controls() -> list[str]:
+    """A human must be able to move the player, in every direction.
+
+    The old input handler accepted a press only if it lasted under 150ms and
+    moved under 12px. A real mouse click is slower and drifts further than
+    that, so almost every click was discarded and the game looked frozen. It
+    also only ever hopped forward: no lateral control, no keyboard.
+
+    Checks that all four directions exist in the simulation, that lateral
+    movement is bounded to the board, and that main.js exposes them.
+    """
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+var g = SimCore.createGame({playerCount:1, seed:"ctl"});
+var p = g.state().players[0];
+// Test "back" at the start row, before any forward hop has been taken.
+out.push("back-at-zero=" + p.hop("back"));
+p.hop("forward");
+for (var i = 0; i < 30; i++) p.hop("right");
+out.push("right-clamp=" + p.state().col);
+for (var i = 0; i < 30; i++) p.hop("left");
+out.push("left-clamp=" + p.state().col);
+out.push("cols=" + g.state().cols);
+out.push("goal=" + g.state().goalRow);
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    kv = dict()
+    for chunk in text.split(" | "):
+        if "=" in chunk:
+            k, _, v = chunk.partition("=")
+            kv[k.strip()] = v.strip()
+    try:
+        cols = int(kv["cols"])
+        if kv.get("right-clamp") != str(cols - 1):
+            problems.append(
+                f"lateral movement is not bounded: hopping right 30 times leaves "
+                f"the player at column {kv.get('right-clamp')}, not {cols - 1}"
+            )
+        if kv.get("left-clamp") != "0":
+            problems.append(
+                f"hopping left 30 times leaves the player at column "
+                f"{kv.get('left-clamp')}, not 0"
+            )
+        if kv.get("back-at-zero") != "false":
+            problems.append("hopping back from the start row is not refused")
+    except (KeyError, ValueError):
+        problems.append(f"could not parse the control probe output: {text[:160]}")
+
+    src = (ROOT / DOM_ENTRY).read_text()
+    if "function act(" not in src:
+        problems.append("src/main.js has no act() entry point for player input")
+    for key in ("ArrowUp", "ArrowLeft", "ArrowRight", "ArrowDown"):
+        if key not in src:
+            problems.append(f"src/main.js does not bind {key}; the game cannot "
+                            f"be played with a keyboard")
+    if "goalRow: s.goalRow" not in src:
+        problems.append(
+            "src/main.js does not pass goalRow to the renderer, so the finish "
+            "line is simulated but never drawn and the player has no visible goal"
+        )
+    # The old tap window. If this ever comes back, the game is unplayable with
+    # a mouse again and nothing else in the suite would notice. A real click
+    # holds for 100-300ms, so anything under 300ms discards most of them.
+    m = re.search(r"TAP_MAX_MS\s*=\s*(\d+)", src)
+    if m and int(m.group(1)) < 300:
+        problems.append(
+            f"src/main.js rejects presses shorter than {m.group(1)}ms; a real "
+            f"mouse click is slower than that and would be silently discarded, "
+            f"which is exactly what made the game look frozen"
+        )
+    return problems
+
+
+def assert_canvas_transform_is_balanced() -> list[str]:
+    """A canvas transform dropped to identity must be restored.
+
+    The surround fill deliberately sets the transform to identity so it covers
+    the whole backing store. Without putting the device-pixel scale back, every
+    subsequent draw lands in DEVICE pixels instead of CSS pixels -- the whole
+    board renders at half size in the top-left quadrant, and the player stands
+    in an empty field with the traffic off where the camera expects it. It is
+    silent: nothing throws, the game runs, it is just wrong.
+    """
+    problems: list[str] = []
+    src = (ROOT / DOM_ENTRY).read_text()
+    # Strip comments before searching: a long explanatory comment between the
+    # identity transform and its restore must not push the restore out of the
+    # window and turn the check into a false alarm.
+    bare = strip_noise(src)
+    for m in re.finditer(r"setTransform\(\s*1\s*,\s*0\s*,\s*0\s*,\s*1\s*,\s*0\s*,\s*0\s*\)", bare):
+        tail = bare[m.end():m.end() + 400]
+        if not re.search(r"setTransform\(\s*dpr", tail):
+            line = src[:m.start()].count("\n") + 1
+            problems.append(
+                f"src/main.js line {line}: the canvas transform is set to identity "
+                f"and never restored to the device-pixel scale, so everything "
+                f"drawn after it renders at half size in one corner"
+            )
+            break
+    return problems
+
+
 def main() -> int:
     problems = (assert_undeclared() + assert_chain_runs()
                 + assert_scene_contract()
                 + assert_scene_for_copies_everything()
-                + assert_player_is_on_screen())
+                + assert_player_is_on_screen()
+                + assert_canvas_transform_is_balanced()
+                + assert_stage_one_is_playable()
+                + assert_playable_controls())
     files = [ROOT / rel for rel in CHAIN] + [ROOT / DOM_ENTRY]
     print(f"files scanned        : {len(files)}")
     print(f"module chain         : {len(CHAIN)}")

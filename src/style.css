@@ -59,6 +59,17 @@ html, body {
 
 #board {
   display: block;
+  /* The canvas MUST have a CSS size.
+   *
+   * sizeCanvas() writes canvas.width/height to the device-pixel size, which
+   * also changes the element's intrinsic size when no CSS size is declared.
+   * That is a feedback loop: the board grows a little on every resize until
+   * it is taller than the window, and it pushes the timer, the lives and the
+   * goal readout off the bottom of the screen -- the controls a player needs
+   * most in order to play. These two properties break the loop: CSS owns the
+   * layout size, the attributes own the resolution. */
+  width: min(94vw, 440px);
+  height: min(60vh, 600px);
   background: #7ba05b;
   border: 1px solid #3a3a3a;
   border-radius: 4px;
@@ -102,9 +113,11 @@ html, body {
 
 #hud {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  width: 300px;
+  /* Five readouts now (time, difficulty, lives, goal, score). Fixed columns
+   * would have wrapped the last one onto its own row. */
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  width: min(94vw, 440px);
   max-width: 100%;
 }
 
@@ -118,8 +131,8 @@ html, body {
   border-radius: 6px;
 }
 
-.stat .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #8a8a8a; }
-.stat .v { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #8a8a8a; }
+.stat .v { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 #hint { font-size: 12px; color: #7a7a7a; text-align: center; }
 

@@ -39,8 +39,16 @@ simulation. Nothing here is mocked.</p>
 <div class="strip" id="strip"></div>
 
 <h2>The board in play</h2>
-<canvas id="board" class="board" width="560" height="600"></canvas>
-<p class="facts" id="facts"></p>
+<div style="display:flex; gap:12px; align-items:flex-start;">
+  <div>
+    <canvas id="board" class="board" width="420" height="540"></canvas>
+    <p class="facts" id="facts"></p>
+  </div>
+  <div>
+    <canvas id="goalboard" class="board" width="420" height="540"></canvas>
+    <p class="facts">same game, approaching the finish line</p>
+  </div>
+</div>
 
 <!-- Canonical load order. Must match index.html and every gate's CHAIN. -->
 <script src="src/stages.js"></script>
@@ -107,6 +115,44 @@ simulation. Nothing here is mocked.</p>
     CharacterRenderer.drawCharacter(ctx, anchor.col, anchor.row, 1,
                                     Roster.getCharacter("pip"));
 
+    // ---- the same game, parked at the finish ----------------------------
+    // The goal band is drawn by Scene from opts.goalRow. Until this was
+    // passed, the finish line was simulated but never drawn, so the player
+    // had no visible destination. This is where that layer is checked:
+    // same simulation, same renderer, camera at the last rows of the stage.
+    var g2 = SimCore.createGame({ playerCount: 1, seed: "look-sheet-goal" });
+    var s2 = g2.state();
+    var st2 = 0;
+    while (s2.players[0].state().row < s2.goalRow - 5 && st2++ < 8000) {
+      var p2 = s2.players[0].state();
+      var blocked2 = s2.hazards.some(function (h) { return h.row === p2.row + 1; });
+      if (!blocked2) g2.hop("forward", 0);
+      g2.tick(16.667);
+    }
+    var ps2 = s2.players[0].state();
+    var cv2 = document.getElementById("goalboard");
+    var ctx2 = cv2.getContext("2d");
+    var scene2 = {
+      id: stage.id, name: stage.name,
+      laneMix: stage.laneMix, scenery: stage.scenery,
+      ground: stage.ground, groundAlt: stage.groundAlt,
+      road: stage.road, water: stage.water,
+      hazard: stage.hazard, hazard2: stage.hazard2,
+      log: stage.log, turtle: stage.turtle,
+      foliage: stage.foliage, foliage2: stage.foliage2, trunk: stage.trunk,
+    };
+    ctx2.setTransform(1, 0, 0, 1, 0, 0);
+    ctx2.fillStyle = Iso.shade(stage.ground, 0.86);
+    ctx2.fillRect(0, 0, cv2.width, cv2.height);
+    Scene.renderScene(ctx2, scene2, {
+      width: cv2.width, height: cv2.height, cols: COLS, viewRows: 13,
+      row0: Math.max(0, ps2.row - 6), col0: 0,
+      focusCol: ps2.col, focusRow: ps2.row,
+      hazards: s2.hazards, goalRow: s2.goalRow,
+    });
+    CharacterRenderer.drawCharacter(ctx2, ps2.col, ps2.row, 1,
+                                    Roster.getCharacter("pip"));
+
     // ---- the object sheet ------------------------------------------------
     var host = document.getElementById("strip");
     // Every object this biome can place, not just the three the stage
@@ -130,7 +176,7 @@ simulation. Nothing here is mocked.</p>
       // once for the lawn, once for the object -- put the lawn in the corner
       // and the object in the middle, so every tile showed an object floating
       // on black.
-      Iso.setView(66, 118, 1, 0);
+      Iso.setView(69, 104, 1, 0);
       // A patch of lawn for the object to stand on, in the same isometric
       // convention as the board.
       for (var r = -2; r <= 2; r++) {

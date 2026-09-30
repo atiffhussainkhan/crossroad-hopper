@@ -68,7 +68,7 @@
 
   // A player is a row/column pair with a life count. Movement is discrete:
   // one input, one tile, no mid-hop correction (M-04).
-  function createPlayer(col, lives) {
+  function createPlayer(col, lives, cols) {
     var state = {
       col: col,
       row: 0,
@@ -76,15 +76,33 @@
       lives: lives,
       alive: true,
       finished: false,
+      // Board width, so hop() can refuse to walk off the side. Defaulted for
+      // the nine-column board every stage uses; createGame passes it in.
+      cols: cols === undefined ? 9 : cols,
     };
     return {
       state: function () { return state; },
       hop: function (direction) {
         if (!state.alive || state.finished) return false;
-        if (direction === "forward") { state.row += 1; state.hops += 1; }
-        else if (direction === "left") state.col -= 1;
-        else if (direction === "right") state.col += 1;
-        return true;
+        /* The board is `cols` wide. Without a clamp, lateral input walks the
+         * player to col -1 or col 9 and off the edge, where there is no tile
+         * under them and no hazard can reach them -- a free walk into
+         * unrenderable space. Lateral movement is a core control in this
+         * genre, so this path has to be right. */
+        if (direction === "forward") { state.row += 1; state.hops += 1; return true; }
+        if (direction === "left") {
+          if (state.col <= 0) return false;
+          state.col -= 1; return true;
+        }
+        if (direction === "right") {
+          if (state.col >= state.cols - 1) return false;
+          state.col += 1; return true;
+        }
+        if (direction === "back") {
+          if (state.row <= 0) return false;
+          state.row -= 1; return true;
+        }
+        return false;
       },
       kill: function () {
         if (!state.alive) return;
@@ -121,7 +139,10 @@
     var telegraphMs = (opts.telegraphMs === undefined) ? 1200 : opts.telegraphMs;
     // Speed is scaled by difficulty at tick time; this is the base rate at
     // difficulty 0. Without this the difficulty ladder is a HUD integer.
-    var speed = opts.speedRowsPerSec || 1.0;
+    // Gentler than it was (1.0). At 1.0 rows/s against a player who can
+    // cover 1.8, any pause to judge a car cost a row, and the eagle was
+    // deciding stages rather than adding pressure to them.
+    var speed = opts.speedRowsPerSec || 0.70;
     return {
       state: function () { return state; },
       tick: function (dt, playerRow, difficulty) {
@@ -209,7 +230,7 @@
     };
 
     for (var i = 0; i < playerCount; i++) {
-      var p = createPlayer(i === 0 ? 0 : 2, Stages.STAGE_START_LIVES);
+      var p = createPlayer(i === 0 ? 0 : 2, Stages.STAGE_START_LIVES, g.cols);
       p.state().startCol = p.state().col;
       g.players.push(p);
     }

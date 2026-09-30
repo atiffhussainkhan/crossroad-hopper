@@ -21,7 +21,9 @@
 (function (global) {
   "use strict";
 
-  var TILE_W = 64, TILE_H = 32, BLOCK_H = 22;
+  // Lanes are wider than they are deep: the board is read left-to-right
+  // and upward, so a column needs room and a row needs less.
+  var TILE_W = 56, TILE_H = 40, BLOCK_H = 26;
 
   // Face factors, corrected for linear light (see note 3 above).
   var LIGHT_TOP = 1.00, LIGHT_LEFT = 0.876, LIGHT_RIGHT = 0.761;
@@ -71,9 +73,27 @@
 
   // ---------- projection -------------------------------------------------
   //
-  // Forward hop increases row and forward is UP the screen, so the z term is
-  // NEGATIVE. In image coordinates y grows downward, so raising a solid must
-  // subtract height. Getting this sign wrong renders every solid upside down.
+  /* Forward is UP the screen and a lane runs LEFT-TO-RIGHT, which is the
+   * camera this genre is defined by. The player has to read a whole lane at a
+   * glance and judge a vehicle's distance along it, and neither is possible
+   * when the lanes run diagonally away from the viewer.
+   *
+   * This used to be a full 2:1 dimetric: x = (col - row) * 32, y =
+   * -(col + row) * 16. It looked handsome and it was wrong for the job --
+   * it pushed the far end of every lane off to the upper left, the camera
+   * focused the player in the middle of the frame, and the result was a
+   * board crushed into one corner with the character standing in an empty
+   * field, unable to see the traffic that was about to hit them.
+   *
+   * So the grid is orthogonal now: a column advances along x, a row advances
+   * along y, and height takes z. Lanes are horizontal bands, forward is up,
+   * and the whole board fits the frame the way the player expects. The
+   * three-face lighting is unchanged, so the objects still read as solids.
+   */
+  //
+  //   col ->  x        (left to right along a lane)
+  //   row ->  y        (up the screen, away from the camera)
+  //   z    -> -y       (height)
 
   var VIEW = { ox: 0, oy: 0, scale: 1 };
 
@@ -83,7 +103,8 @@
 
   function project(col, row, z) {
     z = z || 0;
-    return [(col - row) * (TILE_W / 2), -(col + row) * (TILE_H / 2) - z * BLOCK_H];
+    // Centre the column axis on x so the board is symmetric about the player.
+    return [col * TILE_W - TILE_W / 2, -row * TILE_H - z * BLOCK_H];
   }
 
   function projectS(col, row, z) {
@@ -95,36 +116,39 @@
 
   function frameViewWindow(cols, viewRows, width, height, row0, zmax, margin, biasY, zoom,
                           col0, focusCol, focusRow) {
-    zmax = zmax || 0; margin = margin || 20; biasY = biasY === undefined ? 0.54 : biasY;
+    zmax = zmax || 0; margin = margin === undefined ? 18 : margin;
+    biasY = biasY === undefined ? 0.72 : biasY;
     zoom = zoom || 1;
-    var xs = [], ys = [];
-    [0, cols].forEach(function (c) {
-      [row0, row0 + viewRows].forEach(function (r) {
-        [0, zmax].forEach(function (z) {
-          var p = project(c, r, z); xs.push(p[0]); ys.push(p[1]);
-        });
-      });
-    });
-    var minx = Math.min.apply(null, xs), maxx = Math.max.apply(null, xs);
-    var miny = Math.min.apply(null, ys), maxy = Math.max.apply(null, ys);
-    var bw = Math.max(maxx - minx, 1e-6), bh = Math.max(maxy - miny, 1e-6);
-    // Fit HEIGHT, not width. A 2:1 isometric diamond cannot fill a portrait
-    // frame by fitting, and fitting to width left the board a small band in
-    // the middle with dead space above and below. Let the columns crop.
-    var scale = (height - margin * 2) / bh * zoom;
-    var maxScale = (width - margin) / (TILE_W * 1.2);
-    if (scale > maxScale) scale = maxScale;
-    // Focus the camera on a specific cell when asked. Fitting the whole
-    // board's bounding box leaves the player wherever the projection happens
-    // to put it; a game camera has to put the player where the thumb is.
+    viewRows = viewRows || 12;
+    /* Fit the board's WIDTH and let the height decide how far you can see.
+     *
+     * All nine columns have to be on screen at once: a vehicle can arrive in
+     * any of them, and a lane the player cannot see the whole length of is a
+     * lane they cannot time. The number of visible rows then falls out of
+     * whatever height is left over, which is the right way round for a game
+     * about reading distance. */
+    var boardW = cols * TILE_W;
+    var scale = (width - margin * 2) / boardW * zoom;
+    if (scale > 1.5) scale = 1.5;          // never blow a small board up huge
+    if (scale < 0.2) scale = 0.2;
+    /* Centre the BOARD horizontally, put the PLAYER low.
+     *
+     * Centring the player was wrong: at column 0 it pushed two thirds of the
+     * nine-column board off the right edge, so the lanes the player had not
+     * reached were invisible and the traffic on them was unjudgeable. The
+     * board is what has to be fully on screen -- a vehicle can arrive in any
+     * column. The player drifts within the frame as they move, which is what
+     * the genre does. */
     if (focusCol !== null && focusCol !== undefined) {
+      var boardMid = project(cols / 2 - (col0 || 0), 0, 0)[0];
       var fp = project(focusCol - (col0 || 0), focusRow, 0);
-      setView(width / 2 - fp[0] * scale,
+      setView(width / 2 - boardMid * scale,
               height * biasY - fp[1] * scale, scale, col0);
       return;
     }
-    setView(width / 2 - (minx + maxx) / 2 * scale,
-            height * biasY - (miny + maxy) / 2 * scale, scale, col0);
+    var mid = project(cols / 2 - (col0 || 0), row0 + viewRows / 2, 0);
+    setView(width / 2 - mid[0] * scale,
+            height * biasY - mid[1] * scale, scale, col0);
   }
 
   // ---------- primitives -------------------------------------------------

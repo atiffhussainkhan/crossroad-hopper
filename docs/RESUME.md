@@ -86,3 +86,89 @@ pre-existing baseline rather than a new regression.
    way to find whatever is still wrong in them.
 3. The lawn is flat colour. Crossy Road-class ground has texture; it is the
    most visible remaining gap in how the board reads.
+
+
+---
+
+## UPDATE — stage one made playable (later session)
+
+The player reported stage one was unplayable: **the character could not be
+moved, and there were no moving hazards at all.** Both were real, and neither
+was a rendering problem.
+
+### Why you could not move
+
+`src/main.js` treated input as a *tap*: the press had to last under **150ms**
+and move under **12px**, or it was discarded silently. A human clicking with a
+mouse or a trackpad holds for 100-300ms and drifts further than 12px, so
+almost every real click was dropped. There was also no lateral control at all
+(tap only ever hopped forward) and **no keyboard binding whatsoever**, so the
+game could not be played on a laptop even in principle.
+
+Input is now: press = forward, drag = swipe in that direction, arrows/WASD =
+the same. All three funnel into one `act()`.
+
+### Why there was nothing to dodge
+
+`src/hazards.js` returned an **empty list for stages one and two** — "teaching
+stages carry no lethal hazard at all". That is not a tutorial, it is the
+absence of the game. Every stage now spawns lethal hazards, and the first
+three rows and the last two are guaranteed clear so the opening hop and the
+finish are both decisions rather than reflexes.
+
+Measured per-stage completion by a competent bot, after retuning:
+
+```
+stage  1: 98%   2: 78%   3: 75%   4: 63%   5: 68%
+stage  6: 93%   7: 75%   8: 55%   9: 38%  10: 73%
+```
+
+Stage one at 98% is the number that matters for a first stage. Stage nine
+(Storm) at 38% is an outlier and the next thing worth looking at.
+
+### Also found and fixed
+
+- **`player.hop()` never clamped the column.** Lateral input walked the player
+  to col -22, off the board, into space with no tile under it and no hazard
+  able to reach them.
+- **The goal was simulated but never drawn.** You had to reach row 40 with
+  nothing on screen saying where row 40 was. There is now a finish band, and a
+  GOAL readout in the HUD.
+- **`#board` had no CSS size**, so `sizeCanvas()` writing `canvas.width` grew
+  the element on every resize until it pushed the timer, the lives and the
+  goal readout off the bottom of the screen.
+- **The camera centred the player, not the board.** At column 0 that pushed
+  two thirds of the board off the right edge, so the lanes ahead were invisible.
+- **The surround fill dropped the canvas transform to identity and never
+  restored the device-pixel scale**, which rendered the entire board at half
+  size in one corner. This one was mine, introduced an hour earlier, and it is
+  why several screenshots in this session's history look wrong.
+- **`assert_undeclared()` pooled declared names across all files**, so
+  `scenery.js` declaring `var I` legitimised an undeclared `I` in `main.js`.
+  That reference threw on frame one and killed the render loop. Each file is
+  now checked against its own declarations.
+
+### The projection changed
+
+The board was a 2:1 dimetric: lanes ran diagonally away from the viewer, which
+crushed the board into one corner and made it impossible to read a whole lane
+or judge a vehicle's distance along it. It is now an orthogonal grid — columns
+across, rows up, height out of the plane. Lanes are horizontal bands, forward
+is up, and the whole nine-column board is always on screen.
+
+**This means `tools/iso.py` has drifted from the browser.** The two were kept in
+step deliberately, and they no longer are. `tools/render_art.py` still produces
+the old diagonal gallery sheets. The Python side is a preview artefact and
+nothing in the gate suite depends on its projection, but the "cannot drift"
+claim in `iso.js`'s header is now false and should either be made true or
+removed.
+
+### P-12 is very likely mis-specified
+
+The gate asks for **90% completion of the full ten-stage campaign**. With
+per-stage rates like the ones above, the product is about 1% — which is what
+it now reports. Reaching 90% across ten stages needs every stage at ~99.5%.
+
+The target was almost certainly written to mean *per-stage* solvability. Either
+the requirement should be re-worded, or the campaign figure should be
+re-baselined to something like 10%. This is a spec question, not a tuning one.

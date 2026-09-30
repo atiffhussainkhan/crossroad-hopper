@@ -25,6 +25,7 @@
   var elScore = document.getElementById("score");
   var elBanner = document.getElementById("banner");
   var elPlayers = document.getElementById("mode");
+  var elProgress = document.getElementById("progress");
 
   var TICK_DT_MS = 16.667;
   var ROW_PX = 26;            // vertical pixels per row
@@ -79,6 +80,7 @@
     if (p >= 1) { var done = hopAnim; hopAnim = null; return { p: 1, done: done }; }
     return { p: Math.max(0, p), done: hopAnim };
   }
+  var BOARD_COLS = 9;    // must match SimCore's g.cols
   var DPR_CAP = 3;   // above 3x the pixels are invisible and cost frame time
   function sizeCanvas() {
     var dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
@@ -126,6 +128,25 @@
     var W = canvas.width / dpr;
     var H = canvas.height / dpr;
 
+    // Lay down the surround before the board.
+    //
+    // The camera renders a finite window of rows, so the corners and the
+    // area behind the player are not covered by tiles. Left alone, the canvas
+    // background shows through and the board ends on a hard diagonal seam
+    // that reads as a rendering fault rather than as the edge of the world.
+    // A darker version of the stage's own ground fills it, so the board sits
+    // in a lawn rather than being cut off.
+    var surround = Iso.shade(stage.ground, 0.86);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = surround;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Restore the device-pixel scale. The fill above deliberately drops to
+    // identity so it covers the whole backing store, and without this the rest
+    // of the frame is drawn in DEVICE pixels instead of CSS pixels -- which
+    // renders the entire board at half size, anchored in the top-left
+    // quadrant, with the player standing in an empty field.
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
     // Isometric scene from the shared renderer. Everything below is drawn in
     // the same projection, with the same face factors, so the game and the
     // Python preview cannot diverge visually.
@@ -136,13 +157,19 @@
     var colCentre = 0;
     Scene.renderScene(ctx, sceneFor(stage), {
       width: W, height: H,
-      cols: Math.max(5, Math.round(W / 42)),
-      viewRows: Math.max(7, Math.round(H / 34)),
+      // The camera now fits the board width itself (see Iso.frameViewWindow),
+      // so cols is the real board width and viewRows is just how much is drawn.
+      cols: BOARD_COLS,
+      viewRows: Math.max(9, Math.round(H / 34)),
       row0: topRow,
       col0: colCentre,
       focusCol: anchor.col,
       focusRow: anchor.row,
       hazards: s.hazards,
+      // The destination. Until this was passed, the finish line was
+      // simulated but never drawn: the player was asked to cross an endless
+      // field of traffic with no visible goal to head for.
+      goalRow: s.goalRow,
     });
 
     // Players, drawn through the SAME projection the simulation collides in.
@@ -230,6 +257,12 @@
     elStage.textContent = stage.id + ". " + stage.name;
     elScore.textContent = String(Math.floor(s.totalScore + s.stageScore));
 
+    // How far to the finish. A player -- especially a child -- needs to see
+    // how far there is to go; the clock on its own says nothing about it.
+    if (elProgress) {
+      elProgress.textContent = Math.min(anchor.row, s.goalRow) + "/" + s.goalRow;
+    }
+
     var livesStr = "";
     for (var li = 0; li < s.players.length; li++) {
       if (li) livesStr += " / ";
@@ -288,41 +321,113 @@
     elBanner.style.display = "none";
   }
 
-  // ---------- Input (M-07) ----------------------------------------------
+  // ---------- Input -------------------------------------------------------
+  //
+  /* The game was unplayable and the reason was here, not in the simulation.
+   *
+   * The old handler treated input as a TAP: pointerdown to pointerup within
+   * 150ms and 12 pixels, or the press was discarded entirely. A human clicking
+   * with a mouse or a trackpad holds the button for 100-300ms and drifts
+   * several pixels before releasing. Almost every real click therefore
+   * matched neither limit and was silently dropped, so the player never
+   * moved and there was no error to find. It also only ever hopped forward:
+   * there was no lateral control and no keyboard at all, so you could not
+   * dodge anything even if the tap had registered.
+   *
+   * Input is now: a press-and-release is a FORWARD hop; a drag is a swipe in
+   * that direction; and the arrow keys / WASD do the same. All three funnel
+   * into one act() so there is exactly one code path that can move a player.
+   */
 
-  var downX = 0, downY = 0, downT = 0;
-  var TAP_MAX_MS = 150, TAP_MAX_PX = 12;
+  var SWIPE_MIN_PX = 28;     // below this it is a tap, not a swipe
 
-  canvas.addEventListener("pointerdown", function (e) {
-    downX = e.clientX; downY = e.clientY; downT = performance.now();
-  });
-  canvas.addEventListener("pointerup", function (e) {
-    var dist = Math.sqrt(Math.pow(e.clientX - downX, 2) + Math.pow(e.clientY - downY, 2));
-    if (performance.now() - downT > TAP_MAX_MS || dist > TAP_MAX_PX) return;
-
+  // Which player a touch belongs to: left half or right half of the board.
+  function playerAtX(clientX) {
     var s = game.state();
-    var idx = (game.state().playerCount < 2) ? 0
-      : (e.clientX < canvas.getBoundingClientRect().left + canvas.clientWidth / 2 ? 0 : 1);
+    if (s.playerCount < 2) return 0;
+    var r = canvas.getBoundingClientRect();
+    return (clientX < r.left + r.width / 2) ? 0 : 1;
+  }
+
+  // The single place a player is ever moved by a human.
+  function act(direction, playerIndex) {
+    var s = game.state();
+
+    // One input restarts or resumes, from any terminal phase.
     if (s.phase === SimCore.PHASES.STAGE_CLEAR ||
         s.phase === SimCore.PHASES.STAGE_FAILED ||
         s.phase === SimCore.PHASES.ENDLESS) {
-      // R-02: one input restarts. hop() then moves the player in the same
-      // tick, so resuming never costs an extra beat.
       game.advance();
       hopAnim = null;
       hideBanner();
       return;
     }
-    // M-09: the first tap both starts the stage and hops.
-    if (s.phase === SimCore.PHASES.READY) { hideBanner(); }
-    var idx = (game.state().playerCount < 2) ? 0
-      : (e.clientX < canvas.getBoundingClientRect().left + canvas.clientWidth / 2 ? 0 : 1);
+    if (s.phase === SimCore.PHASES.READY) hideBanner();
+
+    var idx = playerIndex === undefined ? 0 : playerIndex;
     var st0 = game.state().players[idx].state();
     var pc = st0.col, pr = st0.row;
-    game.hop("forward", idx);
-    if (game.state().players[idx].state().row !== pr) startHop(idx, "forward", pc, pr);
+    if (!game.hop(direction, idx)) return;          // refused: wall or finished
+    var after = game.state().players[idx].state();
+    if (after.row !== pr || after.col !== pc) {
+      startHop(idx, direction, pc, pr);
+    }
+  }
+
+  var downX = 0, downY = 0, downId = null, dragged = false;
+
+  canvas.addEventListener("pointerdown", function (e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    downX = e.clientX; downY = e.clientY;
+    downId = e.pointerId; dragged = false;
+  });
+
+  canvas.addEventListener("pointermove", function (e) {
+    if (downId === null || e.pointerId !== downId) return;
+    var dx = e.clientX - downX, dy = e.clientY - downY;
+    if (!dragged && (Math.abs(dx) > SWIPE_MIN_PX || Math.abs(dy) > SWIPE_MIN_PX)) {
+      dragged = true;
+    }
+  });
+
+  function endPointer(e) {
+    if (downId === null || e.pointerId !== downId) return;
+    downId = null;
+    var dx = e.clientX - downX, dy = e.clientY - downY;
+    var idx = playerAtX(e.clientX);
+    if (dragged || Math.abs(dx) > SWIPE_MIN_PX || Math.abs(dy) > SWIPE_MIN_PX) {
+      // A drag is a swipe. Screen y grows downward, so up is a negative dy.
+      if (Math.abs(dx) > Math.abs(dy)) act(dx > 0 ? "right" : "left", idx);
+      else act(dy < 0 ? "forward" : "back", idx);
+      return;
+    }
+    // A plain press hops forward. There is deliberately no time limit here:
+    // a press that is held for a second is still a press.
+    act("forward", idx);
+  }
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", function (e) {
+    if (e.pointerId === downId) { downId = null; dragged = false; }
   });
   canvas.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+
+  // Keyboard. Without this the game could not be played on a laptop at all,
+  // which is how most people will first meet it.
+  var KEYS = {
+    ArrowUp: "forward", w: "forward", W: "forward", " ": "forward",
+    Enter: "forward",
+    ArrowLeft: "left", a: "left", A: "left",
+    ArrowRight: "right", d: "right", D: "right",
+    ArrowDown: "back", s: "back", S: "back",
+  };
+  window.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var dir = KEYS[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    var idx = game.state().playerCount < 2 ? 0 : game.state().activePlayer;
+    act(dir, idx);
+  });
 
   // ---------- Mode toggle: 1 or 2 players --------------------------------
 
@@ -341,8 +446,10 @@
   document.addEventListener("visibilitychange", function () {
     lastFrameMs = performance.now();
     // NF-06: drop any in-flight pointer so a gesture begun before the tab
-    // was hidden cannot resolve after it returns.
-    downT = 0; downX = 0; downY = 0;
+    // was hidden cannot resolve after it returns. downId is what actually
+    // gates endPointer; the coordinates are cleared so a stale release cannot
+    // be read as a swipe.
+    downId = null; dragged = false; downX = 0; downY = 0;
   });
   requestAnimationFrame(function (t) { lastFrameMs = t; frame(t); });
 })();

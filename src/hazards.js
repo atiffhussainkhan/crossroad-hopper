@@ -23,7 +23,7 @@
   var T = global.Tiles;
 
   var KINDS = {
-    car:      { len: 0.86, speed: [1.5, 2.4], kind: "ground" },
+    car:      { len: 0.86, speed: [1.2, 1.9], kind: "ground" },
     tractor:  { len: 0.80, speed: [1.1, 1.7], kind: "ground" },
     tram:     { len: 0.98, speed: [2.0, 3.2], kind: "ground" },
     train:    { len: 0.98, speed: [4.0, 6.5], kind: "rail"  },
@@ -57,15 +57,34 @@
   function buildHazards(seed, row0, viewRows, cols, difficulty, Rng, stageIndex) {
     var rng = Rng;
     var out = [];
-    // Teaching stages carry no lethal hazard at all. The player learns the
-    // lane rhythm, the hop and the goal line with the clock as the only
-    // pressure, and meets a car for the first time in stage THREE. (The
-    // original comment here said "stage two", which contradicted this guard:
-    // stageIndex < 2 covers stages one AND two.)
-    if (stageIndex !== undefined && stageIndex < 2) return out;
+
+    /* THE LAUNCH APRON AND THE FINISH APRON.
+     *
+     * This function used to return an empty list for stages one and two:
+     * "teaching stages carry no lethal hazard at all". That is not a tutorial,
+     * it is the absence of the game. A lane-crossing game with no traffic is a
+     * walking sim, and the player asked for stage one to be playable in the
+     * sense the genre means: real vehicles, real danger, real timing.
+     *
+     * What a first stage should do is be EASY, not EMPTY. So every stage,
+     * starting with stage one, spawns lethal hazards, and the first three rows
+     * and the last two are guaranteed clear. The player is set down on safe
+     * ground, learns the hop on their first press, and then meets the first
+     * car on their own terms. That is a tutorial. An empty board is not. */
+    var SAFE_START_ROWS = 3;
+    var goalRow = (global.Stages && global.Stages.GOAL_ROW_OFFSET) || 40;
+    var SAFE_GOAL_ROWS = 2;
+
     // Density ramps with difficulty but never reaches 1: a lane that is
-    // always occupied is not a puzzle, it is a wall.
-    var baseDensity = Math.min(0.26, 0.09 + difficulty * 0.016);
+    // always occupied is not a puzzle, it is a wall. ensureSolvable() enforces
+    // the rest of that promise by thinning any row with no passable window.
+    //
+    // This is a per-ROW chance on rows that are actually hazardous, and it is
+    // the only difficulty knob. The old values started at 0.09, which put
+    // roughly one car on the entire forty-row board of stage one -- you could
+    // walk the whole stage without ever meeting one.
+    var baseDensity = 0.22 + Math.min(0.26, difficulty * 0.022);
+
     // Lane class decides which hazards can appear, and only one is possible
     // per row, so a log can never share a row with a train. The class comes
     // from the SAME function the renderer draws with (Tiles.laneOf), keyed on
@@ -78,28 +97,21 @@
       var st = global.Stages.getStage(stageIndex);
       if (st) { laneMix = st.laneMix; laneKey = st.id; }
     }
-    // Difficulty is a property of the STAGE, not of the row. Applying one
-    // per-row density to every stage made a stage that is 90 percent road
-    // nearly three times as many crossings as a stage that is 30 percent
-    // road, purely as a side effect of its lane mix -- the difficulty ladder
-    // and the art direction became the same knob. Scaling by the share of the
-    // board that is actually hazardous keeps the expected number of CROSSINGS
-    // comparable between stages, so a stage's difficulty comes from its
-    // baseline and its speed, not from how much asphalt its palette happened
-    // to include. The floor stops a sparse stage from becoming empty.
-    var share = 1.0;
-    if (T && laneMix !== null) {
-      var cyc = T.laneCycleFor(laneMix, laneKey);
-      var haz = 0;
-      for (var ci = 0; ci < cyc.length; ci++) {
-        if (cyc[ci] !== "grass") haz++;
-      }
-      share = Math.max(0.45, haz / cyc.length);
-    }
-    var density = baseDensity * share;
+    // `share` normalised the count of CROSSINGS between stages that have
+    // wildly different lane mixes. It was added when a road-only stage was
+    // getting cars where it had used to get logs, which read as a difficulty
+    // spike. It over-corrected: multiplying a per-ROW chance by the fraction of
+    // rows that are hazardous squares the effect, so stage one came out with
+    // about one car on the whole board. Density is a per-row chance on rows
+    // that are already hazardous, and that is the whole knob.
+    var density = baseDensity;
 
     for (var r = 0; r < viewRows; r++) {
       var row = row0 + r;
+      // The aprons. Absolute rows, not window-relative: row0 is the camera
+      // window and moves as the player advances.
+      if (row < SAFE_START_ROWS) continue;
+      if (row >= goalRow - SAFE_GOAL_ROWS) continue;
       var k = null;
       var lane = T ? T.laneOf(row, laneMix, laneKey) : "road";
       if (lane === "grass") continue;               // never spawn on open ground

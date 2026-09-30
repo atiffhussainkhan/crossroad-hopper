@@ -264,6 +264,38 @@
 
     for (var t = 0; t < rows.length; t++) drawLaneTexture(ctx, scene, rows[t], cols);
 
+    /* The finish zone.
+     *
+     * A stage is won by reaching opts.goalRow, and until now nothing on
+     * screen said where that was. The player was asked to cross an endless
+     * field of traffic with no visible destination, which is not a challenge,
+     * it is a question. This draws the far edge the way the genre does: a
+     * raised, lighter band with a dashed line at its near lip, readable from
+     * several rows away and unmistakably different from a lane you cross. */
+    var goalRow = opts.goalRow;
+    if (goalRow !== undefined && goalRow !== null) {
+      for (var g = 0; g < 2; g++) {
+        var gr = goalRow + g;
+        if (gr < row0 || gr >= row0 + viewRows) continue;
+        for (var gc = 0; gc < cols; gc++) {
+          I.tile(ctx, gc, gr, g === 0 ? "#f2ead2" : "#ded4b8");
+        }
+      }
+      if (goalRow >= row0 && goalRow < row0 + viewRows) {
+        // Near lip: a dashed line, so it reads as a boundary to cross.
+        for (var dc = 0; dc < cols; dc++) {
+          if (dc % 2 === 1) continue;
+          var d = I.projectS(dc + 0.18, goalRow, 0.02);
+          I.poly(ctx, [[d[0] - 4, d[1] - 2], [d[0] + 4, d[1] - 6],
+                       [d[0] + 4, d[1] - 3], [d[0] - 4, d[1] + 1]], "#ffffff");
+        }
+        // Far edge: a low wall, so the destination has a back to it.
+        var w = I.projectS(0, goalRow + 1, 0.0);
+        var w2 = I.projectS(cols, goalRow + 1, 0.0);
+        I.line(ctx, [[w[0], w[1]], [w2[0], w2[1]]], "#b9ad8c", 3);
+      }
+    }
+
     // Hazards, painted back to front. Drawn from the simulation's positions
     // when available; the decorative fallback only runs if the game has not
     // supplied a list, which is the case for the offline preview sheet.
