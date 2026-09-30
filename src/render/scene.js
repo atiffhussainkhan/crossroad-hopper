@@ -14,11 +14,50 @@
   var I = global.Iso;
 
   // One row, one lane class. A repeating cycle the eye can learn.
-  var LANE_CYCLE = ["grass", "grass", "grass", "grass",
-                    "road", "road", "rail", "water", "water", "water"];
+  /* The lane pattern is now DERIVED FROM EACH STAGE'S laneMix instead of a
+   * single fixed cycle. The fixed cycle meant all ten stages had an identical
+   * layout and differed only in colour, which is not ten different scenes --
+   * it is one scene recoloured. Each stage now builds its own repeating
+   * pattern from its own road/rail/water weights, so Suburb is road-heavy,
+   * River is water-heavy, Frozen Lake is mostly water, and so on.
+   *
+   * The pattern stays a fixed cycle per stage rather than being resampled, so
+   * the player can learn a stage's rhythm, which is the whole point. */
+  function buildLaneCycle(laneMix) {
+    var w = laneMix || [0.6, 0.15, 0.25];
+    var slots = 20;
+    var road = Math.round(w[0] * slots);
+    var rail = Math.round(w[1] * slots);
+    var water = Math.round(w[2] * slots);
+    var grass = Math.max(0, slots - road - rail - water);
+    var out = [];
+    var made = 0;
+    // Interleave rather than block, so no stage is a single solid band.
+    var order = ["road", "rail", "water", "grass"];
+    var quota = { road: road, rail: rail, water: water, grass: grass };
+    while (out.length < slots) {
+      for (var o = 0; o < order.length; o++) {
+        var k = order[o];
+        if (quota[k] > 0) { out.push(k); quota[k]--; }
+      }
+    }
+    return out;
+  }
 
-  function laneOf(row) { return LANE_CYCLE[((row % LANE_CYCLE.length) + LANE_CYCLE.length) % LANE_CYCLE.length]; }
-  function isHazardLane(row) { var l = laneOf(row); return l === "road" || l === "rail" || l === "water"; }
+  var LANE_CYCLES = {};
+
+  function laneOf(row, scene) {
+    var key = (scene && scene.id !== undefined) ? scene.id : 0;
+    if (!LANE_CYCLES[key]) {
+      LANE_CYCLES[key] = buildLaneCycle(scene && scene.laneMix);
+    }
+    var cyc = LANE_CYCLES[key];
+    return cyc[((row % cyc.length) + cyc.length) % cyc.length];
+  }
+  function isHazardLane(row, scene) {
+    var l = laneOf(row, scene);
+    return l === "road" || l === "rail" || l === "water";
+  }
 
   // ---------- props ------------------------------------------------------
 
@@ -126,7 +165,7 @@
   // palette change can remove them.
 
   function drawLaneTexture(ctx, scene, row, cols) {
-    var lane = laneOf(row);
+    var lane = laneOf(row, scene);
     for (var col = 0; col < cols; col++) {
       if (lane === "road") {
         if (col % 2 === 0) {
@@ -186,7 +225,7 @@
     for (var ri = 0; ri < rows.length; ri++) {
       var row = rows[ri];
       for (var c = 0; c < cols; c++) {
-        var l = laneOf(row);
+        var l = laneOf(row, scene);
         var base = l === "road" ? scene.road
                  : l === "rail" ? scene.road
                  : l === "water" ? scene.water
@@ -227,7 +266,7 @@
     var sc = [];
     for (var s = 0; s < rows.length - 1; s++) {
       var sr = rows[s];
-      if (isHazardLane(sr)) continue;
+      if (isHazardLane(sr, scene)) continue;
       for (var scn = 0; scn < cols; scn++) {
         var hv = (scn * 7 + sr * 5) % 13;
         if (hv === 0) sc.push([scn, sr, "tree"]);
@@ -242,7 +281,7 @@
   }
 
   global.Scene = {
-    laneOf: laneOf, isHazardLane: isHazardLane,
+    laneOf: laneOf, isHazardLane: isHazardLane, buildLaneCycle: buildLaneCycle,
     renderScene: renderScene, drawLaneTexture: drawLaneTexture,
     drawCar: drawCar, drawTrain: drawTrain, drawLog: drawLog, drawTurtle: drawTurtle,
     drawTree: drawTree, drawBush: drawBush, drawRock: drawRock,

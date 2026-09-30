@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hopper — stage &amp; roster gallery</title>
+<style>
+  :root { --ink:#e8e8ea; --dim:#9aa0a8; --panel:#15181d; --line:#262b33; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#0c0e11; color:var(--ink);
+         font:14px/1.45 -apple-system, system-ui, sans-serif; padding:24px; }
+  h1 { font-size:20px; margin-bottom:4px; }
+  h2 { font-size:15px; color:var(--dim); text-transform:uppercase;
+       letter-spacing:.1em; margin:28px 0 12px; }
+  .sub { color:var(--dim); margin-bottom:8px; }
+  .grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+  .cell { background:var(--panel); border:1px solid var(--line);
+          border-radius:8px; overflow:hidden; }
+  .cell canvas { display:block; width:100%; height:auto; }
+  .cap { padding:8px 10px; font-size:12px; display:flex;
+         justify-content:space-between; align-items:baseline; }
+  .cap b { font-weight:600; }
+  .cap span { color:var(--dim); font-variant-numeric:tabular-nums; }
+  .strip { display:flex; gap:10px; flex-wrap:wrap; }
+  .strip .cell { width:150px; }
+  .note { color:var(--dim); font-size:12px; margin-top:6px; }
+</style>
+</head>
+<body>
+<h1>Hopper — stage &amp; roster gallery</h1>
+<p class="sub">Every stage rendered live from <code>src/stages.js</code> with its own
+palette, lane mix and hazards. Characters drawn from <code>src/roster.js</code>.
+Nothing here is an image asset.</p>
+
+<h2>Ten stages</h2>
+<div class="grid" id="stages"></div>
+
+<h2>Roster — six silhouettes</h2>
+<div class="strip" id="roster"></div>
+<p class="note">Separated by silhouette, not colour: triangle ears, a single antenna,
+tall upright ears, stepped horns, a leafy sprig, round ears. Distinguishable in greyscale.</p>
+
+<h2>Motion — hop, and hazard travel</h2>
+<div class="strip" id="motion"></div>
+<p class="note">Left: the five-frame hop (anticipate, launch, apex, fall, land).
+Right: a car at five positions along its lane, so its travel on the plane is visible.</p>
+
+<script src="src/stages.js"></script>
+<script src="src/hazards.js"></script>
+<script src="src/sim-core.js"></script>
+<script src="src/render/iso.js"></script>
+<script src="src/render/scene.js"></script>
+<script src="src/roster.js"></script>
+<script src="src/render/character.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
+
+  // ---- every stage, drawn with its own hazards and scenery -------------
+  var host = document.getElementById("stages");
+  Stages.STAGES.forEach(function (st, i) {
+    var cell = el("div", "cell");
+    var cv = document.createElement("canvas");
+    cv.width = 260; cv.height = 300;
+    cell.appendChild(cv);
+    var cap = el("div", "cap");
+    cap.innerHTML = "<b>" + (i + 1) + ". " + st.name + "</b><span>diff " + st.baseline + "</span>";
+    cell.appendChild(cap);
+    host.appendChild(cell);
+
+    var ctx = cv.getContext("2d");
+    // Build a real hazard list for this stage so the picture shows what the
+    // player actually meets, not a decorative arrangement.
+    var rng = SimCore.createRng("gallery:" + st.id);
+    var haz = Hazards.ensureSolvable(
+      Hazards.buildHazards("gallery:" + st.id, 0, 14, 7, st.baseline + 2, rng),
+      { needGap: 0.9 });
+
+    Scene.renderScene(ctx, {
+      id: st.id, name: st.name,
+      ground: st.ground, groundAlt: st.groundAlt, road: st.road, water: st.water,
+      hazard: st.hazard, hazard2: st.hazard2, log: st.log, turtle: st.turtle,
+      foliage: st.foliage, foliage2: st.foliage2, trunk: st.trunk,
+      hazardKinds: st.hazardKinds, scenery: st.scenery,
+    }, {
+      width: 260, height: 300, cols: 7, viewRows: 11, row0: 0, col0: 0,
+      focusCol: 3, focusRow: 8, hazards: haz,
+    });
+  });
+
+  // ---- the roster -------------------------------------------------------
+  var rhost = document.getElementById("roster");
+  Roster.ROSTER.forEach(function (ch) {
+    var cell = el("div", "cell");
+    var cv = document.createElement("canvas");
+    cv.width = 150; cv.height = 170;
+    cell.appendChild(cv);
+    var cap = el("div", "cap");
+    cap.innerHTML = "<b>" + ch.name + "</b><span>" + ch.earKind + "</span>";
+    cell.appendChild(cap);
+    rhost.appendChild(cell);
+    var ctx = cv.getContext("2d");
+    Iso.frameViewWindow(1, 1, 150, 170, 0, 2.0, 16, 0.62, 1, 0, 0, 0);
+    Iso.tile(ctx, 0, 0, ch.body);
+    CharacterRenderer.drawCharacter(ctx, 0, 0, 0.95, ch);
+  });
+
+  // ---- motion: the hop, and a car travelling its lane -------------------
+  var mhost = document.getElementById("motion");
+  var frames = [["anticipate", 0.00, 0.82, 1.16], ["launch", 0.55, 1.00, 1.24],
+                ["apex", 0.85, 1.00, 1.02], ["fall", 0.50, 1.00, 0.98],
+                ["land", 0.00, 1.16, 0.80]];
+  frames.forEach(function (f) {
+    var cell = el("div", "cell");
+    var cv = document.createElement("canvas");
+    cv.width = 150; cv.height = 170;
+    cell.appendChild(cv);
+    var cap = el("div", "cap");
+    cap.innerHTML = "<b>" + f[0] + "</b>";
+    cell.appendChild(cap);
+    mhost.appendChild(cell);
+    var ctx = cv.getContext("2d");
+    Iso.frameViewWindow(1, 1, 150, 170, 0, 2.2, 16, 0.60, 1, 0, 0, 0);
+    Iso.tile(ctx, 0, 0, Roster.getCharacter("pip").body);
+    CharacterRenderer.drawCharacter(ctx, 0, 0, 0.9 * f[3], Roster.getCharacter("pip"), f[1]);
+  });
+  [0, 1.4, 2.8, 4.2, 5.6].forEach(function (x) {
+    var cell = el("div", "cell");
+    var cv = document.createElement("canvas");
+    cv.width = 150; cv.height = 170;
+    cell.appendChild(cv);
+    var cap = el("div", "cap");
+    cap.innerHTML = "<b>x = " + x.toFixed(1) + "</b>";
+    cell.appendChild(cap);
+    mhost.appendChild(cell);
+    var ctx = cv.getContext("2d");
+    var st = Stages.getStage(0);
+    Iso.frameViewWindow(4, 1, 150, 170, 0, 1.2, 10, 0.62, 1, 0, 0, 0);
+    for (var r = 0; r < 1; r++) Iso.tile(ctx, 0, r, st.road);
+    Scene.drawCar(ctx, x, 0, {
+      ground: st.ground, groundAlt: st.groundAlt, road: st.road, water: st.water,
+      hazard: st.hazard, hazard2: st.hazard2, foliage: st.foliage,
+      foliage2: st.foliage2, trunk: st.trunk,
+    });
+  });
+
+  document.body.setAttribute("data-gallery-ready", "1");
+})();
+</script>
+</body>
+</html>
