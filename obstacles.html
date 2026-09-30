@@ -1,0 +1,85 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Obstacle gallery</title><link rel="stylesheet" href="src/style.css">
+<style>
+body{background:#15161a;color:#e8e6e0;font:13px/1.4 -apple-system,sans-serif;margin:0;padding:16px 20px 30px}
+h1{font-size:19px;margin:0 0 3px}h2{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#8f96a3;margin:18px 0 8px}
+.sub{color:#8f96a3;margin:0 0 14px;font-size:12px;max-width:900px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.cell{text-align:center}canvas{display:block;background:#000;border-radius:7px}
+.cap{font-size:10px;color:#9aa2b0;margin-top:4px}
+.tall canvas{width:170px;height:88px}.wide canvas{width:170px;height:88px}
+#errors{background:#4a1414;border:1px solid #a33;color:#ffd7d7;padding:10px 14px;
+border-radius:6px;margin-bottom:14px;font-family:ui-monospace,Menlo,monospace;font-size:12px;
+white-space:pre-wrap;display:none}
+</style></head><body>
+<div id="errors"></div>
+<h1>Obstacle gallery</h1>
+<p class="sub">Every hazard the game can spawn, drawn by the real renderer from
+the real stage palettes. Length is the number that matters: a bus is 3.1 tiles
+and occupies most of a lane for most of its pass.</p>
+<script src="src/stages.js"></script><script src="src/tiles.js"></script>
+<script src="src/hazards.js"></script><script src="src/sim-core.js"></script>
+<script src="src/render/iso.js"></script><script src="src/scenery.js"></script>
+<script src="src/render/scene.js"></script>
+<script>
+(function(){
+var errs=[];var eb=document.getElementById("errors");
+function fail(e){errs.push((e&&e.message)||String(e));eb.style.display="block";
+ eb.textContent="RENDER ERRORS ("+errs.length+")\n"+errs.join("\n");}
+window.addEventListener("error",function(e){fail(e.error||e.message);});
+try{
+// which stage is each kind's home, so it is drawn on its own ground
+var HOME={};
+Stages.STAGES.forEach(function(st,si){st.hazardKinds.forEach(function(k){if(HOME[k]===undefined)HOME[k]=[st,si];});});
+var host=document.createElement("div");host.className="grid";
+var LANE_OF={"car":"road","taxi":"road","racecar":"road","police":"road",
+ "limousine":"road","truck":"road","bus":"road","tractor":"road","forklift":"road",
+ "roller":"road","tumbleweed":"road","train":"rail","tram":"rail","monorail":"rail",
+ "log":"water","turtle":"water","snake":"water","alligator":"water",
+ "crocodile":"water","boulder":"ground","geyser":"ground","steamvent":"ground"};
+Object.keys(Hazards.KINDS).forEach(function(k){
+  var home=HOME[k]; if(!home){var c=document.createElement("div");c.className="cell";
+    c.innerHTML="<canvas width=170 height=88></canvas><div class=cap>"+k+"</div>";
+    host.appendChild(c);return;}
+  var st=home[0],si=home[1];
+  // find a row of this kind's lane class in the stage's own cycle
+  var lane=LANE_OF[k]||"road", row=8;
+  for(var r=3;r<40;r++){ if(Tiles.laneOf(r,st.laneMix,st.id)===lane){row=r;break;} }
+  var cell=document.createElement("div");cell.className="cell"+(Hazards.KINDS[k].len>2?"wide":"");
+  var cv=document.createElement("canvas");cv.width=170;cv.height=88;cell.appendChild(cv);
+  var cap=document.createElement("div");cap.className="cap";
+  cap.textContent=k+" · "+Hazards.KINDS[k].len+"t";
+  cell.appendChild(cap);host.appendChild(cell);
+  var ctx=cv.getContext("2d");
+  // ONE view for the ground and the obstacle. Iso.projectS already folds in
+  // the view offset, so setting ox=0 drew the obstacle at x=281 in a 170px
+  // canvas and it fell off the right edge.
+  // The drawers work in LOCAL coordinates, so the board here is rows 0..2
+  // with the obstacle on row 1. Passing the stage's ABSOLUTE row put it
+  // hundreds of pixels above the canvas.
+  var OX = 85 - (4 * 56 - 28), OY = 58 + 40;
+  Iso.setView(OX, OY, 1, 0);
+  for (var cc = 3; cc <= 5; cc++)
+    for (var rr = 0; rr <= 2; rr++) {
+      var L = Tiles.laneOf(row + rr - 1, st.laneMix, st.id);
+      var base = (L === "road" || L === "rail") ? st.road
+                : (L === "water" ? st.water : st.ground);
+      var isHome = (L === lane) || (rr === 1 && lane === "ground");
+      Iso.tile(ctx, cc, rr, isHome ? Iso.shade(base, 1.14) : base);
+    }
+  var hz = Hazards.hazardsForRow("g" + k, row, st.id, 2,
+                                 SimCore.createRng("g" + k), si, 4)
+           .filter(function (h) { return h.kind === k; })[0];
+  if (!hz) hz = { kind: k, spec: Hazards.KINDS[k], row: row, x: 6,
+                  cycle: { t: 400, on: 900, periodMs: 2400 } };
+  if (Scene.TIMED_FNS[k]) Scene.TIMED_FNS[k](ctx, 4, 1, st, hz);
+  else if (Scene.HAZARD_FNS[k]) Scene.HAZARD_FNS[k](ctx, 4, 1, st, hz);
+  else { ctx.fillStyle = "#a33"; ctx.font = "12px monospace";
+         ctx.fillText("NO DRAW", 12, 44); }
+  ctx.fillStyle = "rgba(255,255,255,.8)"; ctx.font = "10px ui-monospace";
+  ctx.fillText(Hazards.KINDS[k].len + " tiles", 6, 12);
+});
+document.body.appendChild(host);
+}catch(e){fail(e);}
+})();
+</script></body></html>

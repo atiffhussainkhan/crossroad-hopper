@@ -83,34 +83,34 @@ def _turtle_colour(scene: dict) -> str:
 SCENES = [
     dict(id=1,  name="Suburb",       sky=("#8fc7f0", "#d8ecf9"), ground="#7ba05b", alt="#6f9450",
          road="#4a4a52", water="#3f7fb5", hazard="#ff4d3d", hazard2="#f2a03d",
-         foliage="#3f8a3d", foliage2="#57a84f", trunk="#7a5433", accent="#ffffff", hazardKinds=["car"], scenery=["tree", "hedge", "mailbox"]),
+         foliage="#3f8a3d", foliage2="#57a84f", trunk="#7a5433", accent="#ffffff", hazardKinds=["car", "taxi", "police"], scenery=["hedge", "tree", "mailbox", "bush", "flowerbed", "fence"]),
     dict(id=2,  name="River",        sky=("#7fb6e0", "#dcecf7"), ground="#3f7fb5", alt="#37719f",
          road="#4a4a52", water="#2f6f9f", hazard="#ff4d3d", hazard2="#8a5a2b",
-         foliage="#2f6b40", foliage2="#438a52", trunk="#6b4a2b", accent="#e8f4ff", hazardKinds=["log", "turtle"], scenery=["reed", "rock"]),
+         foliage="#2f6b40", foliage2="#438a52", trunk="#6b4a2b", accent="#e8f4ff", hazardKinds=["log", "turtle", "alligator", "snake"], scenery=["reed", "lily", "rock", "lily", "reed"]),
     dict(id=3,  name="Desert",       sky=("#f0c88a", "#fce9c4"), ground="#d9b168", alt="#cfa45c",
          road="#5a5048", water="#3f7fb5", hazard="#ff4d3d", hazard2="#a89a3a",
-         foliage="#5f8a3f", foliage2="#7aa84f", trunk="#8a6a3a", accent="#fff6e0", hazardKinds=["car", "tumbleweed"], scenery=["cactus", "rock", "bone"]),
+         foliage="#5f8a3f", foliage2="#7aa84f", trunk="#8a6a3a", accent="#fff6e0", hazardKinds=["car", "tumbleweed", "tractor", "racecar"], scenery=["cactus", "rock", "bone", "boulder"]),
     dict(id=4,  name="Farmland",     sky=("#c2d8b0", "#eef4dc"), ground="#d9d264", alt="#cbbc58",
          road="#54585e", water="#3f7fb5", hazard="#ff4d3d", hazard2="#e8b53d",
-         foliage="#4a7a3a", foliage2="#5f9c48", trunk="#7a5433", accent="#fffce8", hazardKinds=["tractor", "car"], scenery=["haybale", "fence", "tree"]),
+         foliage="#4a7a3a", foliage2="#5f9c48", trunk="#7a5433", accent="#fffce8", hazardKinds=["tractor", "car", "limousine", "truck", "train"], scenery=["haybale", "fence", "tree", "windmill"]),
     dict(id=5,  name="Night City",   sky=("#131a2e", "#38445f"), ground="#2b3040", alt="#262b39",
          road="#1e222c", water="#26405e", hazard="#ff4d3d", hazard2="#4ad9ff",
-         foliage="#2a3a4a", foliage2="#365068", trunk="#2a2f38", accent="#7de8ff", hazardKinds=["car", "tram"], scenery=["neon", "building"]),
+         foliage="#2a3a4a", foliage2="#365068", trunk="#2a2f38", accent="#7de8ff", hazardKinds=["taxi", "tram", "bus", "police"], scenery=["neon", "building", "streetlamp", "hydrant", "postbox"]),
     dict(id=6,  name="Frozen Lake",  sky=("#b8d8e8", "#edf7fc"), ground="#c8e4f0", alt="#bcd9e8",
          road="#262b33", water="#5aa0c0", hazard="#ff4d3d", hazard2="#6b4a8a",
-         foliage="#3d6b5a", foliage2="#4f8570", trunk="#5a4636", accent="#ffffff", hazardKinds=["crack", "sled"], scenery=["pine", "iceberg"]),
+         foliage="#3d6b5a", foliage2="#4f8570", trunk="#5a4636", accent="#ffffff", hazardKinds=["sled", "turtle", "log", "crocodile"], scenery=["pine", "iceberg", "pine", "rock"]),
     dict(id=7,  name="Rainforest",   sky=("#6ba87a", "#cce7c6"), ground="#3f7a4a", alt="#387044",
          road="#4a4438", water="#2f6f8a", hazard="#ff4d3d", hazard2="#7ac94f",
-         foliage="#24522f", foliage2="#357a42", trunk="#5a4028", accent="#e8ffd8", hazardKinds=["log", "animal", "car"], scenery=["vine", "fern", "tree"]),
+         foliage="#24522f", foliage2="#357a42", trunk="#5a4028", accent="#e8ffd8", hazardKinds=["log", "snake", "car", "boulder"], scenery=["vine", "fern", "tree", "bush"]),
     dict(id=8,  name="Construction", sky=("#b8bec8", "#e8ecf2"), ground="#9aa0a8", alt="#8f959d",
          road="#6b7078", water="#4a6a8a", hazard="#ff4d3d", hazard2="#e05c4b",
-         foliage="#7a8a4a", foliage2="#8fa85a", trunk="#8a6a3a", accent="#ffffff", hazardKinds=["steel", "forklift"], scenery=["scaffold", "cone", "crate"]),
+         foliage="#7a8a4a", foliage2="#8fa85a", trunk="#8a6a3a", accent="#ffffff", hazardKinds=["forklift", "roller", "monorail", "truck"], scenery=["scaffold", "cone", "crate", "pylon"]),
     dict(id=9,  name="Storm",        sky=("#3a4450", "#727d8c"), ground="#4a5560", alt="#434d57",
          road="#333a44", water="#38566b", hazard="#ff4d3d", hazard2="#7ac9e8",
-         foliage="#2f3742", foliage2="#3d4a58", trunk="#33383f", accent="#d8e8f4", hazardKinds=["car", "tram", "lightning"], scenery=["pylon", "debris"]),
+         foliage="#2f3742", foliage2="#3d4a58", trunk="#33383f", accent="#d8e8f4", hazardKinds=["limousine", "tram", "tumbleweed", "train"], scenery=["pylon", "puddle", "pylon", "debris"]),
     dict(id=10, name="Volcano",      sky=("#3a1f1c", "#9c4326"), ground="#5a3a34", alt="#52342e",
          road="#3a2a26", water="#8a3a1a", hazard="#ff4d3d", hazard2="#ffd23d",
-         foliage="#2a1a18", foliage2="#3f2622", trunk="#3a2a26", accent="#ffb03d", hazardKinds=["car", "tram", "log", "steel", "lava"], scenery=["lavaVent", "obsidian", "boulder"]),
+         foliage="#2a1a18", foliage2="#3f2622", trunk="#3a2a26", accent="#ffb03d", hazardKinds=["bus", "steamvent", "log", "train", "roller"], scenery=["lavaVent", "obsidian", "boulder", "debris"]),
 ]
 
 
@@ -295,6 +295,172 @@ def draw_boulder(c: Canvas, col: float, row: float, scene: dict) -> None:
          round_top=0.30)
     cx, cy = project_s(col + 0.5, row + 0.5, 0.74)
     c.ellipse(cx, cy, 7, 4, shade(colr, 1.30))
+
+
+def draw_taxi(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_racecar(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_police(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_limousine(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_bus(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_roller(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_monorail(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_snake(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_alligator(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_crocodile(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_geyser(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_steamvent(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_hedge(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_mailbox(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_fence(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_flowerbed(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_streetlamp(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_parkedcar(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_lily(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_bone(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_windmill(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_neon(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_hydrant(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_postbox(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_puddle(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_vine(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_fern(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_scaffold(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_crate(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_pylon(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_debris(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_obsidian(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+def draw_iceberg(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Preview stub. The playable draws this in src/render/scene.js; the
+    Python sheet exists to check the STAGE DATA, not to be the art."""
+    cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
 
 
 def draw_sky(c: Canvas, w: int, h: int, top: str, bottom: str) -> None:

@@ -34,11 +34,17 @@ SCENERY_JS = ROOT / "src" / "scenery.js"
 RENDER = ROOT / "tools" / "render_art.py"
 
 HAZARD_FNS = {
-    "car": "draw_car", "tractor": "draw_tractor", "tram": "draw_tram",
-    "train": "draw_train", "log": "draw_log", "turtle": "draw_turtle",
-    "sled": "draw_sled", "animal": "draw_animal", "steel": "draw_steel",
-    "forklift": "draw_forklift", "tumbleweed": "draw_tumbleweed",
-    "crack": "draw_crack", "lightning": "draw_bolt", "lava": "draw_lava",
+    "car": "draw_car", "taxi": "draw_taxi", "racecar": "draw_racecar",
+    "police": "draw_police", "limousine": "draw_limousine",
+    "truck": "draw_truck", "bus": "draw_bus", "tractor": "draw_tractor",
+    "forklift": "draw_forklift", "roller": "draw_roller",
+    "tumbleweed": "draw_tumbleweed",
+    "train": "draw_train", "tram": "draw_tram", "monorail": "draw_monorail",
+    "sled": "draw_sled",
+    "log": "draw_log", "turtle": "draw_turtle", "snake": "draw_snake",
+    "alligator": "draw_alligator", "crocodile": "draw_crocodile",
+    "boulder": "draw_boulder", "geyser": "draw_geyser",
+    "steamvent": "draw_steamvent",
 }
 
 SCENERY_FNS = {
@@ -46,12 +52,15 @@ SCENERY_FNS = {
     "rock": "draw_rock", "haybale": "draw_haybale", "building": "draw_building",
     "cone": "draw_cone", "lavaVent": "draw_lava_vent", "reed": "draw_reed",
     "pine": "draw_pine", "boulder": "draw_boulder",
-    # Aliases: several biomes reuse an existing prop under a local name.
-    "neon": "draw_building", "hedge": "draw_bush", "mailbox": "draw_cone",
-    "fence": "draw_haybale", "iceberg": "draw_rock", "vine": "draw_reed",
-    "fern": "draw_bush", "scaffold": "draw_building", "crate": "draw_rock",
-    "pylon": "draw_building", "debris": "draw_rock", "obsidian": "draw_rock",
-    "bone": "draw_rock",
+    "hedge": "draw_hedge", "mailbox": "draw_mailbox", "fence": "draw_fence",
+    "flowerbed": "draw_flowerbed", "streetlamp": "draw_streetlamp",
+    "parkedcar": "draw_parkedcar", "lily": "draw_lily", "bone": "draw_bone",
+    "windmill": "draw_windmill", "neon": "draw_neon",
+    "hydrant": "draw_hydrant", "postbox": "draw_postbox",
+    "puddle": "draw_puddle", "vine": "draw_vine", "fern": "draw_fern",
+    "scaffold": "draw_scaffold", "crate": "draw_crate",
+    "pylon": "draw_pylon", "debris": "draw_debris",
+    "obsidian": "draw_obsidian", "iceberg": "draw_iceberg",
 }
 
 # Every character must differ by something structural, not by hue.

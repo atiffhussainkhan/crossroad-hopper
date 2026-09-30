@@ -390,3 +390,94 @@ New gate: isolates the pursuer with no traffic, and asserts a hopping player
 is never caught while a standing player is caught but not within 3 seconds.
 Proved non-vacuous both ways -- restoring `spawnRow = playerRow` fails on the
 1.1s grace, and raising its speed above the player's fails on escapability.
+
+
+---
+
+## UPDATE — stages 2-5, and the stages actually having their own obstacles
+
+### The stages had no obstacles of their own
+
+Asked to build stages 2-5 with their own content, the first thing measured
+was what they actually spawned. **All ten stages spawned only `car`.**
+
+Two root causes, both silent:
+
+1. Obstacle selection was a fixed switch on the LANE CLASS -- road is always a
+   car, rail always a train, water always a log or a turtle. The `hazardKinds`
+   list in stages.js was decoration that only the offline Python sheet ever
+   read. Ten stages of art direction produced one obstacle.
+2. `hazardsForRow` passed `null` where `buildRow` only looks the stage's
+   `laneMix` up when the argument is `undefined`, so the SPAWNER silently fell
+   back to the default lane mix. It thought River was 16 road / 6 rail / 10
+   water while the renderer drew it as 4 road / 24 water / 12 grass. This is
+   the same "spawner and renderer disagree about a row" bug as the original
+   cars-on-lawn defect, reintroduced.
+
+Now a stage's declared `hazardKinds` is authoritative, filtered to what is
+legal for each lane it actually has, weighted toward the front of the list so
+a stage's signature obstacle is its most common one.
+
+### 22 obstacles, researched rather than invented
+
+A research pass over Frogger, Crossy Road, Freeway and Hopper produced the
+catalogue. What went in, and what each one asks of the player:
+
+- **Length** is the number that matters. A bus is 3.1 tiles and occupies most
+  of a lane for most of its pass, so the lane asks a different question than a
+  car does. That is the main source of variety and it is free to read.
+- Road: car, taxi, racecar, police, limousine, truck, bus, tractor, forklift,
+  roller, tumbleweed.
+- Rail: train, tram, monorail.
+- Water: log, turtle, snake, alligator, crocodile.
+
+Two behaviours that are not just "a different shape":
+
+- **Oscillating** hazards (the tumbleweed) reverse inside a span instead of
+  wrapping off the board, so they come back at you and cannot be counted on.
+- **Timed** hazards (geyser, steamvent) are lethal only while they are up, on a
+  fixed period, and are harmless between eruptions. The player learns the beat
+  and crosses on the off phase. These two are *invented*: the research found
+  no geyser, steam vent, conveyor or swinging hazard in any named lane
+  crosser, and said so. They fill a real gap rather than imitating one.
+
+Corrections the research forced, which I had wrong:
+
+- **Snake belongs on WATER, not on land.** The Frogger rule is that it
+  impersonates a log; the whole point is that it is the safe-looking tile you
+  should not trust. I had it as a ground creature.
+- The crocodile/alligator "ride the back, the head eats you" rule is not
+  implemented: the whole animal is lethal. Riding a moving platform needs
+  support for the player to stand on something, which this engine cannot do.
+  Noted as a known departure rather than quietly faked.
+
+### Stages 2-5
+
+| | Stage | Lanes | Its obstacles |
+|---|---|---|---|
+| 2 | River | water + banks | log, turtle, alligator, snake |
+| 3 | Desert | road + sand | car, tumbleweed, tractor, racecar |
+| 4 | Farmland | road + rail | tractor, car, limousine, truck, train |
+| 5 | Night City | road + tram rails | taxi, tram, bus, police |
+
+A river has no road and a desert has no water, so those lane mixes were
+corrected rather than bolting on an obstacle that made no sense. New scenery
+for them: lily pad, windmill, fire hydrant, post box.
+
+### Difficulty went up, deliberately
+
+P-12 campaign reachability moved from **96% to 62%**. That is the cost of what
+was asked for: more obstacles, more kinds, more variety per lane. The density
+floor for stage one also came up from 0.22 to 0.30, because at 0.22 a player
+looking at eight lanes saw about one car and the board read as empty.
+
+### New gates
+
+- every lane class a stage actually has must have a legal declared obstacle,
+  and nothing it spawns may be undeclared;
+- every kind must have a renderer, AND that renderer must actually put marks
+  on a canvas -- a draw function that draws nothing is as bad as none.
+
+Both proved non-vacuous. Also note the browser registry gate caught an
+undeclared `I.ellipse` in main.js within seconds of it being written, which is
+the undeclared-identifier check earning its place.

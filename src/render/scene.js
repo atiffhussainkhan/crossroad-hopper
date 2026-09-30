@@ -12,6 +12,7 @@
   "use strict";
 
   var I = global.Iso;
+  var Hazards = global.Hazards;
 
   // One row, one lane class. A repeating cycle the eye can learn.
   /* The lane pattern is DERIVED FROM EACH STAGE'S laneMix instead of a single
@@ -37,58 +38,225 @@
 
   // ---------- props ------------------------------------------------------
 
-  function drawCar(ctx, col, row, scene) {
-    var body = scene.hazard;
-    I.castShadow(ctx, col, row, 0.78, 0.55);
-    I.cubeFrac(ctx, col + 0.00, row + 0.08, 0.86, 0.34, 0.0, 0.20, I.shade(body, 0.58));
-    I.cubeFrac(ctx, col + 0.04, row + 0.12, 0.76, 0.26, 0.20, 0.16, body);
-    I.cubeFrac(ctx, col + 0.26, row + 0.16, 0.34, 0.22, 0.36, 0.20, I.shade(body, 0.86));
-    I.cubeFrac(ctx, col + 0.28, row + 0.18, 0.32, 0.20, 0.56, 0.07, I.shade(body, 1.18));
-    var g = I.projectS(col + 0.26, row + 0.16, 0.50);
-    I.poly(ctx, [[g[0], g[1] - 1], [g[0] + 9, g[1] + 5], [g[0] + 9, g[1] + 10], [g[0], g[1] + 4]], "#cfe6f5");
-    [0.20, 0.44].forEach(function (dr) {
-      var w = I.projectS(col + 0.16, row + dr, 0.0);
-      I.ellipse(ctx, w[0], w[1] + 4, 4.4, 4.4, "#1c1c20");
-      I.ellipse(ctx, w[0], w[1] + 4, 2.0, 2.0, "#8d9096");
-    });
-    [0.18, 0.40].forEach(function (dr) {
-      var l = I.projectS(col + 1.0, row + dr, 0.26);
-      I.ellipse(ctx, l[0], l[1], 3.0, 2.2, "#fff3c0");
-    });
+
+  /* ---- the obstacle vocabulary ----------------------------------------
+   *
+   * One function per kind in Hazards.KINDS. The first four were the whole set
+   * for most of the project's life, which is why every stage looked and played
+   * alike. Length is the number that matters: a bus that is 3.1 tiles long
+   * occupies most of a lane for most of its pass, so the lane asks a different
+   * question of the player than a car does.
+   */
+
+  function hazardShadow(ctx, col, row, len, alpha) {
+    I.castShadow(ctx, col + (1 - len) / 2, row, 0.4, 0.5, alpha);
   }
 
-  function drawTrain(ctx, col, row, scene) {
-    var body = scene.hazard2 || scene.hazard;
-    I.castShadow(ctx, col, row, 0.66, 0.58);
-    I.cubeFrac(ctx, col + 0.00, row + 0.06, 0.98, 0.30, 0.0, 0.40, I.shade(body, 0.58));
-    I.cubeFrac(ctx, col + 0.02, row + 0.09, 0.94, 0.26, 0.40, 0.26, body);
-    var n = I.projectS(col + 1.0, row + 0.5, 0.0);
-    I.poly(ctx, [[n[0], n[1] - 12], [n[0] - 14, n[1] + 6], [n[0], n[1] + 6]], I.shade(body, 1.05));
-    for (var k = 0; k < 3; k++) {
-      var w = I.projectS(col + 0.18 + k * 0.30, row + 0.06, 0.50);
-      I.poly(ctx, [[w[0], w[1] - 2], [w[0] - 6, w[1] + 4], [w[0] - 6, w[1] + 10], [w[0], w[1] + 4]], "#dff0ff");
-      var r = I.projectS(col + 0.14 + k * 0.30, row + 0.16, 0.68);
-      I.ellipse(ctx, r[0], r[1], 9, 4, I.shade(body, 1.20));
+  // A wheeled body: cabin, glass, and wheels. Shared by the road family so
+  // they read as the same world at different sizes.
+  function wheeled(ctx, col, row, spec, body, glass, opts) {
+    opts = opts || {};
+    var len = opts.len || spec.len;
+    var h = opts.h || 0.34;
+    hazardShadow(ctx, col, row, len, 0.16);
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.12, len, 0.30, 0.0, 0.10, I.shade(body, 0.55));
+    I.cubeFrac(ctx, col + (1 - len) / 2 + 0.02, row + 0.16, len - 0.04, 0.24, 0.10, h - 0.10, body);
+    // Cabin, set back from the nose so long vehicles read as long.
+    var cw = Math.min(len * 0.44, 0.36);
+    var cx = opts.cabinAtEnd ? col + 1 - (1 - len) / 2 - cw : col + (1 - len) / 2 + 0.03;
+    I.cubeFrac(ctx, cx, row + 0.17, cw, 0.22, h - 0.10, 0.20, glass);
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.12, len, 0.30, h, 0.06, I.shade(body, 1.15));
+    // Wheels.
+    var n = Math.max(2, Math.round(len * 3));
+    for (var i = 0; i < n; i++) {
+      var wx = col + (1 - len) / 2 + (i + 0.5) * (len / n);
+      var w = I.projectS(wx, row + 0.18, 0.0);
+      I.ellipse(ctx, w[0], w[1] + 3, 4.2, 4.2, "#1c1c20");
+      I.ellipse(ctx, w[0], w[1] + 3, 1.9, 1.9, "#9aa0a8");
     }
-    var h = I.projectS(col + 0.02, row + 0.5, 0.22);
+    // Headlights and tail lights, so direction is readable at a glance.
+    var nose = opts.cabinAtEnd ? col + (1 - len) / 2 : col + 1 - (1 - len) / 2;
+    var hl = I.projectS(opts.cabinAtEnd ? nose - 0.04 : nose + 0.04, row + 0.30, 0.16);
+    I.ellipse(ctx, hl[0], hl[1], 2.4, 2.0, "#fff3c0");
+  }
+
+  function drawCar(ctx, col, row, scene, h) {
+    wheeled(ctx, col, row, h.spec, h.spec.body || scene.hazard, "#cfe6f5", {});
+  }
+  function drawTaxi(ctx, col, row, scene, h) {
+    wheeled(ctx, col, row, h.spec, "#ffd23d", "#3a3a44", {});
+    var t = I.projectS(col + 0.5, row + 0.62, 0.30);
+    I.ellipse(ctx, t[0], t[1] + 5, 7, 3, "#3a3a44");   // roof sign
+  }
+  function drawLimousine(ctx, col, row, scene, h) {
+    wheeled(ctx, col, row, h.spec, "#7a3ad4", "#dff0ff", { cabinAtEnd: true });
+  }
+  function drawRacecar(ctx, col, row, scene, h) {
+    // Low, pointed and small, with a speed streak: the read is "this one is
+    // faster than the others", which is the whole point of including it.
+    var body = "#e04a6a";
+    hazardShadow(ctx, col, row, h.spec.len, 0.15);
+    I.cubeFrac(ctx, col + 0.16, row + 0.16, 0.68, 0.26, 0.0, 0.12, I.shade(body, 0.55));
+    I.cubeFrac(ctx, col + 0.20, row + 0.19, 0.60, 0.21, 0.12, 0.20, body);
+    I.cubeFrac(ctx, col + 0.34, row + 0.21, 0.30, 0.17, 0.32, 0.12, "#2a2a32");
+    I.cubeFrac(ctx, col + 0.14, row + 0.16, 0.20, 0.26, 0.10, 0.08, I.shade(body, 1.2));
+    [[0.26, 0], [0.72, 0]].forEach(function (p) {
+      var w = I.projectS(col + p[0], row + 0.22, 0.0);
+      I.ellipse(ctx, w[0], w[1] + 3, 4.4, 4.4, "#1c1c20");
+    });
+    // Motion streak behind it, so speed is visible before it arrives.
+    var st = I.projectS(col - 0.10, row + 0.40, 0.18);
+    I.line(ctx, [[st[0] - 12, st[1] - 2], [st[0] - 2, st[1]]], "#ffffff", 2.0);
+    I.line(ctx, [[st[0] - 10, st[1] + 3], [st[0] - 2, st[1] + 2]], "#ffffff", 1.4);
+  }
+  function drawPolice(ctx, col, row, scene, h) {
+    wheeled(ctx, col, row, h.spec, "#f2f2f5", "#2a3a52", {});
+    // The light bar: this obstacle's entire identity, and its telegraph.
+    var b = I.projectS(col + 0.5, row + 0.52, 0.44);
+    I.ellipse(ctx, b[0] - 5, b[1], 3.4, 2.4, "#ff4d3d");
+    I.ellipse(ctx, b[0] + 5, b[1], 3.4, 2.4, "#4a9bff");
+  }
+  function drawTruck(ctx, col, row, scene, h) {
+    // Cab plus a separate trailer: a long vehicle needs a visible joint or it
+    // reads as one enormous car.
+    var body = "#c94f3d", len = h.spec.len;
+    hazardShadow(ctx, col, row, len, 0.18);
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.10, len, 0.32, 0.0, 0.10, I.shade(body, 0.55));
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.13, len * 0.34, 0.28, 0.10, 0.44, body);
+    var cab = I.projectS(col + (1 - len) / 2 + len * 0.17, row + 0.40, 0.32);
+    I.poly(ctx, [[cab[0] - 4, cab[1] - 3], [cab[0] + 4, cab[1] - 5],
+                 [cab[0] + 4, cab[1] + 2], [cab[0] - 4, cab[1] + 3]], "#cfe6f5");
+    I.cubeFrac(ctx, col + (1 - len) / 2 + len * 0.36, row + 0.10, len * 0.62, 0.34, 0.10, 0.52, "#e8e2d0");
+    I.cubeFrac(ctx, col + (1 - len) / 2 + len * 0.36, row + 0.10, len * 0.62, 0.34, 0.62, 0.06, I.shade("#e8e2d0", 1.12));
+    for (var i = 0; i < 4; i++) {
+      var wx = col + (1 - len) / 2 + 0.06 + i * (len - 0.12) / 3;
+      var w = I.projectS(wx, row + 0.16, 0.0);
+      I.ellipse(ctx, w[0], w[1] + 3, 4.4, 4.4, "#1c1c20");
+      I.ellipse(ctx, w[0], w[1] + 3, 2.0, 2.0, "#9aa0a8");
+    }
+  }
+  function drawBus(ctx, col, row, scene, h) {
+    var len = h.spec.len, body = "#3f8fd4";
+    hazardShadow(ctx, col, row, len, 0.18);
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.12, len, 0.32, 0.0, 0.10, I.shade(body, 0.55));
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.16, len, 0.26, 0.10, 0.46, body);
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.12, len, 0.32, 0.56, 0.07, I.shade(body, 1.14));
+    // A row of windows: a bus is recognisable by its window band.
+    var n = Math.max(3, Math.round(len * 2.4));
+    for (var i = 0; i < n; i++) {
+      var x = col + (1 - len) / 2 + (i + 0.5) * (len / n);
+      var q = I.projectS(x, row + 0.42, 0.30);
+      I.poly(ctx, [[q[0] - 4, q[1] - 2], [q[0] + 3, q[1] - 4],
+                   [q[0] + 3, q[1] + 2], [q[0] - 4, q[1] + 4]], "#dff0ff");
+    }
     for (var j = 0; j < 5; j++) {
-      var a = I.projectS(col + 0.06 + j * 0.20, row + 0.06, 0.18);
-      var b = I.projectS(col + 0.16 + j * 0.20, row + 0.06, 0.18);
-      I.poly(ctx, [[a[0], a[1] - 2], [b[0], b[1] - 2], [b[0], b[1] + 2], [a[0], a[1] + 2]], "#ffd23d");
+      var wx2 = col + (1 - len) / 2 + 0.08 + j * (len - 0.16) / 4;
+      var w2 = I.projectS(wx2, row + 0.18, 0.0);
+      I.ellipse(ctx, w2[0], w2[1] + 3, 4.2, 4.2, "#1c1c20");
     }
   }
-
-  function drawLog(ctx, col, row, scene) {
+  function drawTractor(ctx, col, row, scene, h) {
+    var body = "#5aa84f";
+    hazardShadow(ctx, col, row, h.spec.len, 0.16);
+    // Big rear wheel, small front: the silhouette that says tractor.
+    I.cubeFrac(ctx, col + 0.16, row + 0.14, 0.62, 0.30, 0.0, 0.14, I.shade(body, 0.6));
+    I.cubeFrac(ctx, col + 0.18, row + 0.16, 0.56, 0.26, 0.14, 0.34, body);
+    I.cubeFrac(ctx, col + 0.70, row + 0.18, 0.24, 0.22, 0.14, 0.26, I.shade(body, 1.1));
+    var big = I.projectS(col + 0.42, row + 0.30, 0.0);
+    I.ellipse(ctx, big[0], big[1] + 2, 11, 11, "#1c1c20");
+    I.ellipse(ctx, big[0], big[1] + 2, 5, 5, "#c8c8cc");
+    var small = I.projectS(col + 0.80, row + 0.26, 0.0);
+    I.ellipse(ctx, small[0], small[1] + 2, 5.5, 5.5, "#1c1c20");
+  }
+  function drawForklift(ctx, col, row, scene, h) {
+    var body = "#e8b53d";
+    hazardShadow(ctx, col, row, h.spec.len, 0.16);
+    I.cubeFrac(ctx, col + 0.14, row + 0.16, 0.56, 0.28, 0.0, 0.12, I.shade(body, 0.6));
+    I.cubeFrac(ctx, col + 0.18, row + 0.18, 0.46, 0.24, 0.12, 0.30, body);
+    // Mast and forks at the front: the shape that says forklift.
+    I.cubeFrac(ctx, col + 0.70, row + 0.18, 0.07, 0.26, 0.0, 0.62, "#8a8f98");
+    I.cubeFrac(ctx, col + 0.74, row + 0.18, 0.16, 0.05, 0.02, 0.04, "#8a8f98");
+    var cw = I.projectS(col + 0.30, row + 0.50, 0.0);
+    I.ellipse(ctx, cw[0], cw[1] + 3, 6, 6, "#1c1c20");
+  }
+  function drawRoller(ctx, col, row, scene, h) {
+    var body = "#e05c2b";
+    hazardShadow(ctx, col, row, h.spec.len, 0.18);
+    I.cubeFrac(ctx, col + 0.14, row + 0.16, 0.72, 0.30, 0.14, 0.34, body);
+    I.cubeFrac(ctx, col + 0.34, row + 0.18, 0.30, 0.24, 0.48, 0.20, I.shade(body, 0.86));
+    // The drum: one big roller across the front, not wheels.
+    var d0 = I.projectS(col + 0.86, row + 0.30, 0.0);
+    I.ellipse(ctx, d0[0], d0[1] + 3, 12, 12, "#3a3a42");
+    I.ellipse(ctx, d0[0], d0[1] + 3, 6, 6, "#8a8f98");
+    var b0 = I.projectS(col + 0.24, row + 0.30, 0.0);
+    I.ellipse(ctx, b0[0], b0[1] + 3, 7, 7, "#1c1c20");
+  }
+  function drawTumbleweed(ctx, col, row, scene, h) {
+    // A ragged ball, and it sweeps back and forth rather than driving off, so
+    // it comes back and cannot be counted on.
+    hazardShadow(ctx, col, row, h.spec.len, 0.14);
+    var c = I.projectS(col + 0.5, row + 0.42, 0.22);
+    I.ellipse(ctx, c[0], c[1], 12, 12, "#8a6a3a");
+    for (var i = 0; i < 7; i++) {
+      var a = i * 0.9;
+      I.line(ctx, [[c[0] - Math.cos(a) * 11, c[1] - Math.sin(a) * 11],
+                   [c[0] + Math.cos(a) * 11, c[1] + Math.sin(a) * 11]], "#5c4526", 1.8);
+    }
+  }
+  function drawTrain(ctx, col, row, scene, h) {
+    var body = h.spec.body || scene.hazard2;
+    hazardShadow(ctx, col, row, h.spec.len, 0.20);
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2, row + 0.08, h.spec.len, 0.32, 0.0, 0.40, I.shade(body, 0.58));
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2 + 0.02, row + 0.10, h.spec.len - 0.04, 0.28, 0.40, 0.26, body);
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2, row + 0.08, h.spec.len, 0.32, 0.66, 0.07, I.shade(body, 1.14));
+    var n = Math.max(3, Math.round(h.spec.len * 2.2));
+    for (var i = 0; i < n; i++) {
+      var x = col + (1 - h.spec.len) / 2 + (i + 0.5) * (h.spec.len / n);
+      var q = I.projectS(x, row + 0.40, 0.52);
+      I.poly(ctx, [[q[0] - 4, q[1] - 2], [q[0] + 3, q[1] - 4],
+                   [q[0] + 3, q[1] + 3], [q[0] - 4, q[1] + 5]], "#dff0ff");
+    }
+  }
+  function drawTram(ctx, col, row, scene, h) {
+    // Street-level tram: shorter, lower, and lit from inside. It reads as a
+    // cousin of the train rather than the same thing again.
+    var body = h.spec.body || "#4ad9ff";
+    hazardShadow(ctx, col, row, h.spec.len, 0.18);
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2, row + 0.10, h.spec.len, 0.30, 0.0, 0.14, I.shade(body, 0.6));
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2 + 0.02, row + 0.13, h.spec.len - 0.04, 0.26, 0.14, 0.38, body);
+    var n = Math.max(3, Math.round(h.spec.len * 2.6));
+    for (var i = 0; i < n; i++) {
+      var x = col + (1 - h.spec.len) / 2 + (i + 0.5) * (h.spec.len / n);
+      var q = I.projectS(x, row + 0.42, 0.32);
+      I.poly(ctx, [[q[0] - 4, q[1] - 2], [q[0] + 3, q[1] - 4],
+                   [q[0] + 3, q[1] + 3], [q[0] - 4, q[1] + 5]], "#fff3c0");
+    }
+    var pan = I.projectS(col + 0.5, row + 0.24, 0.60);
+    I.line(ctx, [[pan[0] - 8, pan[1] - 12], [pan[0] + 8, pan[1] - 12]], "#8a8f98", 2.2);
+  }
+  function drawMonorail(ctx, col, row, scene, h) {
+    var body = h.spec.body || "#9a7ad4";
+    hazardShadow(ctx, col, row, h.spec.len, 0.18);
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2, row + 0.12, h.spec.len, 0.26, 0.0, 0.34, I.shade(body, 0.6));
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2 + 0.02, row + 0.15, h.spec.len - 0.04, 0.22, 0.34, 0.22, body);
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2, row + 0.12, h.spec.len, 0.26, 0.56, 0.06, I.shade(body, 1.2));
+    var n = Math.max(3, Math.round(h.spec.len * 2.0));
+    for (var i = 0; i < n; i++) {
+      var x = col + (1 - h.spec.len) / 2 + (i + 0.5) * (h.spec.len / n);
+      var q = I.projectS(x, row + 0.38, 0.42);
+      I.ellipse(ctx, q[0], q[1], 3, 2.4, "#f0e8ff");
+    }
+  }
+  function drawLog(ctx, col, row, scene, h) {
     var wood = scene.log || "#8a5a2b";
-    I.cubeFrac(ctx, col + 0.00, row + 0.04, 0.90, 0.28, 0.0, 0.26, I.shade(wood, 0.80));
-    I.cubeFrac(ctx, col + 0.02, row + 0.08, 0.86, 0.24, 0.26, 0.14, wood);
-    var e = I.projectS(col + 1.0, row + 0.5, 0.16);
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2, row + 0.06, h.spec.len, 0.28, 0.0, 0.26, I.shade(wood, 0.80));
+    I.cubeFrac(ctx, col + (1 - h.spec.len) / 2 + 0.02, row + 0.10, h.spec.len - 0.04, 0.24, 0.26, 0.14, wood);
+    var e = I.projectS(col + 1 - (1 - h.spec.len) / 2, row + 0.5, 0.16);
     I.ellipse(ctx, e[0], e[1], 17, 9, I.shade(wood, 1.28));
     I.ellipse(ctx, e[0], e[1], 12, 6, I.shade(wood, 1.05));
     I.ellipse(ctx, e[0], e[1], 6, 3, I.shade(wood, 0.88));
   }
-
-  function drawTurtle(ctx, col, row, scene) {
+  function drawTurtle(ctx, col, row, scene, h) {
     var base = scene.turtle || "#4a7a3a";
     I.ellipse(ctx, ...pt(col, row, 0.0), 16, 7, I.shade(base, 1.45));
     var c = I.projectS(col + 0.5, row + 0.5, 0.0);
@@ -99,11 +267,98 @@
     I.poly(ctx, pts.map(function (p) {
       return [c[0] + (p[0] - c[0]) * 0.86, c[1] + (p[1] - c[1]) * 0.80];
     }), base);
-    var hd = I.projectS(col + 1.0, row + 0.5, 0.10);
+    var hd = I.projectS(col + 1, row + 0.5, 0.10);
     I.ellipse(ctx, hd[0], hd[1], 5.0, 4.0, I.shade(base, 1.45));
     I.ellipse(ctx, hd[0] + 1.5, hd[1] - 0.8, 1.4, 1.3, "#1b1b1b");
     I.ellipse(ctx, c[0] - 4, c[1] - 3, 4.5, 2.4, I.shade(base, 1.28));
   }
+  function drawAlligator(ctx, col, row, scene, h) {
+    // A long, low, dark shape with a ridge of scutes: unmistakably not a log.
+    var g = "#2f5a3a", len = h.spec.len;
+    I.ellipse(ctx, ...pt(col, row, 0.0), len * 26, 9, "#1a3a24");
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.24, len, 0.26, 0.0, 0.14, g);
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.24, len, 0.26, 0.14, 0.05, I.shade(g, 1.2));
+    var scutes = Math.round(len * 5);
+    for (var i = 0; i < scutes; i++) {
+      var x = col + (1 - len) / 2 + (i + 0.5) * (len / scutes);
+      var q = I.projectS(x, row + 0.5, 0.20);
+      I.poly(ctx, [[q[0] - 2, q[1]], [q[0], q[1] - 4], [q[0] + 2, q[1]]], I.shade(g, 1.35));
+    }
+    var hd = I.projectS(col + 1 - (1 - len) / 2, row + 0.5, 0.10);
+    I.ellipse(ctx, hd[0], hd[1], 7, 5, I.shade(g, 1.15));
+    I.ellipse(ctx, hd[0] + 2, hd[1] - 1.5, 1.8, 1.8, "#ffd23d");
+  }
+  function drawCrocodile(ctx, col, row, scene, h) {
+    // Same family as the alligator but wider, paler and with a bigger jaw.
+    var g = "#4a6b3a", len = h.spec.len;
+    I.ellipse(ctx, ...pt(col, row, 0.0), len * 28, 11, "#243d1c");
+    I.cubeFrac(ctx, col + (1 - len) / 2, row + 0.22, len, 0.30, 0.0, 0.16, g);
+    var jaw = I.projectS(col + 1 - (1 - len) / 2, row + 0.5, 0.06);
+    I.poly(ctx, [[jaw[0] - 4, jaw[1] - 3], [jaw[0] + 6, jaw[1] + 1],
+                 [jaw[0] - 4, jaw[1] + 4]], I.shade(g, 1.25));
+    for (var i = 0; i < 7; i++) {
+      var x = col + (1 - len) / 2 + (i + 0.5) * (len / 7);
+      var q = I.projectS(x, row + 0.5, 0.18);
+      I.poly(ctx, [[q[0] - 3, q[1] + 1], [q[0], q[1] - 6], [q[0] + 3, q[1] + 1]], I.shade(g, 1.4));
+    }
+  }
+  function drawSnake(ctx, col, row, scene, h) {
+    // A low undulating body with a head: nothing like a vehicle at any size.
+    var b = "#7a4ad4";
+    var pts = [];
+    var n = 7;
+    for (var i = 0; i <= n; i++) {
+      var x = col + (i / n) * (1 - (1 - h.spec.len));
+      var y = row + 0.5 + Math.sin(i * 0.9) * 0.10;
+      var q = I.projectS(x, y, 0.08);
+      pts.push([q[0], q[1]]);
+    }
+    I.line(ctx, pts, b, 7);
+    I.line(ctx, pts, I.shade(b, 1.3), 3);
+    var hd = I.projectS(col + 1 - (1 - h.spec.len), row + 0.5, 0.10);
+    I.ellipse(ctx, hd[0], hd[1], 6, 5, b);
+    I.ellipse(ctx, hd[0] + 2, hd[1] - 1.5, 1.5, 1.5, "#ffd23d");
+    I.line(ctx, [[hd[0] + 4, hd[1] - 4], [hd[0] + 9, hd[1] - 6]], "#c94f3d", 1.6);
+  }
+  function drawBoulder(ctx, col, row, scene, h) {
+    var b = I.shade(scene.ground, 0.62);
+    I.ellipse(ctx, ...pt(col, row, 0.0), 20, 9, "rgba(0,0,0,0.18)");
+    I.blob(ctx, col + 0.18, row + 0.20, 0.62, 0.56, 0.0, 0.42, b);
+    I.blob(ctx, col + 0.34, row + 0.30, 0.34, 0.30, 0.40, 0.22, I.shade(b, 1.2));
+  }
+  /* A geyser and a steam vent: TIMED, not moving. They erupt on a beat and
+   * are harmless between eruptions, which is a completely different thing to
+   * read than a vehicle. The ground ring is the tell. */
+  function drawGeyser(ctx, col, row, scene, h, up, tint) {
+    var base = I.projectS(col + 0.5, row + 0.5, 0);
+    // Always show the vent, so the beat can be read before it fires.
+    I.ellipse(ctx, base[0], base[1], 14, 7, tint === "steam" ? "#6b6b73" : "#2a6b8a");
+    I.ellipse(ctx, base[0], base[1], 9, 4.4, tint === "steam" ? "#3a3a42" : "#12405a");
+    if (!up) {
+      // Between eruptions: a faint ring showing when it will fire.
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.22)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(base[0], base[1], 18, 9, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    var top = I.projectS(col + 0.5, row + 0.5, 1.25);
+    var c = tint === "steam" ? "#e8e2d8" : "#7ad0ff";
+    for (var i = 0; i < 3; i++) {
+      var t = i / 2;
+      I.line(ctx, [[base[0], base[1] - 4], [top[0], top[1] + 6]],
+             c, 12 - i * 3);
+    }
+    I.ellipse(ctx, top[0], top[1] - 4, 12, 9, c);
+    I.ellipse(ctx, top[0], top[1] - 6, 7, 5, "#ffffff");
+  }
+
+
+
+
 
   function pt(col, row, z) { var p = I.projectS(col, row, z); return [p[0], p[1] + 4]; }
 
@@ -226,7 +481,26 @@
 
   // ---------- scene ------------------------------------------------------
 
-  var HAZARD_FNS = { car: drawCar, train: drawTrain, log: drawLog, turtle: drawTurtle };
+  var HAZARD_FNS = {
+    car: drawCar, taxi: drawTaxi, racecar: drawRacecar, police: drawPolice,
+    limousine: drawLimousine, truck: drawTruck,
+    bus: drawBus, tractor: drawTractor, forklift: drawForklift,
+    roller: drawRoller, tumbleweed: drawTumbleweed,
+    train: drawTrain, tram: drawTram, monorail: drawMonorail,
+    log: drawLog, turtle: drawTurtle, alligator: drawAlligator,
+    crocodile: drawCrocodile,
+    snake: drawSnake, boulder: drawBoulder,
+  };
+  // The timed ones are not a plain lookup: what they draw depends on whether
+  // they are UP this instant, which is the whole mechanic.
+  var TIMED_FNS = {
+    geyser: function (ctx, c, r, sc, h) {
+      drawGeyser(ctx, c, r, sc, h, Hazards.isActive(h), "water");
+    },
+    steamvent: function (ctx, c, r, sc, h) {
+      drawGeyser(ctx, c, r, sc, h, Hazards.isActive(h), "steam");
+    },
+  };
 
   function renderScene(ctx, scene, opts) {
     var width = opts.width, height = opts.height;
@@ -304,7 +578,7 @@
       for (var si = 0; si < simHazards.length; si++) {
         var sh = simHazards[si];
         if (sh.row < row0 || sh.row >= row0 + viewRows) continue;
-        hazards.push([sh.x, sh.row, sh.kind]);
+        hazards.push([sh.x, sh.row, sh.kind, sh]);
       }
     } else {
       for (var h = 0; h < rows.length - 1; h++) {
@@ -322,7 +596,9 @@
     }
     hazards.sort(function (a, b) { return (b[0] + b[1]) - (a[0] + a[1]); });
     hazards.forEach(function (x) {
-      if (HAZARD_FNS[x[2]]) HAZARD_FNS[x[2]](ctx, x[0], x[1], scene);
+      var h = x[3];
+      if (TIMED_FNS[x[2]]) { TIMED_FNS[x[2]](ctx, x[0], x[1], scene, h); return; }
+      if (HAZARD_FNS[x[2]]) HAZARD_FNS[x[2]](ctx, x[0], x[1], scene, h);
     });
 
     // Scenery, placed from the stage's own declared object vocabulary.
@@ -356,7 +632,16 @@
     laneOf: laneOf, isHazardLane: isHazardLane, buildLaneCycle: buildLaneCycle,
     renderScene: renderScene, drawLaneTexture: drawLaneTexture,
     sceneryFor: sceneryFor, hash2: hash2,
-    drawCar: drawCar, drawTrain: drawTrain, drawLog: drawLog, drawTurtle: drawTurtle,
+    drawCar: drawCar, drawTaxi: drawTaxi, drawRacecar: drawRacecar,
+    drawPolice: drawPolice, drawLimousine: drawLimousine,
+    drawTruck: drawTruck, drawBus: drawBus, drawTractor: drawTractor,
+    drawForklift: drawForklift, drawRoller: drawRoller,
+    drawTumbleweed: drawTumbleweed,
+    drawTrain: drawTrain, drawTram: drawTram, drawMonorail: drawMonorail,
+    drawLog: drawLog, drawTurtle: drawTurtle, drawAlligator: drawAlligator,
+    drawCrocodile: drawCrocodile, drawSnake: drawSnake, drawBoulder: drawBoulder,
+    drawGeyser: drawGeyser,
+    HAZARD_FNS: HAZARD_FNS, TIMED_FNS: TIMED_FNS,
     drawTree: drawTree, drawBush: drawBush, drawRock: drawRock,
   };
 })(typeof window !== "undefined" ? window : (typeof global !== "undefined" ? global : this));

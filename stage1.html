@@ -98,7 +98,10 @@ simulation. Nothing here is mocked.</p>
     // ---- the board ------------------------------------------------------
     var cv = document.getElementById("board");
     var ctx = cv.getContext("2d");
-    var COLS = 9;
+    // The board is 14 columns wide now (the outer ones are camera margin);
+    // the look sheet was still drawing 9, so vehicles outside that range were
+    // never rendered and the board looked empty.
+    var COLS = 14;
     var VROWS = 13;
     var anchor = ps;
     Scene.renderScene(ctx, {

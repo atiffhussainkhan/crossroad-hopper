@@ -30,16 +30,59 @@
   var SAFE_START_ROWS = 3;
   var SAFE_GOAL_ROWS = 2;
 
+  /* Every obstacle the game can spawn, and what makes it a decision.
+   *
+   *   len     hitbox length in tiles. A truck that is 2.6 long occupies most
+   *           of a lane for most of its pass: you either commit early or
+   *           wait for a gap that may not come. This is the single most
+   *           useful number for making a lane feel different from a car lane.
+   *   speed   tiles/second, [slowest, fastest]
+   *   kind    ground  rolls along the row
+   *           rail    locked to a rail lane
+   *           water   floats along a water lane
+   *           air     crosses without touching the row (a geyser's column)
+   *   osc     if present, reverses at the ends of a span instead of wrapping
+   *           off the board. A hazard that comes back is one you can no longer
+   *           count on, which is a different decision from one that leaves.
+   *   cycle   if present, lethal only for `on` ms out of every `period` ms.
+   *           The player learns the beat and crosses on the off phase.
+   */
   var KINDS = {
-    car:      { len: 0.86, speed: [1.2, 1.9], kind: "ground" },
-    tractor:  { len: 0.80, speed: [1.1, 1.7], kind: "ground" },
-    tram:     { len: 0.98, speed: [2.0, 3.2], kind: "ground" },
-    train:    { len: 0.98, speed: [4.0, 6.5], kind: "rail"  },
-    log:      { len: 0.90, speed: [0.7, 1.3], kind: "water" },
-    turtle:   { len: 0.62, speed: [0.3, 0.6], kind: "water" },
-    sled:     { len: 0.80, speed: [1.0, 1.6], kind: "ground" },
-    forklift: { len: 0.70, speed: [0.8, 1.3], kind: "ground" },
-    steel:    { len: 0.55, speed: [0.0, 0.0], kind: "air"   },
+    // --- road ------------------------------------------------------------
+    car:       { len: 0.86, speed: [1.2, 1.9], kind: "ground" },
+    taxi:      { len: 0.90, speed: [1.5, 2.2], kind: "ground" },
+    racecar:   { len: 0.78, speed: [2.6, 3.6], kind: "ground" },
+    police:    { len: 0.95, speed: [3.0, 4.2], kind: "ground" },
+    limousine: { len: 2.10, speed: [1.1, 1.6], kind: "ground" },
+    truck:     { len: 2.60, speed: [0.9, 1.4], kind: "ground" },
+    bus:       { len: 3.10, speed: [0.8, 1.2], kind: "ground" },
+    tractor:   { len: 1.30, speed: [0.7, 1.2], kind: "ground" },
+    forklift:  { len: 1.10, speed: [0.8, 1.3], kind: "ground" },
+    roller:    { len: 1.70, speed: [0.6, 1.0], kind: "ground" },
+    tumbleweed:{ len: 0.80, speed: [2.4, 3.4], kind: "ground",
+                 osc: { span: 14, periodMs: 2600 } },
+    // --- rail ------------------------------------------------------------
+    train:     { len: 3.40, speed: [4.0, 6.0], kind: "rail" },
+    tram:      { len: 2.20, speed: [2.0, 3.0], kind: "rail" },
+    monorail:  { len: 2.80, speed: [3.0, 4.4], kind: "rail" },
+    // --- water -----------------------------------------------------------
+    log:       { len: 0.90, speed: [0.7, 1.3], kind: "water" },
+    turtle:    { len: 0.62, speed: [0.3, 0.6], kind: "water" },
+    alligator: { len: 2.20, speed: [0.5, 0.9], kind: "water" },
+    crocodile: { len: 2.60, speed: [0.4, 0.8], kind: "water" },
+    // --- anything --------------------------------------------------------
+    // Frogger rule: the snake impersonates a log. It belongs on WATER, not
+    // on land, and that is the whole point -- it is the safe-looking tile
+    // you are not supposed to trust.
+    snake:     { len: 0.90, speed: [0.6, 1.1], kind: "water" },
+    boulder:   { len: 1.20, speed: [0.9, 1.5], kind: "ground" },
+    // A geyser: the column erupts on a beat. Lethal only while it is up, and
+    // it looks like water rather than a vehicle, so it reads as a different
+    // kind of danger entirely.
+    geyser:    { len: 1.00, speed: [0, 0], kind: "air",
+                 cycle: { on: 900, periodMs: 2400 } },
+    steamvent: { len: 1.00, speed: [0, 0], kind: "air",
+                 cycle: { on: 1200, periodMs: 3000 } },
   };
 
   // Per-column speed variance, so two hazards in the same row are not a wall.
@@ -54,6 +97,14 @@
     return {
       kind: kind, spec: spec, row: row, dir: dir,
       speed: sp * dir,
+      // Oscillating hazards reverse inside a span instead of wrapping off the
+      // board, so they come back at you and cannot be counted on.
+      osc: spec.osc ? { span: spec.osc.span, periodMs: spec.osc.periodMs,
+                        t: 0, dir: 1, mid: 0 } : null,
+      // Timed hazards are only lethal part of the time. `phase` staggers
+      // them so two geysers in a row are not in lockstep.
+      cycle: spec.cycle ? { on: spec.cycle.on, periodMs: spec.cycle.periodMs,
+                            t: rng.range(0, spec.cycle.periodMs) } : null,
       x: rng.range(xMin === undefined ? -cols : xMin - 0.5, cols + 0.5),
       wobble: rng.range(0.5, 1.5),      // log drift phase
       dead: false,
@@ -88,7 +139,10 @@
     // the only difficulty knob. The old values started at 0.09, which put
     // roughly one car on the entire forty-row board of stage one -- you could
     // walk the whole stage without ever meeting one.
-    var baseDensity = 0.22 + Math.min(0.26, difficulty * 0.022);
+    // 0.30 at the start, not 0.22: at 0.22 a player looking at eight lanes
+    // saw about one car and the board read as empty. 0.30 is still the
+    // gentlest stage and still leaves a readable gap in most lanes.
+    var baseDensity = 0.30 + Math.min(0.30, difficulty * 0.030);
 
     // Lane class decides which hazards can appear, and only one is possible
     // per row, so a log can never share a row with a train. The class comes
@@ -128,7 +182,77 @@
    *
    * Generating per row and keeping the result means: existing cars keep
    * driving, new rows appear ahead, and nothing behind is disturbed. */
-  function buildRow(row, cols, density, Rng, stageIndex, laneMixIn, laneKeyIn, xMin) {
+  function laneClassOf(row, laneMix, laneKey) {
+    if (!T) return "road";
+    return T.laneOf(row, laneMix, laneKey);
+  }
+
+  /* What kind of hazard a row may carry.
+   *
+   * This is where a stage stops being a recolour of Suburb. It used to be a
+   * fixed switch on the lane class -- road is always a car, rail always a
+   * train, water always a log or a turtle -- so all ten stages spawned
+   * exactly the same obstacles and the declared `hazardKinds` in stages.js
+   * were decoration that only the offline preview sheet ever read.
+   *
+   * Now the stage's own declared list is authoritative, filtered to the kinds
+   * that are legal for that lane. A stage that declares `tractor, car` gets
+   * tractors and cars, weighted toward tractors; one that declares `tram`
+   * gets trams. A stage that declares a kind for a lane it does not have
+   * simply never spawns it, because the lane is not there to hold it.
+   */
+  var LANE_KINDS = {
+    road: ["car", "racecar", "taxi", "police", "truck", "bus", "tractor",
+           "forklift", "roller", "tumbleweed", "limousine"],
+    rail: ["train", "tram", "monorail"],
+    water: ["log", "turtle", "snake", "alligator", "crocodile"],
+  };
+  var OPEN_KINDS = ["geyser", "steamvent", "boulder"];
+
+  function kindsForStage(stageIndex) {
+    if (stageIndex === undefined || !global.Stages || !global.Stages.getStage) return null;
+    var st = global.Stages.getStage(stageIndex);
+    if (!st || !st.hazardKinds || !st.hazardKinds.length) return null;
+    return st.hazardKinds;
+  }
+
+  /* A hazard kind this lane can legally carry, or null. */
+  function legalForLane(kind, lane) {
+    if (LANE_KINDS[lane] && LANE_KINDS[lane].indexOf(kind) >= 0) return kind;
+    if (OPEN_KINDS.indexOf(kind) >= 0) return kind;   // legal on any lane
+    return null;
+  }
+
+  function pickKind(lane, stageIndex, rng) {
+    if (lane === "grass") return null;                // never spawn on open ground
+    var want = kindsForStage(stageIndex);
+    var pool = [];
+    if (want) {
+      for (var i = 0; i < want.length; i++) {
+        var ok = legalForLane(want[i], lane);
+        if (ok) pool.push(ok);
+      }
+    }
+    if (!pool.length) {
+      // The stage declared nothing usable for this lane: fall back to the
+      // generic set for the lane rather than leaving it empty.
+      pool = LANE_KINDS[lane] ? [LANE_KINDS[lane][0]] : [];
+    }
+    if (!pool.length) return null;
+    // The first declared kind is the stage's signature obstacle, so weight
+    // toward the front of the list.
+    var total = 0, j;
+    for (j = 0; j < pool.length; j++) total += Math.max(1, pool.length - j);
+    var r = rng.next() * total;
+    for (j = 0; j < pool.length; j++) {
+      r -= Math.max(1, pool.length - j);
+      if (r < 0) return pool[j];
+    }
+    return pool[0];
+  }
+
+  function buildRow(row, cols, density, Rng, stageIndex, laneMixIn, laneKeyIn, xMin,
+                   difficulty) {
     var rng = Rng;
     var out = [];
     var laneMix = laneMixIn, laneKey = laneKeyIn;
@@ -144,16 +268,11 @@
     // window and moves as the player advances.
     if (row < SAFE_START_ROWS) return out;
     if (row >= goalRow - SAFE_GOAL_ROWS) return out;
-    var k = null;
-    var lane = T ? T.laneOf(row, laneMix, laneKey) : "road";
-    if (lane === "grass") return out;               // never spawn on open ground
-    if (lane === "road") k = "car";
-    else if (lane === "rail") k = "train";
-    else if (lane === "water") k = (rng.bool() ? "log" : "turtle");
-    if (!k || !KINDS[k]) return out;
+    var k = pickKind(laneClassOf(row, laneMix, laneKey), stageIndex, rng);
+    if (!k) return out;
     if (rng.next() > density) return out;
     var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1
-    var h = makeHazard(k, row, cols, rng, 0, xMin);
+    var h = makeHazard(k, row, cols, rng, difficulty || 0, xMin);
     if (!h) return out;
     if (dirHint === 0) h.dir = 1;       // guarantee some direction variety
     h.speed = Math.abs(h.speed) * h.dir;
@@ -174,11 +293,13 @@
     var rowRng = (Rng && Rng.fork) ? Rng.fork(String(row))
             : (global.SimCore && global.SimCore.createRng
                ? global.SimCore.createRng(seed + ":r" + row) : Rng);
-    var made = buildRow(row, cols, base, rowRng, stageIndex, null, null, lo);
-    for (var i = 0; i < made.length; i++) {
-      // Speed depends on the difficulty at the moment the row comes into view.
-      made[i].speed *= 1 + Math.min(12, difficulty) * 0.020;
-    }
+    // `undefined`, NOT null: buildRow only looks the stage's laneMix up when
+    // the argument is undefined. Passing null silently fell back to the
+    // default mix, so the spawner thought River was mostly road and rail
+    // while the renderer drew it as mostly water -- which is how cars ended
+    // up on rows the player could see were lawn, all over again.
+    var made = buildRow(row, cols, base, rowRng, stageIndex, undefined, undefined,
+                        lo, difficulty);
     return ensureSolvable(made, { needGap: 0.9 });
   }
 
@@ -244,6 +365,22 @@
     for (var i = 0; i < list.length; i++) {
       var h = list[i];
       if (h.spec.kind === "air") continue;          // steel is suspended
+      if (h.osc) {
+        // Sweep back and forth across a span. No wrap, so it always comes
+        // back -- the player has to time the turnaround, not just the pass.
+        h.osc.t += dt;
+        var sweep = h.speed * dt;
+        h.x += sweep;
+        h.osc.mid += sweep;
+        if (h.osc.mid > h.osc.span || h.osc.mid < 0) {
+          h.osc.dir = -h.osc.dir;
+          h.osc.mid += (h.osc.mid > h.osc.span ? -h.osc.span : h.osc.span);
+          h.x += sweep * 2;
+          h.speed = -h.speed;
+        }
+        continue;
+      }
+      if (h.cycle) { h.cycle.t += dt; continue; }
       h.x += h.speed * dt;
       // Wrap. A hazard that drives off the end and stops existing would let
       // a lane go permanently safe.
@@ -255,9 +392,19 @@
   // Axis-aligned test. The player occupies a square, the hazard a rectangle
   // `len` wide. A circle test would be kinder but dishonest: it would let a
   // player clip the nose of a train and survive, which reads as a bug.
+  /* Is a timed hazard up right now? A geyser between eruptions is a safe
+   * tile, and the player learns the beat and crosses on the off phase. */
+  function isActive(h) {
+    if (!h.cycle) return true;
+    return (h.cycle.t % h.cycle.periodMs) < h.cycle.on;
+  }
+
   function hits(h, playerCol, playerRow, playerHalf) {
     if (h.row !== playerRow) return false;
-    if (h.spec.kind === "air") return false;       // steel lands, never rests
+    // Dormant means harmless. An "air" hazard used to be excluded outright,
+    // which made every such obstacle decorative; now they kill while they are
+    // up, which is the whole point of a geyser.
+    if (!isActive(h)) return false;
     var half = h.spec.len / 2;
     return Math.abs((h.x) - playerCol) < (half + playerHalf);
   }
@@ -271,6 +418,9 @@
 
   global.Hazards = {
     buildRow: buildRow, hazardsForRow: hazardsForRow, SAFE_START_ROWS: 3,
+    isActive: isActive,
+    pickKind: pickKind, legalForLane: legalForLane,
+    LANE_KINDS: LANE_KINDS, OPEN_KINDS: OPEN_KINDS,
     KINDS: KINDS, makeHazard: makeHazard, buildHazards: buildHazards,
     tickHazards: tickHazards, hits: hits, anyHits: anyHits,
     laneHasGap: laneHasGap, ensureSolvable: ensureSolvable,

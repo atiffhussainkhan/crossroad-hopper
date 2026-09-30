@@ -517,6 +517,73 @@
     return [pts[3], pts[4], top, pts[2], pts[1]];
   }
 
+
+  // ---- River extras -----------------------------------------------------
+  /* A lily pad is a SAFE tile that looks like water, and the frog it belongs
+   * to never stops looking at you. It is the counterweight to the log and the
+   * snake: on a river row, some things you can stand on, some things you
+   * cannot, and they all look broadly similar from a distance. */
+  function lily(ctx, col, row, scene) {
+    var w = scene.water || "#2f6f9f";
+    I.ellipse(ctx, ...padPt(col, row), 22, 11, I.shade(w, 1.25));
+    // The notch that says "pad" rather than "blob".
+    I.poly(ctx, [
+      [padPt(col, row)[0] + 12, padPt(col, row)[1] - 3],
+      [padPt(col, row)[0] + 20, padPt(col, row)[1] - 6],
+      [padPt(col, row)[0] + 20, padPt(col, row)[1] + 2],
+    ], I.shade(w, 1.05));
+    I.ellipse(ctx, padPt(col, row)[0] - 4, padPt(col, row)[1] - 3, 9, 4.6,
+              I.shade("#3f9a5a", 1.12));
+    I.ellipse(ctx, padPt(col, row)[0] - 6, padPt(col, row)[1] - 5, 4, 2.2, "#f2e6d8");
+  }
+  function padPt(col, row) {
+    var p = I.projectS(col + 0.5, row + 0.5, 0.04);
+    return [p[0], p[1]];
+  }
+
+  // ---- Night extras -----------------------------------------------------
+  /* A fire hydrant and a postbox: small, bright, unmistakably street
+   * furniture. Night City needs a silhouette you can name at 40px. */
+  function hydrant(ctx, col, row, scene) {
+    I.castShadow(ctx, col, row, 0.30, 0.34, 0.18);
+    var red = "#d94a3d";
+    I.cubeFrac(ctx, col + 0.40, row + 0.38, 0.20, 0.20, 0.0, 0.06, I.shade(red, 0.7));
+    I.cubeFrac(ctx, col + 0.42, row + 0.40, 0.16, 0.16, 0.06, 0.26, red);
+    I.cubeFrac(ctx, col + 0.34, row + 0.40, 0.32, 0.08, 0.16, 0.08, I.shade(red, 1.1));
+    I.cubeFrac(ctx, col + 0.42, row + 0.40, 0.16, 0.16, 0.32, 0.05, I.shade(red, 1.2));
+    I.ellipse(ctx, ...capPt(col, row, 0.40), 3, 2, "#ffe9a8");
+  }
+  function capPt(col, row, z) {
+    var p = I.projectS(col + 0.5, row + 0.5, z);
+    return [p[0], p[1]];
+  }
+  function postbox(ctx, col, row, scene) {
+    I.castShadow(ctx, col, row, 0.36, 0.34, 0.18);
+    var blue = "#2f5ad4";
+    I.cubeFrac(ctx, col + 0.40, row + 0.40, 0.18, 0.18, 0.0, 0.06, I.shade(blue, 0.7));
+    I.cubeFrac(ctx, col + 0.42, row + 0.42, 0.14, 0.14, 0.06, 0.30, blue);
+    // A domed top, so it is not a blue box.
+    I.blob(ctx, col + 0.42, row + 0.42, 0.14, 0.14, 0.36, 0.06, I.shade(blue, 1.2));
+    var s = I.projectS(col + 0.42, row + 0.56, 0.24);
+    I.poly(ctx, [[s[0] - 4, s[1] - 2], [s[0] + 3, s[1] - 3],
+                 [s[0] + 3, s[1] + 1], [s[0] - 4, s[1] + 2]], "#101018");
+  }
+
+  // ---- Farm extras ------------------------------------------------------
+  function windmill(ctx, col, row, scene) {
+    I.castShadow(ctx, col, row, 1.30, 0.50, 0.18);
+    var body = "#e8e0cc";
+    I.cubeFrac(ctx, col + 0.36, row + 0.34, 0.28, 0.28, 0.0, 0.62, body);
+    I.blob(ctx, col + 0.36, row + 0.34, 0.28, 0.28, 0.62, 0.14, I.shade(body, 0.8));
+    var h = I.projectS(col + 0.5, row + 0.5, 0.86);
+    for (var i = 0; i < 4; i++) {
+      var a = i * Math.PI / 2 + 0.4;
+      I.line(ctx, [[h[0], h[1]], [h[0] + Math.cos(a) * 22, h[1] + Math.sin(a) * 22]],
+             "#8a4a3a", 3.0);
+    }
+    I.ellipse(ctx, h[0], h[1], 3.4, 3.4, "#5c3a2a");
+  }
+
   // ---- registry ---------------------------------------------------------
   //
   // Keys are the names stages.js declares. Every one of them must resolve;
@@ -528,13 +595,13 @@
     fence: fence, streetlamp: streetlamp, flowerbed: flowerbed,
     parkedcar: parkedcar,
     // River
-    reed: reed, rock: rock,
+    reed: reed, lily: lily, rock: rock,
     // Desert
     cactus: cactus, bone: bone,
     // Farmland
-    haybale: haybale,
+    haybale: haybale, windmill: windmill,
     // Night City
-    neon: neon, building: building,
+    neon: neon, building: building, hydrant: hydrant, postbox: postbox,
     // Frozen Lake
     pine: pine, iceberg: iceberg,
     // Rainforest

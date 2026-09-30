@@ -1098,6 +1098,133 @@ print(out.join(" | "));
     return problems
 
 
+def assert_each_stage_has_its_own_obstacles() -> list[str]:
+    """Every stage must be able to spawn what it declares, and nothing else.
+
+    Two defects hid here for most of the project's life:
+
+      - obstacle selection was a fixed switch on the LANE CLASS (road is always
+        a car, rail always a train, water always a log), so all ten stages
+        spawned exactly the same thing and the `hazardKinds` list in stages.js
+        was decoration only the offline preview sheet ever read;
+      - a stage could declare kinds it had no lane for, so the fallback fired
+        and it quietly spawned something it never asked for.
+
+    Both are silent. This asserts, per stage: every lane class it actually has
+    has a legal declared kind, and nothing it spawns is undeclared.
+    """
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+// NOTE: stageIndex throughout the engine is POSITIONAL (0-based), while
+// st.id is the stage's own 1-based id. Passing st.id as the index silently
+// looked up the next stage along, which is how this probe first "found"
+// Night City spawning crocodiles.
+Stages.STAGES.forEach(function (st, si) {
+  var lanes = {};
+  for (var r = 0; r < 40; r++) {
+    var L = Tiles.laneOf(r, st.laneMix, st.id);
+    if (L !== "grass") lanes[L] = 1;
+  }
+  var need = Object.keys(lanes);
+  var bad = [];
+  need.forEach(function (L) {
+    var legal = st.hazardKinds.filter(function (k) {
+      return Hazards.legalForLane(k, L);
+    });
+    if (!legal.length) bad.push(L);
+  });
+  if (bad.length) out.push("stage" + st.id + " has " + bad.join("/") +
+                           " lanes with no declared obstacle");
+  // And nothing spawned may be undeclared.
+  var kinds = {};
+  for (var w = 0; w < 60; w++)
+    Hazards.hazardsForRow("v" + st.id + w, w, st.id, 2,
+                          SimCore.createRng("v" + st.id + w), si, 4)
+      .forEach(function (h) { kinds[h.kind] = 1; });
+  var keys = Object.keys(kinds);
+  if (!keys.length) out.push("stage" + st.id + " spawns nothing at all");
+  var undeclared = keys.filter(function (k) {
+    return st.hazardKinds.indexOf(k) < 0;
+  });
+  if (undeclared.length)
+    out.push("stage" + st.id + " spawns undeclared " + undeclared.join("/"));
+});
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    chunks = [c.strip() for c in text.split(" | ") if c.strip()]
+    for c in chunks:
+        problems.append(f"stage data: {c}")
+    return problems
+
+
+def assert_every_obstacle_has_a_renderer() -> list[str]:
+    """Every kind the game can spawn must be drawable, or it is invisible."""
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+var missing = [];
+Object.keys(Hazards.KINDS).forEach(function (k) {
+  if (!Scene.HAZARD_FNS[k] && !Scene.TIMED_FNS[k]) missing.push(k);
+});
+out.push("kinds=" + Object.keys(Hazards.KINDS).length);
+out.push("missing=" + missing.join("/"));
+// And each must actually put marks on the canvas: a renderer that draws
+// nothing is as bad as no renderer at all.
+var noops = [];
+var ctx = { n: 0 };
+function stub() {}
+["beginPath","moveTo","lineTo","closePath","fill","stroke","ellipse","arc",
+ "save","restore","rect"].forEach(function (m) { ctx[m] = stub; });
+ctx.save = function () {}; ctx.restore = function () {};
+ctx.ellipse = function () { ctx.n++; };
+ctx.beginPath = function () { ctx.n++; };
+ctx.fill = function () { ctx.n++; };
+ctx.stroke = function () { ctx.n++; };
+ctx.moveTo = function () { ctx.n++; };
+ctx.lineTo = function () { ctx.n++; };
+ctx.closePath = function () { ctx.n++; };
+ctx.arc = function () { ctx.n++; };
+["fillStyle","strokeStyle","lineWidth","lineCap"].forEach(function (p) {
+  Object.defineProperty(ctx, p, { set: function () {}, get: function () { return ""; } });
+});
+var scene = Stages.getStage(0);
+Object.keys(Hazards.KINDS).forEach(function (k) {
+  ctx.n = 0;
+  var h = Hazards.hazardsForRow("z", 6, 5, 0, SimCore.createRng("z"), 0, 4)[0];
+  if (!h) h = { kind: k, spec: Hazards.KINDS[k], row: 6, x: 5, cycle: { t: 300, on: 900, periodMs: 2400 } };
+  try {
+    if (Scene.TIMED_FNS[k]) Scene.TIMED_FNS[k](ctx, 4, 6, scene, h);
+    else if (Scene.HAZARD_FNS[k]) Scene.HAZARD_FNS[k](ctx, 4, 6, scene, h);
+    if (ctx.n === 0) noops.push(k);
+  } catch (e) { noops.push(k + "(threw)"); }
+});
+out.push("noops=" + noops.join("/"));
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    kv = dict()
+    for chunk in text.split(" | "):
+        if "=" in chunk:
+            k, _, v = chunk.partition("=")
+            kv[k.strip()] = v.strip()
+    if kv.get("missing"):
+        problems.append(
+            f"obstacles with no renderer at all: {kv['missing']}. They would "
+            f"kill the player while being invisible."
+        )
+    if kv.get("noops"):
+        problems.append(
+            f"obstacles whose renderer draws nothing: {kv['noops']}"
+        )
+    if not kv:
+        return [f"could not parse the obstacle-renderer probe: {text[:200]}"]
+    return problems
+
+
 def main() -> int:
     problems = (assert_undeclared() + assert_chain_runs()
                 + assert_scene_contract()
@@ -1112,7 +1239,9 @@ def main() -> int:
                 + assert_death_freezes_the_board()
                 + assert_camera_follows_and_stays_in_frame()
                 + assert_player_starts_in_the_middle()
-                + assert_pursuer_is_escapable())
+                + assert_pursuer_is_escapable()
+                + assert_each_stage_has_its_own_obstacles()
+                + assert_every_obstacle_has_a_renderer())
     files = [ROOT / rel for rel in CHAIN] + [ROOT / DOM_ENTRY]
     print(f"files scanned        : {len(files)}")
     print(f"module chain         : {len(CHAIN)}")
