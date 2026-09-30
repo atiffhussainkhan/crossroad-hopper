@@ -1028,6 +1028,76 @@ print("cols=" + g.state().cols +
     return problems
 
 
+def assert_pursuer_is_escapable() -> list[str]:
+    """The pursuer must punish idling, not progress.
+
+    It used to spawn ON the player's own row, so it had no gap to close: the
+    instant it stopped telegraphing it was already past them, and standing
+    still for one second was fatal. The player reported it as "a red thing
+    that keeps killing me for no reason" -- which is exactly right, because
+    there was no way to see it, no way to understand it, and no way to avoid
+    it. An unavoidable, unexplained kill is not difficulty, it is noise.
+
+    Asserted: a player who keeps hopping is never caught, and a player who
+    stands still is caught, but not instantly.
+    """
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+function run(hopping) {
+  var g = SimCore.createGame({playerCount: 1, seed: "pursuer"});
+  g.hop("forward", 0);
+  for (var i = 0; i < 20; i++) g.hop("forward", 0);
+  for (var t = 0; t < 5; t++) g.tick(16.667);
+  var lastHop = 0, n = 0;
+  while (n++ < 4000) {
+    if (hopping && n * 16.667 - lastHop >= 550) { g.hop("forward", 0); lastHop = n * 16.667; }
+    // No traffic: the pursuer must be the only thing that can kill.
+    var pr = g.state().players[0].state().row;
+    g.state().hazards.length = 0;
+    g.state().hazardRow0 = pr - 4; g.state().hazardRows = 12;
+    g.tick(16.667);
+    if (g.state().phase === "DEAD" || g.state().phase === "STAGE_FAILED")
+      return "caught@" + (n * 16.667 / 1000).toFixed(2);
+  }
+  return "safe";
+}
+out.push("moving=" + run(true));
+out.push("still=" + run(false));
+var st = SimCore.createPursuer();
+out.push("armed=" + (st.state().mode));
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    kv = dict()
+    for chunk in text.split(" | "):
+        if "=" in chunk:
+            k, _, v = chunk.partition("=")
+            kv[k.strip()] = v.strip()
+    if "moving" not in kv:
+        return [f"could not parse the pursuer probe: {text[:200]}"]
+    if kv["moving"] != "safe":
+        problems.append(
+            f"a player who keeps hopping is {kv['moving']} by the pursuer. It is "
+            f"meant to punish standing still; catching a moving player makes it "
+            f"an unavoidable execution."
+        )
+    if kv["still"] == "safe":
+        problems.append(
+            "a player who stands still is never caught; the pursuer does nothing"
+        )
+    elif kv["still"].startswith("caught@"):
+        secs = float(kv["still"].split("@")[1])
+        if secs < 3.0:
+            problems.append(
+                f"a player who stands still is caught after only {secs:.1f}s. "
+                f"There is no time to understand what happened; the bird should "
+                f"give a few seconds of grace."
+            )
+    return problems
+
+
 def main() -> int:
     problems = (assert_undeclared() + assert_chain_runs()
                 + assert_scene_contract()
@@ -1041,7 +1111,8 @@ def main() -> int:
                 + assert_hop_never_blanks_the_player()
                 + assert_death_freezes_the_board()
                 + assert_camera_follows_and_stays_in_frame()
-                + assert_player_starts_in_the_middle())
+                + assert_player_starts_in_the_middle()
+                + assert_pursuer_is_escapable())
     files = [ROOT / rel for rel in CHAIN] + [ROOT / DOM_ENTRY]
     print(f"files scanned        : {len(files)}")
     print(f"module chain         : {len(CHAIN)}")

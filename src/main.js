@@ -26,6 +26,9 @@
   var elBanner = document.getElementById("banner");
   var elPlayers = document.getElementById("mode");
   var elProgress = document.getElementById("progress");
+  var elHint = document.getElementById("hint");
+  var DEFAULT_HINT = "Click or press SPACE to hop forward. Arrow keys or WASD to " +
+                     "move. Dodge the traffic and cross the white line.";
 
   var TICK_DT_MS = 16.667;
   var ROW_PX = 26;            // vertical pixels per row
@@ -275,24 +278,90 @@
       ctx.restore();
     }
 
-    // Pursuer: triangle while telegraphing, square once active.
+    /* The pursuer, drawn as an actual bird.
+     *
+     * It used to be a red square while hunting and a red triangle while
+     * arriving, drawn at column 0 while the player stood at column 7. There
+     * was no way to tell what it was, no way to see it coming, and no way to
+     * understand that the rule was "keep moving" -- so it read as an
+     * unexplained red thing that killed you at random. A player who cannot
+     * see a threat cannot avoid it, and a threat they cannot avoid is not
+     * difficulty, it is noise.
+     *
+     * So: a bird with a body, swept wings, a beak and talons, drawn at the
+     * PLAYER's own column because the kill rule is row-only and that is
+     * genuinely where it will take you. A shadow on the ground leads it, so
+     * its approach is visible from off-screen. While it is still arriving the
+     * shadow tightens on the player: a countdown you can read. */
     var pu = game.state().pursuer.state();
     if (pu.mode !== "DISTANCE_LOCKED") {
       var purRow = (pu.mode === "ACTIVE") ? pu.row : pu.spawnRow;
-      // Absolute row, same projection as the player, and centred on the
-      // board rather than pinned to column 0: the kill rule is row-only, so a
-      // column-0 marker misrepresents where it will actually get you.
-      var q = Iso.projectS((s.players.length - 1) / 2, purRow, 0.4);
-      ctx.fillStyle = "#e06060";
+      var lead = s.players[0].state();
+      // Row-only kill, so it belongs over the player, not over some fixed
+      // column. For two players, over the leading one.
+      var purCol = lead.col;
+      var pRow = lead.row;
+      // How close it is to taking them, 0 = far, 1 = about to.
+      var near = pu.mode === "ACTIVE"
+        ? Math.max(0, Math.min(1, (purRow - (pRow - 5)) / 5))
+        : 0;
+      var ground = Iso.projectS(purCol, purRow, 0);
+      var air = Iso.projectS(purCol, purRow, 1.05 + (pu.mode === "ACTIVE" ? 0 : 0.25));
+
+      // 1. The shadow on the ground, which is how you see it coming.
+      var sh = 26 + (1 - near) * 30;
+      ctx.save();
+      ctx.globalAlpha = 0.20 + near * 0.28;
+      Iso.ellipse(ctx, ground[0], ground[1], sh, sh * 0.45, "#000000");
+      ctx.restore();
+
       if (pu.mode === "SPAWNING") {
+        // A tightening ring: the ground shadow closing in is the countdown.
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,120,90," + (0.35 + 0.45 * near).toFixed(2) + ")";
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.moveTo(q[0], q[1] - 14 * dpr);
-        ctx.lineTo(q[0] - 12 * dpr, q[1] + 4 * dpr);
-        ctx.lineTo(q[0] + 12 * dpr, q[1] + 4 * dpr);
-        ctx.closePath(); ctx.fill();
-      } else if (q[1] > -20 && q[1] < H) {
-        ctx.fillRect(q[0] - 11 * dpr, q[1], 22 * dpr, 22 * dpr);
+        ctx.ellipse(ground[0], ground[1], 30 - near * 16, (30 - near * 16) * 0.45, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
       }
+
+      // 2. The bird. Wings sweep as it closes, so it reads as alive.
+      var bob = Math.sin((pu.activeFor || 0) / 140) * 3;
+      var w = 26 + near * 8;                      // wingspan
+      var body = "#4a3a52", wing = "#5f4a68", beak = "#e8b53d";
+      // Wings: two swept quads, raised as it closes in.
+      var lift = 9 + near * 12;
+      ctx.save();
+      ctx.translate(air[0], air[1] + bob);
+      ctx.fillStyle = body;
+      ctx.beginPath();                            // body
+      ctx.ellipse(0, 0, 7, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = wing;                        // left wing
+      ctx.beginPath();
+      ctx.moveTo(-4, -3);
+      ctx.lineTo(-w, -lift);
+      ctx.lineTo(-w * 0.82, lift * 0.55);
+      ctx.lineTo(-3, 4);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();                            // right wing
+      ctx.moveTo(4, -3);
+      ctx.lineTo(w, -lift);
+      ctx.lineTo(w * 0.82, lift * 0.55);
+      ctx.lineTo(3, 4);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = beak;                        // beak
+      ctx.beginPath();
+      ctx.moveTo(0, -7); ctx.lineTo(-3, -13); ctx.lineTo(3, -13);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#f2e6d8";                   // eye
+      ctx.beginPath(); ctx.ellipse(-3, -6, 1.6, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(3, -6, 1.6, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#2a2230";                   // talons
+      ctx.fillRect(-5, 8, 3, 6);
+      ctx.fillRect(2, 8, 3, 6);
+      ctx.restore();
     }
 
     var remaining = Math.max(0, Stages.STAGE_DURATION_MS - s.elapsedInStageMs);
@@ -305,6 +374,14 @@
     // how far there is to go; the clock on its own says nothing about it.
     if (elProgress) {
       elProgress.textContent = Math.min(anchor.row, s.goalRow) + "/" + s.goalRow;
+    }
+    // Say WHY the bird is there, and what to do. A threat with no explanation
+    // is indistinguishable from a bug.
+    if (elHint) {
+      var puH = game.state().pursuer.state();
+      if (puH.mode === "ACTIVE") elHint.textContent = "The bird is chasing you — keep hopping forward!";
+      else if (puH.mode === "SPAWNING") elHint.textContent = "A bird is coming — keep moving!";
+      else elHint.textContent = DEFAULT_HINT;
     }
 
     var livesStr = "";

@@ -347,3 +347,46 @@ centred within 2px; one asserts the player starts on a whole cell in the
 middle of the playable band. The camera check deliberately asserts the board
 *covers* the frame rather than fitting inside it -- those are opposite
 requirements, and a check written for one rejects the other.
+
+
+---
+
+## UPDATE — "a red thing keeps killing me for no reason"
+
+That red thing was the **pursuer** (the eagle), and the player was right on
+every count: it was unidentifiable, unexplainable and unavoidable.
+
+**Why it killed constantly.** `createPursuer` set `spawnRow = playerRow` -- the
+bird spawned **on the player's own row**, so it had no gap to close. The
+instant it finished telegraphing it was already past them. Measured before the
+fix: a player standing completely still after row 20 died in **1.13 seconds**,
+barely longer than the 1.2s warning. The design intent in the spec is "cannot
+be fought, blocked or outlasted, only outrun" -- i.e. it punishes *idling* --
+but the implementation made it punish *existing*.
+
+**Why it looked wrong.** It was a red square while hunting and a red triangle
+while arriving, drawn at **column 0** while the player stood at column 7. The
+kill rule is row-only, so it was drawn nowhere near the player and there was
+no way to read what it was or where it would land.
+
+Three fixes:
+
+1. **It now flies in from five rows behind**, so it has to catch up. Measured
+   after: a player who stands still is caught after **8.3s**; a player who
+   keeps hopping is **never caught** (it falls 6.7 rows behind).
+2. **It is drawn as a bird** -- body, two swept wings that rise as it closes,
+   a beak, eyes and talons -- over the **player's own column**, because the
+   kill is row-only and that is genuinely where it will take you. A ground
+   shadow leads it and tightens and darkens as it approaches, so the approach
+   is visible and the closing is a readable countdown. While it is still
+   arriving there is a shrinking warning ring on the ground.
+3. **The hint line says what is happening**: "A bird is coming -- keep moving!"
+
+A player who cannot see a threat cannot avoid it, and a threat they cannot
+avoid is not difficulty, it is noise. That was the actual defect behind the
+report; the spawn row was the part that made it lethal.
+
+New gate: isolates the pursuer with no traffic, and asserts a hopping player
+is never caught while a standing player is caught but not within 3 seconds.
+Proved non-vacuous both ways -- restoring `spawnRow = playerRow` fails on the
+1.1s grace, and raising its speed above the player's fails on escapability.

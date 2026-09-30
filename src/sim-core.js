@@ -24,6 +24,12 @@
   // How long the world holds still after a hit before the player is put back.
   // Long enough to read "You died", short enough not to break the rhythm.
   var DEAD_BEAT_MS = 1100;
+  // How far BEHIND the player the pursuer starts. It used to start ON their
+  // row, which meant it had no gap to close: the instant it stopped
+  // telegraphing it was already past them, so standing still for one second
+  // was fatal and the rule was effectively "never stop". It is meant to punish
+  // idling, not progress, so it flies in from behind and has to catch up.
+  var PURSUER_SPAWN_GAP = 5;
 
   var Stages = global.Stages || (typeof require !== "undefined" ? require("./stages.js").Stages : null);
 
@@ -153,7 +159,8 @@
         if (state.mode === "DISTANCE_LOCKED") {
           if (playerRow >= threshold) {
             state.mode = "SPAWNING";
-            state.spawnRow = playerRow;
+            // Behind the player, never on top of them.
+            state.spawnRow = Math.max(0, playerRow - PURSUER_SPAWN_GAP);
             state.elapsed = 0;
           }
           return "ALIVE";
