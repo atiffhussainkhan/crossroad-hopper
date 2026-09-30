@@ -50,9 +50,13 @@
 
   // One pass over a window of rows. Deterministic from a seed, so a run can
   // be replayed from its seed in a bug report.
-  function buildHazards(seed, row0, viewRows, cols, difficulty, Rng) {
+  function buildHazards(seed, row0, viewRows, cols, difficulty, Rng, stageIndex) {
     var rng = Rng;
     var out = [];
+    // Teaching stages carry no lethal hazard at all. The player learns the
+    // lane rhythm, the hop and the goal line with the clock as the only
+    // pressure, and meets a car for the first time in stage two.
+    if (stageIndex !== undefined && stageIndex < 2) return out;
     // Density ramps with difficulty but never reaches 1: a lane that is
     // always occupied is not a puzzle, it is a wall.
     var density = Math.min(0.26, 0.09 + difficulty * 0.016);

@@ -192,6 +192,8 @@
       stageScore: 0,
       endlessScore: 0,
       endlessMs: 0,
+      coins: 0,
+      stageCoins: 0,
       hazards: [],
       hazardRow0: null,
       hazardRows: 0,
@@ -346,7 +348,7 @@
         if (g.hazardRow0 === null || want0 < g.hazardRow0 || want0 + wantRows > g.hazardRow0 + g.hazardRows) {
           g.hazards = H.ensureSolvable(
             H.buildHazards(g.hazardSeed + ":" + g.stageIndex, want0, wantRows,
-                           g.cols, diff, g.rng),
+                           g.cols, diff, g.rng, g.stageIndex),
             { needGap: 0.9 });
           g.hazardRow0 = want0; g.hazardRows = wantRows;
         }
@@ -385,6 +387,9 @@
       }
       if (allFinished()) {
         g.totalScore += Math.floor(g.stageScore);
+        // E-02: coins persist across runs and are banked at stage end.
+        g.coins += g.stageCoins;
+        g.stageCoins = 0;
         if (g.stageIndex + 1 >= Stages.stageCount()) {
           g.phase = PHASES.ENDLESS;
         } else {
@@ -419,6 +424,17 @@
 
     function difficulty() {
       return Stages.difficultyFor(g.stageIndex, g.elapsedInStageMs);
+    }
+
+    /* Tile density by stage. Stages one and two are TEACHING stages: they
+     * contain only solid ground and no special tiles, so a new player learns
+     * the hop, the lanes and the goal line with nothing able to kill them
+     * except the pursuer, which does not arm for 20 rows. Density then ramps
+     * so stage 10 is a wall of moving parts. This is the design fix the red
+     * campaign gate was asking for, not a coefficient tweak. */
+    function tileDensity() {
+      if (g.stageIndex < 2) return 0;
+      return Math.min(0.55, (g.stageIndex - 1) * 0.09 + Math.floor(g.elapsedInStageMs / 30000) * 0.03);
     }
 
     startStage(0);

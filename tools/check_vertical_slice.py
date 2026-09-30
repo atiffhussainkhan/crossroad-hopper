@@ -281,7 +281,7 @@ console.log("@@P@@" + JSON.stringify(r));
     #     possible bug in this genre: the player learns that cars are scenery.
     s = run_probe("""
 ObjC.import('Foundation');
-["src/stages.js", "src/hazards.js", "src/sim-core.js"].forEach(function (rel) {
+["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js"].forEach(function (rel) {
   var t = $.NSString.stringWithContentsOfFileEncodingError(
     _gd + "/" + rel, $.NSUTF8StringEncoding, null);
   eval(ObjC.unwrap(t));

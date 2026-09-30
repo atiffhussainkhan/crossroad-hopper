@@ -28,7 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
 
-CHAIN = ["src/stages.js", "src/hazards.js", "src/sim-core.js",
+CHAIN = ["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js",
          "src/render/iso.js", "src/render/scene.js", "src/roster.js",
          "src/render/character.js"]
 
