@@ -48,6 +48,11 @@ simulation. Nothing here is mocked.</p>
     <canvas id="goalboard" class="board" width="420" height="540"></canvas>
     <p class="facts">same game, approaching the finish line</p>
   </div>
+  <div>
+    <canvas id="deadboard" class="board" width="420" height="540"></canvas>
+    <p class="facts">the moment after being hit: the board holds, the player
+      is flattened and stays on screen, and the game says so</p>
+  </div>
 </div>
 
 <!-- Canonical load order. Must match index.html and every gate's CHAIN. -->
@@ -152,6 +157,66 @@ simulation. Nothing here is mocked.</p>
     });
     CharacterRenderer.drawCharacter(ctx2, ps2.col, ps2.row, 1,
                                     Roster.getCharacter("pip"));
+
+    // ---- the moment after being hit --------------------------------------
+    // Death used to teleport the player back to the start line on the same
+    // tick as the hit, with no message: the board blinked and the player was
+    // gone. There is now a beat where the world holds still and the game says
+    // what happened. This renders that exact state through the real renderer.
+    var g3 = SimCore.createGame({ playerCount: 1, seed: "look-sheet-death" });
+    g3.hop("forward", 0);
+    for (var d3 = 0; d3 < 240; d3++) g3.tick(16.667);
+    var ps3 = g3.state().players[0].state();
+    // Put a car exactly where the player is standing. This is a test rig: the
+    // point is to reach the DEAD state and render it, not to play well.
+    g3.state().hazards = [{ kind: "car", spec: { len: 0.86, kind: "ground" },
+                            row: ps3.row, dir: 1, speed: 0,
+                            x: ps3.col, dead: false }];
+    g3.state().hazardRow0 = ps3.row - 4;
+    g3.state().hazardRows = 12;
+    g3.tick(16.667); g3.tick(16.667);
+    var deadPs = g3.state().players[0].state();
+    var cv3 = document.getElementById("deadboard");
+    var ctx3 = cv3.getContext("2d");
+    var scene3 = {
+      id: stage.id, name: stage.name,
+      laneMix: stage.laneMix, scenery: stage.scenery,
+      ground: stage.ground, groundAlt: stage.groundAlt,
+      road: stage.road, water: stage.water,
+      hazard: stage.hazard, hazard2: stage.hazard2,
+      log: stage.log, turtle: stage.turtle,
+      foliage: stage.foliage, foliage2: stage.foliage2, trunk: stage.trunk,
+    };
+    ctx3.setTransform(1, 0, 0, 1, 0, 0);
+    ctx3.fillStyle = Iso.shade(stage.ground, 0.86);
+    ctx3.fillRect(0, 0, cv3.width, cv3.height);
+    Scene.renderScene(ctx3, scene3, {
+      width: cv3.width, height: cv3.height, cols: COLS, viewRows: 13,
+      row0: Math.max(0, deadPs.row - 6), col0: 0,
+      focusCol: deadPs.col, focusRow: deadPs.row,
+      hazards: g3.state().hazards, goalRow: g3.state().goalRow,
+    });
+    // Flattened, the way the game draws a player who has just been hit.
+    var pv3 = Iso.projectS(deadPs.col, deadPs.row, 0);
+    ctx3.save();
+    ctx3.translate(pv3[0], pv3[1]);
+    ctx3.scale(0.30, 0.30);
+    ctx3.translate(-pv3[0], -pv3[1]);
+    CharacterRenderer.drawCharacter(ctx3, deadPs.col, deadPs.row, 1,
+                                    Roster.getCharacter("pip"));
+    ctx3.restore();
+    // The message the game shows.
+    ctx3.fillStyle = "rgba(10,10,10,0.72)";
+    ctx3.fillRect(cv3.width * 0.12, cv3.height * 0.40,
+                  cv3.width * 0.76, cv3.height * 0.14);
+    ctx3.fillStyle = "#f2f2f5";
+    ctx3.font = "600 26px -apple-system, sans-serif";
+    ctx3.textAlign = "center";
+    ctx3.fillText("You died", cv3.width / 2, cv3.height * 0.48);
+    ctx3.fillStyle = "#c9ccd4";
+    ctx3.font = "15px -apple-system, sans-serif";
+    ctx3.fillText("Tap or press any key to try again", cv3.width / 2,
+                  cv3.height * 0.525);
 
     // ---- the object sheet ------------------------------------------------
     var host = document.getElementById("strip");

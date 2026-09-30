@@ -223,3 +223,62 @@ The gate for this one checks hazard **object identity**, not position. With a
 per-row seed a full rebuild would place the same cars in the same places, so a
 positional check passes while the board is being thrown away and remade -- a
 check that looks green and proves nothing.
+
+
+---
+
+## UPDATE — the player was vanishing, and death had no message
+
+### The player vanished on EVERY hop
+
+`startHop()` read `.col` and `.row` straight off `players[i]`. But
+`players[i]` is a player **WRAPPER** -- the row and column live inside the
+object its `state()` returns. So the hop's target was `undefined`, the
+interpolation was `NaN`, and **a `NaN` transform makes canvas discard the draw
+call**. The character was being asked to draw at a position that was not a
+number, so it was not drawn at all -- for the whole duration of every hop.
+
+Found by instrumenting the live page and reading the drawn row out through the
+document title: `simR5 drawRNaN`. Six frames captured across one hop show the
+player present, gone, gone, present, present, present.
+
+This had been present since the hop animation was first added.
+
+### "I can only jump forward"
+
+Arrow keys and WASD always worked. What did not work was **swiping**, and a
+swipe was the natural gesture. The handler read the *release* point, so a
+quick flick -- which usually ends up back near where it started, because the
+hand is already lifting -- was read as a plain tap, and a plain tap is a
+forward hop. The direction is now taken from the furthest the finger actually
+travelled, and the threshold is 18px rather than 28.
+
+### Death had no message and the scene blinked
+
+`applyDeath()` revived the player on the same tick as the hit, so the board
+teleported back to the start line with no feedback at all -- it read as the
+game glitching. There is now a short `DEAD` beat (1100ms): the hazards stop,
+the pursuer stops, the clock stops, the player is drawn **flattened rather
+than removed** (they were being skipped by `if (!ps.alive) continue;`, so they
+disappeared at the exact moment you need to see what hit you), and the game
+says "You died / Tap or press any key to try again". Any input ends the beat
+early.
+
+Note this contradicts requirement R-01 in the spec ("the respawn is immediate,
+with no menu and no input-blocking animation"). The player asked for a
+message, so the spec line should be amended rather than the behaviour
+reverted.
+
+### A knock-on the campaign
+
+The death beat briefly collapsed P-12 to 9%: `simulateCampaign()` had no case
+for the new phase and fell through to its default "stop" branch, so every run
+ended the moment anything hit the player. DEAD is not terminal -- the driver
+ticks through it now. Campaign is back to **62%**. It was 72% before the beat;
+the difference is the ~1.1s the world holds still, which is the cost of the
+message and a fair trade.
+
+Two more gates, each proved non-vacuous: one refuses a `startHop` that never
+resolves the player's `state()` (stripping comments and excluding
+`game.state()`, because both otherwise satisfy a naive substring check), and
+one asserts the death beat actually freezes the world and puts the player back.

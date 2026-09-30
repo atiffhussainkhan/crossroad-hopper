@@ -54,10 +54,19 @@
   var hopAnim = null;   // { fc, fr, tc, tr, t0, dur, arc, sway }
 
   function startHop(playerIndex, dir, fromCol, fromRow) {
-    var st = game.state();
-    var ps = st.players[playerIndex];
-    if (!ps) return;
-    if (fromCol === undefined) return;
+    var holder = game.state().players[playerIndex];
+    if (!holder) return;
+    /* .state() is not optional. `players[i]` is a player WRAPPER; its row and
+     * column live inside the object its state() returns. Reading `.col`
+     * straight off the wrapper gave `undefined`, so the hop's target was
+     * undefined, the interpolation was NaN, and a NaN transform makes canvas
+     * drop the draw call entirely.
+     *
+     * That is why the player VANISHED for the whole duration of every hop:
+     * it was being asked to draw at a position that was not a number. */
+    var ps = holder.state();
+    if (fromCol === undefined || fromRow === undefined) return;
+    if (typeof ps.col !== "number" || typeof ps.row !== "number") return;
     var m = (typeof Roster !== "undefined" && Roster.motionFor)
       ? Roster.motionFor((typeof Roster !== "undefined" && Roster.ROSTER[
           playerIndex % Roster.ROSTER.length] || { id: "pip" }).id) : null;
@@ -178,7 +187,11 @@
     // drawn 5.8 to 21 tiles from the hazard that killed it.
     for (var i = 0; i < s.players.length; i++) {
       var ps = s.players[i].state();
-      if (!ps.alive) continue;
+      /* A dead player is DRAWN, flattened. Skipping them made the character
+       * disappear at the exact moment the player needs to see what killed
+       * them, which reads as a glitch rather than as a loss. */
+      var deadNow = !ps.alive;
+      if (!ps.alive && s.phase !== SimCore.PHASES.DEAD) continue;
       var who = (typeof Roster !== "undefined" && Roster.ROSTER)
         ? Roster.ROSTER[i % Roster.ROSTER.length] : null;
       // Draw the character at its TRUE world position and let the projection
@@ -193,7 +206,8 @@
       // has already moved the player; this is presentation only and cannot
       // change where anyone lands.
       var col = ps.col, row = ps.row, lift = 0, squash = 1, swayNow = 0;
-      var prog = hopProgress();
+      var prog = deadNow ? null : hopProgress();
+      if (deadNow) squash = 0.30;      // pressed flat by whatever hit them
       if (prog) {
         var a = prog.done, e = prog.p;
         col = a.fc + (a.tc - a.fc) * e;
@@ -270,7 +284,9 @@
     }
     elLives.textContent = livesStr;
 
-    if (s.phase === SimCore.PHASES.READY) {
+    if (s.phase === SimCore.PHASES.DEAD) {
+      showBanner("You died", "Tap or press any key to try again");
+    } else if (s.phase === SimCore.PHASES.READY) {
       showBanner("Stage " + stage.id + " — " + stage.name, "Tap to start");
     } else if (s.phase === SimCore.PHASES.STAGE_CLEAR) {
       showBanner("Stage clear", "Tap for stage " + (stage.id + 1));
@@ -339,7 +355,7 @@
    * into one act() so there is exactly one code path that can move a player.
    */
 
-  var SWIPE_MIN_PX = 28;     // below this it is a tap, not a swipe
+  var SWIPE_MIN_PX = 18;     // below this it is a tap, not a swipe
 
   // Which player a touch belongs to: left half or right half of the board.
   function playerAtX(clientX) {
@@ -375,16 +391,26 @@
   }
 
   var downX = 0, downY = 0, downId = null, dragged = false;
+  // How far the finger actually got, and in which direction.
+  //
+  // Reading only the release point meant a quick flick -- which often ends up
+  // back near where it started, because the hand is already lifting -- was
+  // read as a plain tap, so the player could only ever move FORWARD. That is
+  // what "I can only jump forward" meant.
+  var maxDx = 0, maxDy = 0, bestDx = 0, bestDy = 0;
 
   canvas.addEventListener("pointerdown", function (e) {
     if (e.button !== undefined && e.button !== 0) return;
     downX = e.clientX; downY = e.clientY;
     downId = e.pointerId; dragged = false;
+    maxDx = 0; maxDy = 0; bestDx = 0; bestDy = 0;
   });
 
   canvas.addEventListener("pointermove", function (e) {
     if (downId === null || e.pointerId !== downId) return;
     var dx = e.clientX - downX, dy = e.clientY - downY;
+    if (Math.abs(dx) > Math.abs(maxDx)) { maxDx = dx; bestDx = dx; bestDy = dy; }
+    if (Math.abs(dy) > Math.abs(maxDy)) { maxDy = dy; bestDx = dx; bestDy = dy; }
     if (!dragged && (Math.abs(dx) > SWIPE_MIN_PX || Math.abs(dy) > SWIPE_MIN_PX)) {
       dragged = true;
     }
@@ -395,10 +421,16 @@
     downId = null;
     var dx = e.clientX - downX, dy = e.clientY - downY;
     var idx = playerAtX(e.clientX);
-    if (dragged || Math.abs(dx) > SWIPE_MIN_PX || Math.abs(dy) > SWIPE_MIN_PX) {
+    // Take whichever is larger: how far the finger travelled, or where it
+    // let go. A short deliberate drag and a fast flick both have to register.
+    var useDx = dx, useDy = dy;
+    if (Math.abs(maxDx) > Math.abs(dx) || Math.abs(maxDy) > Math.abs(dy)) {
+      useDx = bestDx; useDy = bestDy;
+    }
+    if (dragged || Math.abs(useDx) > SWIPE_MIN_PX || Math.abs(useDy) > SWIPE_MIN_PX) {
       // A drag is a swipe. Screen y grows downward, so up is a negative dy.
-      if (Math.abs(dx) > Math.abs(dy)) act(dx > 0 ? "right" : "left", idx);
-      else act(dy < 0 ? "forward" : "back", idx);
+      if (Math.abs(useDx) > Math.abs(useDy)) act(useDx > 0 ? "right" : "left", idx);
+      else act(useDy < 0 ? "forward" : "back", idx);
       return;
     }
     // A plain press hops forward. There is deliberately no time limit here:

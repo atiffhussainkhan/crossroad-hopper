@@ -783,6 +783,129 @@ print(out.join(" | "));
     return problems
 
 
+def assert_hop_never_blanks_the_player() -> list[str]:
+    """The player must be drawn on every frame of a hop, and must be drawn
+    when dead.
+
+    Two defects, both silent.
+
+    1. `startHop` read `.col` / `.row` straight off `players[i]`, which is a
+       player WRAPPER -- the values live inside the object its `state()`
+       returns. The hop's target was therefore `undefined`, the interpolation
+       was `NaN`, and a `NaN` transform makes canvas discard the draw call. The
+       player was rendered every frame at a position that was not a number,
+       so it VANISHED for the entire duration of every single hop.
+
+    2. A dead player was skipped by `if (!ps.alive) continue;`, so at the
+       exact moment the player needed to see what killed them, they were not
+       on the screen. The world now freezes for a beat and says "You died".
+    """
+    problems: list[str] = []
+    src = (ROOT / DOM_ENTRY).read_text()
+    # Reading a coordinate straight off the wrapper.
+    for m in re.finditer(r"players\[[^\]]*\]\s*\.\s*(col|row)\b", src):
+        line = src[:m.start()].count("\n") + 1
+        problems.append(
+            f"src/main.js line {line}: reads '.{m.group(1)}' directly off a "
+            f"player wrapper. players[i] is a wrapper; the value is inside "
+            f".state(). This made the hop interpolate to NaN and the character "
+            f"vanish for the whole hop."
+        )
+        break
+    # ...and the subtler form: the wrapper put in a local, then read from that.
+    # Looking for the substring ".state()" is useless here -- a comment
+    # mentioning it, or the unrelated game.state() call elsewhere in the
+    # function, would satisfy it. Strip comments and require a state() call
+    # that is not on the game itself.
+    hop = re.search(r"function startHop\([^)]*\)\s*\{(.*?)\n  \}", src, re.S)
+    if hop:
+        body = re.sub(r"/\*.*?\*/", " ", hop.group(1), flags=re.S)
+        body = re.sub(r"//[^\n]*", " ", body)
+        if not re.search(r"(?<!game)\.state\s*\(\s*\)", body):
+            line = src[:hop.start()].count("\n") + 1
+            problems.append(
+                f"src/main.js line {line}: startHop never calls .state() on the "
+                f"player. players[i] is a wrapper and has no .col/.row of its "
+                f"own, so the hop target was undefined, the interpolation was "
+                f"NaN, and the player vanished for the whole hop."
+            )
+    else:
+        problems.append("could not find startHop() in src/main.js to check it")
+    # A dead player must still be drawn.
+    if re.search(r"if\s*\(\s*!ps\.alive\s*\)\s*continue;", src):
+        line = src[:re.search(r"if\s*\(\s*!ps\.alive\s*\)\s*continue;", src).start()].count("\n") + 1
+        problems.append(
+            f"src/main.js line {line}: a dead player is skipped entirely, so "
+            f"they disappear at the moment the player needs to see what hit "
+            f"them. Draw them flattened instead."
+        )
+    # The death beat has to exist and has to freeze the world.
+    if "DEAD" not in src:
+        problems.append(
+            "src/main.js has no DEAD phase: a death teleports the player back "
+            "to the start with no message, which reads as the game glitching"
+        )
+    return problems
+
+
+def assert_death_freezes_the_board() -> list[str]:
+    """Hitting something must hold the scene still and say so.
+
+    The world used to revive the player on the same tick as the hit, so the
+    board teleported back to the start line with no feedback at all. There is
+    now a short DEAD beat: the hazards stop, the pursuer stops, the clock
+    stops, and a message is shown.
+    """
+    problems: list[str] = []
+    script = "".join('load("%s");' % rel for rel in CHAIN)
+    script += """
+var out = [];
+var g = SimCore.createGame({ playerCount: 1, seed: "deathbeat" });
+g.hop("forward", 0);
+for (var i = 0; i < 200; i++) g.tick(16.667);
+var row = g.state().players[0].state().row;
+g.state().hazards = [{ kind: "car", spec: { len: 0.86, kind: "ground" },
+                      row: row, dir: 1, speed: 2, x: g.state().players[0].state().col,
+                      dead: false }];
+g.state().hazardRow0 = row - 4;
+g.state().hazardRows = 12;
+g.tick(16.667); g.tick(16.667);
+out.push("phase=" + g.state().phase);
+var x0 = g.state().hazards[0].x;
+for (var k = 0; k < 30; k++) g.tick(16.667);
+out.push("moved=" + (Math.abs(g.state().hazards[0].x - x0) > 0.01 ? "yes" : "no"));
+out.push("stillDead=" + g.state().phase);
+for (var m = 0; m < 90; m++) g.tick(16.667);
+out.push("after=" + g.state().phase);
+out.push("alive=" + g.state().players[0].state().alive);
+out.push("lives=" + g.state().players[0].state().lives);
+print(out.join(" | "));
+"""
+    text = run_jsc(script)
+    kv = dict()
+    for chunk in text.split(" | "):
+        if "=" in chunk:
+            k, _, v = chunk.partition("=")
+            kv[k.strip()] = v.strip()
+    if not kv:
+        return [f"could not parse the death-beat probe: {text[:160]}"]
+    if kv.get("phase") != "DEAD":
+        problems.append(
+            f"a fatal hit did not enter the death beat (phase={kv.get('phase')}); "
+            f"the player should be told they died"
+        )
+    if kv.get("moved") == "yes":
+        problems.append("the board kept moving during the death beat; it should hold still")
+    if kv.get("stillDead") != "DEAD":
+        problems.append("the death beat ended immediately; there is no beat to read")
+    if kv.get("after") != "RUNNING" or kv.get("alive") != "true":
+        problems.append(
+            f"the player was not put back on the board after the beat "
+            f"(phase={kv.get('after')} alive={kv.get('alive')})"
+        )
+    return problems
+
+
 def main() -> int:
     problems = (assert_undeclared() + assert_chain_runs()
                 + assert_scene_contract()
@@ -792,7 +915,9 @@ def main() -> int:
                 + assert_stage_one_is_playable()
                 + assert_playable_controls()
                 + assert_face_is_on_the_head()
-                + assert_hazards_survive_a_hop())
+                + assert_hazards_survive_a_hop()
+                + assert_hop_never_blanks_the_player()
+                + assert_death_freezes_the_board())
     files = [ROOT / rel for rel in CHAIN] + [ROOT / DOM_ENTRY]
     print(f"files scanned        : {len(files)}")
     print(f"module chain         : {len(CHAIN)}")

@@ -207,10 +207,22 @@ var r = {};
 // --- lives exhaustion retries the same stage, not the campaign
 // Drives applyDeath(), the same entry point the pursuer uses, so this tests
 // the real path rather than poking player internals.
+//
+// A death is now followed by a short DEAD beat in which the player is out and
+// the world is frozen, so the beat has to be ticked through between lives --
+// otherwise the second applyDeath is correctly refused (the player is already
+// dead) and the probe measures the beat, not the lives rule. What is being
+// asserted is unchanged: four deaths exhaust the stage, and a retry restores
+// four lives on the SAME stage.
 var g = SimCore.createGame({playerCount: 1, seed: "probe"});
 g.hop("forward");
 var p = g.state().players[0];
-for (var d = 0; d < 4; d++) { g.applyDeath(0); }
+for (var d = 0; d < 4; d++) {
+  g.applyDeath(0);
+  for (var b = 0; b < 120 && g.state().phase === SimCore.PHASES.DEAD; b++) {
+    g.tick(16.667);
+  }
+}
 r.phaseAfterLives = g.state().phase;
 r.livesAtFailure = p.state().lives;
 var before = g.state().stageIndex;

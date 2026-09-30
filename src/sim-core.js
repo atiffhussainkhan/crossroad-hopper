@@ -21,6 +21,9 @@
   // P-02: the pursuer arms on distance, never on a stopwatch. The row at which
   // it becomes eligible. Verified against the spec by check_vertical_slice.py.
   var PURSUER_DISTANCE_THRESHOLD = 20;
+  // How long the world holds still after a hit before the player is put back.
+  // Long enough to read "You died", short enough not to break the rhythm.
+  var DEAD_BEAT_MS = 1100;
 
   var Stages = global.Stages || (typeof require !== "undefined" ? require("./stages.js").Stages : null);
 
@@ -194,6 +197,12 @@
   var PHASES = {
     READY: "READY",
     RUNNING: "RUNNING",
+    // The beat between being hit and being put back on the board. The world
+    // is FROZEN here on purpose: a player who has just been run over needs to
+    // see the car that did it, and a message saying so. Before this existed,
+    // a death silently teleported the character back to the start line, which
+    // reads as the game glitching rather than as the player losing.
+    DEAD: "DEAD",
     STAGE_CLEAR: "STAGE_CLEAR",
     STAGE_FAILED: "STAGE_FAILED",
     GAME_OVER: "GAME_OVER",
@@ -306,6 +315,15 @@
         if (moved) { g.endlessScore += 1; g.activePlayer = idx; }
         return moved;
       }
+      // Any input during the death beat ends it early and moves the player,
+      // so a child who taps again is never stuck waiting.
+      if (g.phase === PHASES.DEAD) {
+        for (var dz = 0; dz < g.players.length; dz++) {
+          if (!g.players[dz].state().alive) g.players[dz].revive();
+        }
+        g.phase = PHASES.RUNNING;
+        g.deadForMs = 0;
+      }
       if (g.phase !== PHASES.RUNNING) return false;
       g.activePlayer = idx;
       return g.players[idx].hop(direction || "forward");
@@ -325,12 +343,28 @@
         g.phase = PHASES.STAGE_FAILED;
         return true;
       }
-      victim.revive();
+      // Do NOT revive here. Enter the death beat; the revive happens when the
+      // beat ends, so the scene holds and the message can be read.
+      g.phase = PHASES.DEAD;
+      g.deadForMs = 0;
       g.pursuer.reset();
       return true;
     }
 
     function tick(dt) {
+      if (g.phase === PHASES.DEAD) {
+        // Frozen. No hazards move, no pursuer closes, no clock runs: the board
+        // the player was hit on is still the board they are looking at.
+        g.deadForMs += dt;
+        if (g.deadForMs >= DEAD_BEAT_MS) {
+          for (var dv = 0; dv < g.players.length; dv++) {
+            if (!g.players[dv].state().alive) g.players[dv].revive();
+          }
+          g.phase = PHASES.RUNNING;
+          g.deadForMs = 0;
+        }
+        return g.phase;
+      }
       if (g.phase === PHASES.ENDLESS) {
         // No clock, no goal row, no stage end: difficulty simply keeps
         // climbing and the pursuer never stops.
@@ -573,8 +607,14 @@
     var stalls = 0;
 
     while (step < maxSteps) {
-      if (gstate.phase === PHASES.READY || gstate.phase === PHASES.RUNNING) {
-        if (step * dt - lastHopMs >= 600) {
+      /* DEAD is not terminal. The player is mid-beat: the world is frozen and
+       * the beat ends on its own, so the driver just keeps ticking through it.
+       * Falling through to the default branch here ended every run the moment
+       * anything hit the player, which is why the campaign number collapsed
+       * the day the death beat was added. */
+      if (gstate.phase === PHASES.READY || gstate.phase === PHASES.RUNNING ||
+          gstate.phase === PHASES.DEAD) {
+        if (gstate.phase !== PHASES.DEAD && step * dt - lastHopMs >= 600) {
           var pst = gstate.players[0].state();
           // Only step into a row that is clear. If it is not, wait: that is
           // the decision a player makes, and it is what makes the stage
