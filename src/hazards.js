@@ -29,6 +29,9 @@
    *   SAFE_GOAL_ROWS   always clear, so the stage can actually be finished */
   var SAFE_START_ROWS = 3;
   var SAFE_GOAL_ROWS = 2;
+  // Every Nth row in the last third of a stage carries a bird, guaranteed.
+  var ENDGAME_BIRD_EVERY = 3;
+  var ENDMOD = 0;
 
   /* Every obstacle the game can spawn, and what makes it a decision.
    *
@@ -83,6 +86,23 @@
                  cycle: { on: 900, periodMs: 2400 } },
     steamvent: { len: 1.00, speed: [0, 0], kind: "air",
                  cycle: { on: 1200, periodMs: 3000 } },
+    /* The swooping bird.
+     *
+     * Everything else in the game is bound to a lane: a car needs asphalt, a
+     * log needs water. A bird does not, which is the entire point -- it flies
+     * over the LAWN, so the ground the player has been treating as a safe
+     * place to think is not safe. That turns the player's one refuge into
+     * another thing to read, and it is the cheapest way to make the endgame
+     * feel different from the opening.
+     *
+     * It is drawn cartoonish on purpose: a wide-eyed, round-bodied bird with
+     * a big beak and flapping wings, so a child recognises it instantly as
+     * "the thing in the sky" rather than as another vehicle.
+     *
+     * `flies` marks it as lane-independent. `endgame` marks it as something
+     * the stage guarantees near the finish. */
+    hawk:     { len: 1.05, speed: [1.8, 2.6], kind: "ground", flies: true,
+                endgame: true },
   };
 
   // Per-column speed variance, so two hazards in the same row are not a wall.
@@ -268,9 +288,29 @@
     // window and moves as the player advances.
     if (row < SAFE_START_ROWS) return out;
     if (row >= goalRow - SAFE_GOAL_ROWS) return out;
+    /* The endgame bird.
+     *
+     * The request was that EVERY stage has a flying thing that comes at the
+     * player near the end. "Near the end" is the last third of the crossing,
+     * and the last stretch is made DENSE with them rather than left to
+     * chance: a guarantee the player discovers by playing is worth much less
+     * than one they can anticipate, and a stage that sometimes ends with no
+     * bird at all is a stage whose ending cannot be learned. */
+    var progress = row / Math.max(1, goalRow - SAFE_GOAL_ROWS);
+    var endgame = progress >= 0.62;
+    if (row % ENDGAME_BIRD_EVERY === 0 && endgame) {
+      var bh = makeHazard("hawk", row, cols, rng, difficulty || 0, xMin);
+      if (bh) {
+        bh.dir = (row % 2) ? 1 : -1;
+        bh.speed = Math.abs(bh.speed) * bh.dir;
+        bh.x = bh.dir > 0 ? xMin - 0.5 : cols + 0.5;
+        out.push(bh);
+      }
+    }
+
     var k = pickKind(laneClassOf(row, laneMix, laneKey), stageIndex, rng);
     if (!k) return out;
-    if (rng.next() > density) return out;
+    if (rng.next() > density * (endgame ? 1.35 : 1)) return out;
     var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1
     var h = makeHazard(k, row, cols, rng, difficulty || 0, xMin);
     if (!h) return out;

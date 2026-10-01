@@ -329,18 +329,27 @@ Stages.STAGES.forEach(function (s) {
   if (solid === 0)
     out.push("stage " + s.id + " has no standable row at all");
 });
-// The spawner must never put a hazard on a row the renderer calls ground.
-var stray = 0, checked = 0;
-for (var si = 2; si < Stages.STAGES.length; si++) {
+/* The endgame bird is MEANT to fly over the lawn -- it is lane-independent,
+ * and that is precisely what makes it different from every other obstacle. So
+ * the rule is not "nothing spawns on grass" but "only the bird does": a
+ * VEHICLE on a row the player can see is walkable is the exact bug this probe
+ * was written for, and admitting the bird must not blunt it. */
+var stray = 0, checked = 0, birdsOnGrass = 0;
+for (var si = 0; si < Stages.STAGES.length; si++) {
   var st = Stages.STAGES[si];
-  var hs = Hazards.buildHazards("probe", 0, 40, 9, 4,
-                                SimCore.createRng("probe"), si);
-  hs.forEach(function (h) {
-    checked++;
-    if (!Scene.isHazardLane(h.row, st)) stray++;
-  });
+  for (var rr = 0; rr < 40; rr++) {
+    Hazards.hazardsForRow("pg" + si + rr, rr, st.id, 4,
+                          SimCore.createRng("pg" + si + rr), si, 4)
+      .forEach(function (h) {
+        checked++;
+        if (Scene.isHazardLane(h.row, st)) return;
+        if (h.kind === "hawk") birdsOnGrass++;
+        else stray++;
+      });
+  }
 }
 out.push("hazards-on-grass=" + stray + "/" + checked);
+out.push("birds-on-grass=" + birdsOnGrass);
 // print(), not a bare expression: the jsc shell does NOT echo the value of
 // the last expression statement, so a bare `out.join(...)` here writes
 // nothing and every assertion below silently passes on an empty string.
@@ -353,8 +362,15 @@ print(out.join(" | "));
             if n[0] != "0":
                 problems.append(
                     f"{n[0]} of {n[1]} spawned hazards sit on rows drawn as "
-                    f"standable ground (the lane class the spawner and the "
-                    f"renderer derive disagree)"
+                    f"standable ground. Only the endgame bird may fly over the "
+                    f"lawn; a vehicle there looks walkable and is lethal."
+                )
+        elif chunk.startswith("birds-on-grass="):
+            if chunk.split("=")[1] == "0":
+                problems.append(
+                    "the endgame bird never flies over the lawn, so the safe "
+                    "ground is still safe and the bird is just another vehicle "
+                    "in the air"
                 )
         elif chunk and "THREW" not in chunk and not chunk.startswith("palette") \
                 and not chunk.startswith("createGame") \
@@ -1145,8 +1161,11 @@ Stages.STAGES.forEach(function (st, si) {
       .forEach(function (h) { kinds[h.kind] = 1; });
   var keys = Object.keys(kinds);
   if (!keys.length) out.push("stage" + st.id + " spawns nothing at all");
+  // The endgame bird is UNIVERSAL: every stage guarantees one in its last
+  // third, which is the point of it, so it is not per-stage data.
+  var UNIVERSAL = ["hawk"];
   var undeclared = keys.filter(function (k) {
-    return st.hazardKinds.indexOf(k) < 0;
+    return st.hazardKinds.indexOf(k) < 0 && UNIVERSAL.indexOf(k) < 0;
   });
   if (undeclared.length)
     out.push("stage" + st.id + " spawns undeclared " + undeclared.join("/"));
@@ -1177,8 +1196,11 @@ out.push("missing=" + missing.join("/"));
 var noops = [];
 var ctx = { n: 0 };
 function stub() {}
+// translate/scale/transform matter: a renderer that positions itself through
+// the transform was reported as "threw" until these were stubbed.
 ["beginPath","moveTo","lineTo","closePath","fill","stroke","ellipse","arc",
- "save","restore","rect"].forEach(function (m) { ctx[m] = stub; });
+ "save","restore","rect","translate","scale","transform","clearRect"]
+  .forEach(function (m) { ctx[m] = stub; });
 ctx.save = function () {}; ctx.restore = function () {};
 ctx.ellipse = function () { ctx.n++; };
 ctx.beginPath = function () { ctx.n++; };

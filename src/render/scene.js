@@ -80,6 +80,94 @@
     I.ellipse(ctx, hl[0], hl[1], 2.4, 2.0, "#fff3c0");
   }
 
+
+  /* The swooping bird.
+   *
+   * Deliberately cartoonish and deliberately unlike every other obstacle in
+   * the game: round body, enormous beak, wide eyes, and wings that flap through
+   * a full upstroke as it passes. A child should read this instantly as "the
+   * thing in the sky", not as one more vehicle in a different colour.
+   *
+   * It flies over grass as well as tarmac, so its shadow on the ground is the
+   * only reliable warning: you see it coming from above rather than from the
+   * lane, which is a different read from every other hazard here. */
+  function drawHawk(ctx, col, row, scene, h) {
+    var x = h.x;
+    // Shadow first, and clearly: the bird is above the lane, not in it.
+    var g = I.projectS(x + 0.5, row + 0.5, 0);
+    ctx.save();
+    ctx.globalAlpha = 0.26;
+    I.ellipse(ctx, g[0], g[1], 15, 7, "#000000");
+    ctx.restore();
+
+    var p = I.projectS(x + 0.5, row + 0.5, 0.72);
+    var dir = (h && h.speed !== 0) ? (h.speed > 0 ? 1 : -1) : 1;
+    // A flap that reads at 40px: wings high on the way past, low at the ends.
+    var flap = Math.sin((h && h.activeFor ? h.activeFor : 0) / 90) * 0.5 + 0.5;
+    var lift = 4 + flap * 16;
+    var body = "#f0a828", dark = "#d4881a", beak = "#f26a2b", wing = "#ffc94a";
+
+    ctx.save();
+    ctx.translate(p[0], p[1]);
+    ctx.scale(dir, 1);
+    // Wings: two swept shapes, one behind the body and one in front so the
+    // bird reads as having depth rather than as a flat sticker.
+    ctx.fillStyle = wing;
+    [-1, 1].forEach(function (s) {
+      ctx.beginPath();
+      ctx.moveTo(2 * s, -2);
+      ctx.lineTo(17 * s, -lift);
+      ctx.lineTo(15 * s, 6);
+      ctx.lineTo(3 * s, 3);
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.fillStyle = dark;
+    ctx.beginPath();
+    ctx.moveTo(-3, -1);
+    ctx.lineTo(-16, -lift * 0.7);
+    ctx.lineTo(-13, 7);
+    ctx.lineTo(-2, 4);
+    ctx.closePath();
+    ctx.fill();
+    // Body.
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 9, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Head.
+    ctx.beginPath();
+    ctx.ellipse(7, -4, 6.5, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Beak: big, orange, unmistakable.
+    ctx.fillStyle = beak;
+    ctx.beginPath();
+    ctx.moveTo(11, -6);
+    ctx.lineTo(22, -2);
+    ctx.lineTo(11, 1);
+    ctx.closePath();
+    ctx.fill();
+    // Eye: white with a big pupil, the cartoonish tell.
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(8, -6, 3.4, 3.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#1b1b1b";
+    ctx.beginPath();
+    ctx.ellipse(9.4, -6, 1.7, 1.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Tail feathers.
+    ctx.fillStyle = dark;
+    ctx.beginPath();
+    ctx.moveTo(-8, 1);
+    ctx.lineTo(-18, 6);
+    ctx.lineTo(-16, 9);
+    ctx.lineTo(-7, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
   function drawCar(ctx, col, row, scene, h) {
     wheeled(ctx, col, row, h.spec, h.spec.body || scene.hazard, "#cfe6f5", {});
   }
@@ -489,7 +577,7 @@
     train: drawTrain, tram: drawTram, monorail: drawMonorail,
     log: drawLog, turtle: drawTurtle, alligator: drawAlligator,
     crocodile: drawCrocodile,
-    snake: drawSnake, boulder: drawBoulder,
+    snake: drawSnake, boulder: drawBoulder, hawk: drawHawk,
   };
   // The timed ones are not a plain lookup: what they draw depends on whether
   // they are UP this instant, which is the whole mechanic.
@@ -640,6 +728,7 @@
     drawTrain: drawTrain, drawTram: drawTram, drawMonorail: drawMonorail,
     drawLog: drawLog, drawTurtle: drawTurtle, drawAlligator: drawAlligator,
     drawCrocodile: drawCrocodile, drawSnake: drawSnake, drawBoulder: drawBoulder,
+    drawHawk: drawHawk,
     drawGeyser: drawGeyser,
     HAZARD_FNS: HAZARD_FNS, TIMED_FNS: TIMED_FNS,
     drawTree: drawTree, drawBush: drawBush, drawRock: drawRock,

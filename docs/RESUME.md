@@ -481,3 +481,37 @@ looking at eight lanes saw about one car and the board read as empty.
 Both proved non-vacuous. Also note the browser registry gate caught an
 undeclared `I.ellipse` in main.js within seconds of it being written, which is
 the undeclared-identifier check earning its place.
+
+
+---
+
+## UPDATE — the endgame bird
+
+Asked for a flying thing that comes at the player at the end of every stage.
+
+`hawk`: a cartoonish bird -- round body, big orange beak, wide eyes, tail
+feathers, wings that flap through a full upstroke as it passes -- with a ground
+shadow under it so its approach is readable.
+
+**It flies over grass as well as tarmac.** Everything else in the game is
+bound to a lane: a car needs asphalt, a log needs water. The bird does not,
+and that is the entire point. It turns the lawn -- the one place the player
+goes to think -- into another thing to read, which is the cheapest way to make
+an endgame feel different from an opening.
+
+**It is guaranteed, not left to chance.** Rows 24, 27, 30, 33 and 36 of every
+40-row stage carry one, unconditionally, and density is 35% higher across the
+last third. A guarantee the player discovers by playing is worth much less than
+one they can anticipate; a stage that *sometimes* ends with no bird is a stage
+whose ending cannot be learned. It is universal rather than per-stage data, so
+it is exempt from the "every stage declares what it spawns" gate and is
+asserted separately.
+
+Cost: P-12 campaign reachability 62% -> 54%. That is the complexity increase,
+and it is the dial (`ENDGAME_BIRD_EVERY`, and the 0.62 progress threshold) if
+it wants easing later.
+
+Gate: the check that no hazard spawns on a row the player can see is walkable
+is now "only the bird may", not "nothing may". That keeps the original
+cars-on-lawn protection intact -- a vehicle on the lawn still fails it -- while
+allowing the one hazard that is *meant* to fly there. Proved both ways.
