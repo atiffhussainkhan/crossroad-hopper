@@ -291,7 +291,13 @@
     }
 
     function startStage(index) {
-      g.stageIndex = index;
+      // Each ATTEMPT at a stage must deal a different board. The hazard seed
+      // used to be campaignSeed + stageIndex only, so retrying a stage
+      // regenerated the identical board: a player (or the autoplay) that died
+      // once died 13 times in a row, and the retry budget was worth nothing.
+      // That is what made stage 10 a wall rather than merely hard.
+      if (g.stageIndex === index) g.stageAttempt = (g.stageAttempt || 0) + 1;
+      else { g.stageIndex = index; g.stageAttempt = 0; }
       g.phase = PHASES.READY;
       g.elapsedInStageMs = 0;
       g.stageScore = 0;
@@ -455,7 +461,10 @@
         for (var nr = want0; nr < wantEnd; nr++) {
           if (gen[nr]) continue;
           gen[nr] = true;
-          var made = H.hazardsForRow(g.hazardSeed + ":" + g.stageIndex, nr,
+          // The attempt is part of the seed, so a retry is a new board rather
+          // than a replay of the one that just killed the player.
+          var made = H.hazardsForRow(g.hazardSeed + ":" + g.stageIndex + ":" +
+                                      (g.stageAttempt || 0), nr,
                                      g.playMax, diff, g.rng, g.stageIndex,
                                      g.playMin);
           for (var mk = 0; mk < made.length; mk++) g.hazards.push(made[mk]);

@@ -110,7 +110,7 @@ SCENES = [
          foliage="#2f3742", foliage2="#3d4a58", trunk="#33383f", accent="#d8e8f4", hazardKinds=["limousine", "tram", "tumbleweed", "train"], scenery=["pylon", "puddle", "pylon", "debris"]),
     dict(id=10, name="Volcano",      sky=("#3a1f1c", "#9c4326"), ground="#5a3a34", alt="#52342e",
          road="#3a2a26", water="#8a3a1a", hazard="#ff4d3d", hazard2="#ffd23d",
-         foliage="#2a1a18", foliage2="#3f2622", trunk="#3a2a26", accent="#ffb03d", hazardKinds=["car", "steamvent", "turtle", "tram", "boulder"], scenery=["lavaVent", "obsidian", "boulder", "debris"]),
+         foliage="#2a1a18", foliage2="#3f2622", trunk="#3a2a26", accent="#ffb03d", hazardKinds=["bus", "steamvent", "log", "train", "roller"], scenery=["lavaVent", "obsidian", "boulder", "debris"]),
 ]
 
 
