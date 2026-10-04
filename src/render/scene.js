@@ -291,6 +291,30 @@
                    [c[0] + Math.cos(a) * 11, c[1] + Math.sin(a) * 11]], "#5c4526", 1.8);
     }
   }
+  // The railway telegraph. A flashing signal at the entry edge, plus a bar
+  // across the lane that brightens as the hazard closes on it. The player sees
+  // the arrival before anything can hit them, which is what makes the crossing
+  // a timing decision instead of a reflex.
+  function drawTelegraph(ctx, row, scene, h) {
+    var fromLeft = h.speed > 0;
+    var edge = fromLeft ? 0 : 9;
+    var p = I.projectS(edge + (fromLeft ? 0.10 : 0.90), row + 0.5, 0.5);
+    // Urgency: the closer to arrival, the brighter and the redder.
+    var left = Math.max(0, Math.min(1, h.tel.t / h.tel.ms));
+    var blink = 0.55 + 0.45 * Math.sin(h.tel.t / 90);
+    var hot = Math.round(255 * (0.35 + 0.65 * (1 - left)));
+    var col = "rgb(" + hot + "," + Math.round(90 * blink + 40) + "," + Math.round(60 * blink) + ")";
+    // Post
+    I.line(ctx, [[p[0], p[1] - 13], [p[0], p[1] + 5]], "#2a2f38", 2.4);
+    // Lamps
+    I.ellipse(ctx, p[0], p[1] - 8, 3.4, 3.4, col);
+    I.ellipse(ctx, p[0], p[1] - 1, 3.4, 3.4, blink > 0.7 ? "#ffd23d" : "#6b5a2a");
+    // Entry mark across the lane
+    var a = I.projectS(fromLeft ? 0.02 : 0.98, row + 0.5, 0.5);
+    I.line(ctx, [[a[0] - 4, a[1] - 5], [a[0] + 4, a[1] - 5]], col, 2.2);
+    I.line(ctx, [[a[0] - 4, a[1] + 5], [a[0] + 4, a[1] + 5]], col, 2.2);
+  }
+
   function drawTrain(ctx, col, row, scene, h) {
     var body = h.spec.body || scene.hazard2;
     hazardShadow(ctx, col, row, h.spec.len, 0.20);
@@ -685,6 +709,12 @@
     hazards.sort(function (a, b) { return (b[0] + b[1]) - (a[0] + a[1]); });
     hazards.forEach(function (x) {
       var h = x[3];
+      // Phase 2 item 3: a rail hazard that is still only ANNOUNCED is drawn
+      // as a level-crossing signal at the edge it will enter from, and its
+      // body is withheld until the warning has run out. The player can see it
+      // coming and can therefore time the crossing, which is the difference
+      // between a hard lane and an unclearable one.
+      if (h && h.tel && h.tel.t > 0) { drawTelegraph(ctx, x[1], scene, h); return; }
       if (TIMED_FNS[x[2]]) { TIMED_FNS[x[2]](ctx, x[0], x[1], scene, h); return; }
       if (HAZARD_FNS[x[2]]) HAZARD_FNS[x[2]](ctx, x[0], x[1], scene, h);
     });

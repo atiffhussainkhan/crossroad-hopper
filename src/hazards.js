@@ -29,6 +29,24 @@
    *   SAFE_GOAL_ROWS   always clear, so the stage can actually be finished */
   var SAFE_START_ROWS = 3;
   var SAFE_GOAL_ROWS = 2;
+
+  /* Phase 2 item 3 — the railway telegraph.
+   *
+   * A rail hazard is ANNOUNCED before it is on the lane. It sits at the lane
+   * entry edge, visible as a warning, and cannot hit anything, for
+   * TELEGRAPH_MS. Only then does it run.
+   *
+   * This is not a difficulty knob, it is a fairness requirement. The player
+   * hops at most once per 600ms and is exposed to a row for ~0.55s. A train is
+   * 3.4 tiles long at up to 6 tiles/sec, so it covers any single column in
+   * 0.57s — faster than the hop cadence. Without a warning the player cannot
+   * see it in time, which is why stage 10 measured 54% campaign reachability
+   * against a 90% target: the lane was not hard, it was unclearable.
+   *
+   * tools/check_hazard_reach.py asserts TELEGRAPH_MS is never shorter than the
+   * traverse window, so this cannot silently regress.
+   */
+  var TELEGRAPH_MS = 1200;   // >= hop cadence (600ms) and traverse (550ms)
   // Every Nth row in the last third of a stage carries a bird, guaranteed.
   var ENDGAME_BIRD_EVERY = 3;
   var ENDMOD = 0;
@@ -106,6 +124,19 @@
   };
 
   // Per-column speed variance, so two hazards in the same row are not a wall.
+  // True while a hazard is still only ANNOUNCED: it has not entered the lane
+  // and cannot hit anything, but the player can see it coming.
+  function isTelegraphing(h) {
+    return !!(h && h.tel && h.tel.t > 0);
+  }
+
+  // Park a rail hazard at the lane entry edge and start its warning.
+  function armTelegraph(h, cols, xMin) {
+    var lo = xMin === undefined ? 0 : xMin;
+    h.x = (h.speed > 0) ? (lo - 0.5 - h.spec.len) : (cols + 0.5 + h.spec.len);
+    h.tel = { t: TELEGRAPH_MS, ms: TELEGRAPH_MS };
+  }
+
   function makeHazard(kind, row, cols, rng, difficulty, xMin) {
     var spec = KINDS[kind];
     if (!spec) return null;
@@ -114,7 +145,7 @@
     // Difficulty raises the ceiling only. The floor never drops, so stage one
     // is never faster than its slowest vehicle.
     sp *= 1 + Math.min(difficulty, 12) * 0.020;
-    return {
+    var h = {
       kind: kind, spec: spec, row: row, dir: dir,
       speed: sp * dir,
       // Oscillating hazards reverse inside a span instead of wrapping off the
@@ -125,10 +156,16 @@
       // them so two geysers in a row are not in lockstep.
       cycle: spec.cycle ? { on: spec.cycle.on, periodMs: spec.cycle.periodMs,
                             t: rng.range(0, spec.cycle.periodMs) } : null,
+      // Rail hazards announce themselves before they enter the lane. The
+      // countdown is staggered so two trains never arm in lockstep.
+      tel: spec.kind === "rail"
+             ? { t: rng.range(0, TELEGRAPH_MS), ms: TELEGRAPH_MS } : null,
       x: rng.range(xMin === undefined ? -cols : xMin - 0.5, cols + 0.5),
       wobble: rng.range(0.5, 1.5),      // log drift phase
       dead: false,
     };
+    if (h.tel) armTelegraph(h, cols, xMin);
+    return h;
   }
 
   // One pass over a window of rows. Deterministic from a seed, so a run can
@@ -365,6 +402,9 @@
           var h = list[i];
           if (h.row !== row) continue;
           if (h.spec.kind === "air") continue;
+          // A train still inside its warning window occupies no lane, so it
+          // cannot be the thing that closes the last crossing gap.
+          if (isTelegraphing(h)) continue;
           var x = h.x + h.speed * (s / 20);
           if (x > 10.5) x -= 12;      // wrap, matching tickHazards
           if (x < -1.5) x += 12;
@@ -405,6 +445,9 @@
     for (var i = 0; i < list.length; i++) {
       var h = list[i];
       if (h.spec.kind === "air") continue;          // steel is suspended
+      // An announced rail hazard holds at the entry edge and does not move.
+      // It cannot hit anything until its warning has run out.
+      if (h.tel && h.tel.t > 0) { h.tel.t -= dtMs; continue; }
       if (h.osc) {
         // Sweep back and forth across a span. No wrap, so it always comes
         // back -- the player has to time the turnaround, not just the pass.
@@ -424,8 +467,16 @@
       h.x += h.speed * dt;
       // Wrap. A hazard that drives off the end and stops existing would let
       // a lane go permanently safe.
-      if (h.x > cols + 1.5) h.x = -1.5;
-      if (h.x < -1.5) h.x = cols + 1.5;
+      if (h.x > cols + 1.5) {
+        h.x = -1.5;
+        // A train re-entering a lane must announce itself again, or the second
+        // pass would be uncrossable even though the first was fair.
+        if (h.tel) armTelegraph(h, cols, -1.5);
+      }
+      if (h.x < -1.5) {
+        h.x = cols + 1.5;
+        if (h.tel) armTelegraph(h, cols, -1.5);
+      }
     }
   }
 
@@ -445,6 +496,9 @@
     // which made every such obstacle decorative; now they kill while they are
     // up, which is the whole point of a geyser.
     if (!isActive(h)) return false;
+    // An announced train is not on the lane yet. It is visible, and it is
+    // harmless, which is exactly what makes the crossing a decision.
+    if (isTelegraphing(h)) return false;
     var half = h.spec.len / 2;
     return Math.abs((h.x) - playerCol) < (half + playerHalf);
   }
@@ -464,5 +518,8 @@
     KINDS: KINDS, makeHazard: makeHazard, buildHazards: buildHazards,
     tickHazards: tickHazards, hits: hits, anyHits: anyHits,
     laneHasGap: laneHasGap, ensureSolvable: ensureSolvable,
+    // Phase 2 item 3. Exported so tools/check_hazard_reach.py can assert the
+    // telegraph is never shorter than the traverse window.
+    TELEGRAPH_MS: TELEGRAPH_MS, isTelegraphing: isTelegraphing,
   };
 })(typeof window !== "undefined" ? window : (typeof global !== "undefined" ? global : this));
