@@ -14,6 +14,9 @@
 #   6. check_hazard_reach.py — Phase 2: no rail hazard may enter a lane without
 #                           a telegraph at least as long as the traverse window
 #
+#   7. check_endgame.py — two-way traffic, a bird per stage, warned sink
+#                       holes, and the doubled board density
+#
 # Future phases add: check_lane_invariants.py, check_content_schema.py,
 # check_solvability.py, check_save_schema.py, check_quality.py.
 # See docs/DEVELOPMENT-PLAN.md.
@@ -45,6 +48,7 @@ gate "check_art_assets"     tools/check_art_assets.py
 gate "check_js_renderer"     tools/check_js_renderer.py
 gate "check_js_runtime"       tools/check_js_runtime.py
 gate "check_hazard_reach"     tools/check_hazard_reach.py
+gate "check_endgame"          tools/check_endgame.py
 gate "check_vertical_slice" tools/check_vertical_slice.py
 
 echo

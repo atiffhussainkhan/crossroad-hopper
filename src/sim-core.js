@@ -719,6 +719,14 @@
         g.tick(dt);
       } else if (gstate.phase === PHASES.STAGE_CLEAR) {
         stageResults.push({ stage: gstate.stageIndex, result: "CLEAR" });
+        /* `retries` is a PER-STAGE budget, so it resets here. It did not, and
+         * the counter was compared against `3 + stageIndex` while carrying
+         * every failure from the whole campaign. The consequence was that a
+         * campaign which lost 13 lives anywhere across ten stages could never
+         * finish stage 10, even having lost none there — measured at 49 of 49
+         * failing seeds. This is the same class of bug as the hazardSeed one:
+         * a per-stage quantity that was being carried campaign-wide. */
+        retries = 0;
         g.advance();
         lastHopMs = step * dt;
       } else if (gstate.phase === PHASES.STAGE_FAILED) {

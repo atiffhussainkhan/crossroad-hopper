@@ -315,6 +315,70 @@
     I.line(ctx, [[a[0] - 4, a[1] + 5], [a[0] + 4, a[1] + 5]], col, 2.2);
   }
 
+  /* The sink hole, in its three states.
+   *
+   * The contract with the player is the sign: it goes up for `warn` ms BEFORE
+   * the hole opens, and the gate check_hazard_reach.py asserts that warning is
+   * never shorter than the hop cadence, so a player who reads it always has
+   * time to step off. Closed, it is a manhole cover and nothing more. */
+  function drawSinkhole(ctx, col, row, scene, h) {
+    var cols = 9;
+    var open = Hazards.isActive(h);
+    var warn = Hazards.isWarning(h);
+    // How far through the warning we are, for the pulse.
+    var phase = 0;
+    if (h.cycle) {
+      var p = h.cycle.t % h.cycle.periodMs;
+      phase = Math.max(0, Math.min(1, (p - (h.cycle.periodMs - (h.cycle.warn || 1))) / (h.cycle.warn || 1)));
+    }
+
+    var x0 = col + 0.10, x1 = col + 0.90;
+    if (open) {
+      // The ditch: a dark gap right across the lane.
+      var a = I.projectS(x0, row + 0.5, 0.5);
+      var b = I.projectS(x1, row + 0.5, 0.5);
+      I.line(ctx, [[a[0], a[1] - 7], [b[0], b[1] - 7]], "#120b08", 7);
+      I.line(ctx, [[a[0], a[1] - 3], [b[0], b[1] - 3]], "#2a1a12", 5);
+      // Torn edge, so it reads as broken ground and not a painted stripe.
+      for (var e = 0; e <= 8; e++) {
+        var ex = x0 + (x1 - x0) * (e / 8);
+        var q = I.projectS(ex, row + 0.32, 0.5);
+        I.line(ctx, [[q[0] - 3, q[1]], [q[0] + 3, q[1] - 2]], "#6b5340", 1.6);
+      }
+    } else {
+      // Closed: a bolted cover sitting flush with the ground.
+      var c0 = I.projectS(x0, row + 0.5, 0.5);
+      var c1 = I.projectS(x1, row + 0.5, 0.5);
+      var cover = warn ? "#8a5a3a" : "#5a5f66";
+      I.line(ctx, [[c0[0], c0[1]], [c1[0], c1[1]]], cover, 6);
+      I.line(ctx, [[c0[0], c0[1] - 2], [c1[0], c1[1] - 2]], I.shade(cover, 0.35), 1.6);
+      if (warn) {
+        // Hazard chevrons: the cover itself starts looking wrong.
+        for (var c = 0; c <= 4; c++) {
+          var cx = x0 + (x1 - x0) * (c / 4);
+          var cq = I.projectS(cx, row + 0.5, 0.5);
+          I.line(ctx, [[cq[0] - 2, cq[1] + 2], [cq[0], cq[1] - 2]], "#ffd23d", 1.6);
+          I.line(ctx, [[cq[0], cq[1] - 2], [cq[0] + 2, cq[1] + 2]], "#ffd23d", 1.6);
+        }
+      }
+    }
+
+    if (!open) {
+      // The sign itself, planted at the near edge so it is on screen before the
+      // player ever needs it. It pulses faster as the hole nears opening.
+      var s = I.projectS(x0 + 0.12, row + 0.30, 0.5);
+      var beat = 0.55 + 0.45 * Math.sin((h.cycle ? h.cycle.t : 0) / (70 + phase * 40));
+      var lamp = warn ? (phase > 0.5 ? "#ff3b30" : "#ffd23d") : "#6b5a2a";
+      I.line(ctx, [[s[0], s[1] - 15], [s[0], s[1] + 4]], "#3a3226", 2.2);
+      I.ellipse(ctx, s[0], s[1] - 15, 4.2, 4.2, lamp);
+      if (warn) {
+        ctx.save && ctx.save();
+        I.ellipse(ctx, s[0], s[1] - 15, 6.4 * beat + 2, 6.4 * beat + 2, "rgba(255,90,60," +
+                 Math.round(90 * beat) + ")");
+      }
+    }
+  }
+
   function drawTrain(ctx, col, row, scene, h) {
     var body = h.spec.body || scene.hazard2;
     hazardShadow(ctx, col, row, h.spec.len, 0.20);
@@ -599,6 +663,7 @@
     bus: drawBus, tractor: drawTractor, forklift: drawForklift,
     roller: drawRoller, tumbleweed: drawTumbleweed,
     train: drawTrain, tram: drawTram, monorail: drawMonorail,
+    sinkhole: drawSinkhole,
     log: drawLog, turtle: drawTurtle, alligator: drawAlligator,
     crocodile: drawCrocodile,
     snake: drawSnake, boulder: drawBoulder, hawk: drawHawk,
@@ -761,6 +826,7 @@
     drawHawk: drawHawk,
     drawGeyser: drawGeyser,
     HAZARD_FNS: HAZARD_FNS, TIMED_FNS: TIMED_FNS,
+    drawSinkhole: drawSinkhole, drawTelegraph: drawTelegraph,
     drawTree: drawTree, drawBush: drawBush, drawRock: drawRock,
   };
 })(typeof window !== "undefined" ? window : (typeof global !== "undefined" ? global : this));

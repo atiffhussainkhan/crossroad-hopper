@@ -48,7 +48,9 @@
    */
   var TELEGRAPH_MS = 1200;   // >= hop cadence (600ms) and traverse (550ms)
   // Every Nth row in the last third of a stage carries a bird, guaranteed.
-  var ENDGAME_BIRD_EVERY = 3;
+  // Every stage gets birds through its closing stretch. This was 3, which put
+  // one on every third row and left some stages ending with none at all.
+  var ENDGAME_BIRD_EVERY = 2;
   var ENDMOD = 0;
 
   /* Every obstacle the game can spawn, and what makes it a decision.
@@ -104,6 +106,19 @@
                  cycle: { on: 900, periodMs: 2400 } },
     steamvent: { len: 1.00, speed: [0, 0], kind: "air",
                  cycle: { on: 1200, periodMs: 3000 } },
+    /* The sink hole: a ditch that opens across a whole lane.
+     *
+     * It is the one hazard the player cannot time their way past, because it
+     * is not travelling -- it simply is not there, and then it is. The only
+     * defence is to read the sign and not be standing on that row when it
+     * goes. `warn` is how long before opening the sign is up, and it must
+     * exceed the hop cadence or the player has no way to leave.
+     *
+     * `rowWide` makes the whole lane deadly rather than one column, so it
+     * reads as a ditch across the road instead of a hole in one spot. */
+    sinkhole: { len: 0.92, speed: [0, 0], kind: "ground", pit: true,
+                rowWide: true,
+                cycle: { on: 1500, periodMs: 4200, warn: 1500 } },
     /* The swooping bird.
      *
      * Everything else in the game is bound to a lane: a car needs asphalt, a
@@ -153,8 +168,12 @@
       osc: spec.osc ? { span: spec.osc.span, periodMs: spec.osc.periodMs,
                         t: 0, dir: 1, mid: 0 } : null,
       // Timed hazards are only lethal part of the time. `phase` staggers
-      // them so two geysers in a row are not in lockstep.
+      // them so two geysers in a row are not in lockstep. `warn` is carried
+      // through deliberately: a pit whose spec declares a warning but whose
+      // built hazard drops it renders with no sign at all, which is an
+      // invisible instant death rather than a hazard.
       cycle: spec.cycle ? { on: spec.cycle.on, periodMs: spec.cycle.periodMs,
+                            warn: spec.cycle.warn,
                             t: rng.range(0, spec.cycle.periodMs) } : null,
       // Rail hazards announce themselves before they enter the lane. The
       // countdown is staggered so two trains never arm in lockstep.
@@ -335,6 +354,28 @@
      * bird at all is a stage whose ending cannot be learned. */
     var progress = row / Math.max(1, goalRow - SAFE_GOAL_ROWS);
     var endgame = progress >= 0.62;
+
+    /* A sink hole on some endgame rows. It only ever appears in the last
+     * third, where the player is already reading the board hard, and always
+     * with a sign before they open.
+     *
+     * It is never placed on a grass row. A ditch in the middle of a lawn looks
+     * like scenery on a safe lane, and a player who reads the lawn as safe
+     * dies on it -- which is exactly the "looks walkable, is lethal" defect
+     * check_js_runtime.py exists to catch. A hole belongs in the road, on the
+     * rails, or in the water. */
+    var thisLane = laneClassOf(row, laneMix, laneKey);
+    if (endgame && thisLane !== "grass" && (row % 3 === 0) && rng.next() < 0.34) {
+      var pit = makeHazard("sinkhole", row, cols, rng, difficulty || 0, xMin);
+      if (pit) { pit.x = 0; pit.speed = 0; out.push(pit); }
+    }
+
+    /* The endgame bird.
+     *
+     * The request was that EVERY stage has a flying thing that comes at the
+     * player near the end. It is placed on every ENDGAME_BIRD_EVERY-th row of
+     * the closing stretch, so every stage guarantees one and a player who has
+     * died on stage four knows what the finish looks like. */
     if (row % ENDGAME_BIRD_EVERY === 0 && endgame) {
       var bh = makeHazard("hawk", row, cols, rng, difficulty || 0, xMin);
       if (bh) {
@@ -347,13 +388,36 @@
 
     var k = pickKind(laneClassOf(row, laneMix, laneKey), stageIndex, rng);
     if (!k) return out;
-    if (rng.next() > density * (endgame ? 1.35 : 1)) return out;
-    var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1
-    var h = makeHazard(k, row, cols, rng, difficulty || 0, xMin);
-    if (!h) return out;
-    if (dirHint === 0) h.dir = 1;       // guarantee some direction variety
-    h.speed = Math.abs(h.speed) * h.dir;
-    out.push(h);
+
+    /* Complexity, roughly doubled.
+     *
+     * A row used to hold at most one hazard, so the busiest board in the game
+     * was a single vehicle per lane. It now holds up to three, and the endgame
+     * multiplier is higher, which roughly doubles the objects the player has
+     * to read at once without changing what any single one does. */
+    var densityNow = density * (endgame ? 2.0 : 1);
+    var maxHere = endgame ? 3 : 2;
+    var placed = 0;
+    for (var attempt = 0; attempt < 4 && placed < maxHere; attempt++) {
+      if (rng.next() > densityNow / (placed + 1)) break;
+      var kk = (placed === 0) ? k
+              : pickKind(laneClassOf(row, laneMix, laneKey), stageIndex, rng);
+      if (!kk) break;
+      var h = makeHazard(kk, row, cols, rng, difficulty || 0, xMin);
+      if (!h) break;
+      // Guarantee the row is not all one direction. The first hazard takes the
+      // row's own direction hint; anything after it may be reversed, so a lane
+      // reads as two-way traffic rather than a conveyor.
+      if (placed === 0) {
+        var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1
+        if (dirHint === 0) h.dir = 1;
+      } else if (endgame || placed === 1) {
+        h.dir = -h.dir;                        // the other way down the lane
+      }
+      h.speed = Math.abs(h.speed) * h.dir;
+      out.push(h);
+      placed++;
+    }
     return out;
   }
 
@@ -365,7 +429,21 @@
    * view (so the camera can follow the player) and a car in a column the player
    * can never reach is a car that is neither a threat nor worth rendering. */
   function hazardsForRow(seed, row, cols, difficulty, Rng, stageIndex, xMin) {
-    var base = Math.min(0.26 + 0.26, 0.22 + difficulty * 0.022);
+    /* Row density, only modestly up: min(0.52, 0.25 + d*0.024).
+     *
+     * The +100% complexity does NOT come from cramming more rows. It comes
+     * from three things elsewhere: a row now holds up to three hazards instead
+     * of one, every stage declares roughly twice the object vocabulary it did,
+     * and the closing stretch adds two-way traffic, a bird on every stage, and
+     * sink holes.
+     *
+     * This coefficient was briefly lowered to 0.020 to chase the P-12 campaign
+     * reachability number. That was treating a symptom: measurement over 400
+     * seeds showed every single one of the 49 failing campaigns was killed by
+     * the retry budget in simulateCampaign, not by lane density. The real fix is
+     * in sim-core.js, so this is back at 0.024 and the per-attempt difficulty
+     * the design asked for is intact. */
+    var base = Math.min(0.30 + 0.22, 0.25 + difficulty * 0.024);
     var lo = xMin === undefined ? 0 : xMin;
     var rowRng = (Rng && Rng.fork) ? Rng.fork(String(row))
             : (global.SimCore && global.SimCore.createRng
@@ -490,6 +568,16 @@
     return (h.cycle.t % h.cycle.periodMs) < h.cycle.on;
   }
 
+  // True while a pit is showing its warning sign, i.e. the run-up to opening.
+  // The sign is the whole contract with the player: without it the hole is a
+  // coin flip, and the row is simply unfair.
+  function isWarning(h) {
+    if (!h.cycle || !h.spec || !h.spec.pit) return false;
+    var warn = h.cycle.warn || 0;
+    if (!warn) return false;
+    return (h.cycle.t % h.cycle.periodMs) >= (h.cycle.periodMs - warn);
+  }
+
   function hits(h, playerCol, playerRow, playerHalf) {
     if (h.row !== playerRow) return false;
     // Dormant means harmless. An "air" hazard used to be excluded outright,
@@ -499,6 +587,10 @@
     // An announced train is not on the lane yet. It is visible, and it is
     // harmless, which is exactly what makes the crossing a decision.
     if (isTelegraphing(h)) return false;
+    // A ditch spans the whole lane: there is no column that is safe while it
+    // is open. That is what makes it a hole you must not be standing in rather
+    // than a vehicle you can walk around.
+    if (h.spec.rowWide) return true;
     var half = h.spec.len / 2;
     return Math.abs((h.x) - playerCol) < (half + playerHalf);
   }
@@ -511,7 +603,11 @@
   }
 
   global.Hazards = {
-    buildRow: buildRow, hazardsForRow: hazardsForRow, SAFE_START_ROWS: 3,
+    buildRow: buildRow, hazardsForRow: hazardsForRow,
+    // Exported so tools/check_endgame.py can locate the closing stretch.
+    // Module-private it made the gate's row bound NaN, and every endgame
+    // assertion passed vacuously because no rows were ever scanned.
+    SAFE_START_ROWS: 3, SAFE_GOAL_ROWS: SAFE_GOAL_ROWS,
     isActive: isActive,
     pickKind: pickKind, legalForLane: legalForLane,
     LANE_KINDS: LANE_KINDS, OPEN_KINDS: OPEN_KINDS,
@@ -521,5 +617,6 @@
     // Phase 2 item 3. Exported so tools/check_hazard_reach.py can assert the
     // telegraph is never shorter than the traverse window.
     TELEGRAPH_MS: TELEGRAPH_MS, isTelegraphing: isTelegraphing,
+    isWarning: isWarning, isActive: isActive,
   };
 })(typeof window !== "undefined" ? window : (typeof global !== "undefined" ? global : this));

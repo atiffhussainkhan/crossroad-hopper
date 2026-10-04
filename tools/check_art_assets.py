@@ -44,7 +44,7 @@ HAZARD_FNS = {
     "log": "draw_log", "turtle": "draw_turtle", "snake": "draw_snake",
     "alligator": "draw_alligator", "crocodile": "draw_crocodile",
     "boulder": "draw_boulder", "geyser": "draw_geyser",
-    "steamvent": "draw_steamvent",
+    "steamvent": "draw_steamvent", "sinkhole": "draw_sinkhole",
 }
 
 SCENERY_FNS = {
