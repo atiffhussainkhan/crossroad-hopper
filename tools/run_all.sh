@@ -11,10 +11,12 @@
 #   3. check_art_assets.py — every declared stage asset has a renderer; the mock matches the game
 #   4. check_js_renderer.py — the playable actually loads the isometric renderer
 #   5. check_vertical_slice.py — the stage-loop campaign sweep and structural probes
+#   6. check_hazard_reach.py — Phase 2: no rail hazard may enter a lane without
+#                           a telegraph at least as long as the traverse window
 #
-# Future phases add: check_lane_invariants.py, check_hazard_reach.py,
-# check_content_schema.py, check_solvability.py, check_save_schema.py,
-# check_quality.py. See docs/DEVELOPMENT-PLAN.md.
+# Future phases add: check_lane_invariants.py, check_content_schema.py,
+# check_solvability.py, check_save_schema.py, check_quality.py.
+# See docs/DEVELOPMENT-PLAN.md.
 
 set -e
 cd "$(dirname "$0")/.."
@@ -42,6 +44,7 @@ gate "check_testability"    tools/check_testability.py
 gate "check_art_assets"     tools/check_art_assets.py
 gate "check_js_renderer"     tools/check_js_renderer.py
 gate "check_js_runtime"       tools/check_js_runtime.py
+gate "check_hazard_reach"     tools/check_hazard_reach.py
 gate "check_vertical_slice" tools/check_vertical_slice.py
 
 echo
