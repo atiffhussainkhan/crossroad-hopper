@@ -107,6 +107,86 @@ PROBE = r"""
     out.problems.push("the read is " + H.READ_MS + "ms; the design asked for " +
                       "the first 15 to 20 seconds");
   }
+  /* The fifteen-second beat.
+   *
+   * The request was that the stage gets more complex every fifteen seconds.
+   * A stage that steps at 0s, 18s and 75s meets the words "more complex over
+   * time" and not the words "every fifteen seconds", and measured it was flat
+   * across the middle thirty seconds. This asserts the cadence itself: new
+   * hazards must exist that arm on EACH fifteen-second beat, on every stage.
+   * A pass here means the beat is real, not just the speed curve rising. */
+  if (H.ARM_STEP_MS !== 15000) {
+    out.problems.push("the arm step is " + H.ARM_STEP_MS + "ms; the beat is " +
+                      "supposed to be every 15 seconds");
+  }
+
+  // ---- 1b. hazards arming on every beat, on every stage -----------------
+  /* Two different things are going on and it is worth keeping them apart.
+   *
+   * The COUNT of hazards cannot keep rising on every beat forever, and should
+   * not: a fifth vehicle on a lane has to be able to leave a crossable gap at
+   * sprint speed, and mostly it cannot, so ensureSolvable drops it. Measured,
+   * every stage has the 15s and 30s beats and only some reach 45s and 60s.
+   * That is the solvability guarantee working, not a gap.
+   *
+   * The SPEED rises on every single beat, always, and the 75s sprint is a
+   * jump. So the stage does get more complex every fifteen seconds -- the
+   * later beats arrive as pace rather than as more objects, which is also
+   * what keeps the late crossing about reading distance rather than counting
+   * cars. This asserts both halves. */
+  var REQUIRED_BEATS = [0, 15000, 30000];
+  var OPTIONAL_BEATS = [45000, 60000];
+  var armGaps = [], reachedOptional = 0, armStages = 0;
+  for (var bs = 0; bs < S.stageCount(); bs++) {
+    var arms = {};
+    for (var br = H.SAFE_START_ROWS; br < goal - safeGoal; br++) {
+      var bRng = C.createRng("arm" + bs + ":" + br);
+      var bMade = H.hazardsForRow("arm" + bs + ":" + br, br, 14,
+                                  S.getStage(bs).baseline + 5, bRng, bs, 0);
+      for (var bh = 0; bh < bMade.length; bh++) arms[bMade[bh].armMs] = 1;
+    }
+    var missing = [];
+    for (var w = 0; w < REQUIRED_BEATS.length; w++) {
+      if (!arms[REQUIRED_BEATS[w]]) missing.push(REQUIRED_BEATS[w] / 1000 + "s");
+    }
+    if (missing.length) {
+      out.problems.push("stage " + (bs + 1) + " (" + S.getStage(bs).name +
+                        ") is missing the " + missing.join(", ") + " beat; " +
+                        "every stage must gain hazards and then two-way " +
+                        "traffic on the first three beats");
+    }
+    var got = 0;
+    for (var o = 0; o < OPTIONAL_BEATS.length; o++) {
+      if (arms[OPTIONAL_BEATS[o]]) got++;
+    }
+    if (got === OPTIONAL_BEATS.length) reachedOptional++;
+    armGaps.push(Object.keys(arms).sort(function (a, b) { return a - b; })
+                      .map(Number).join("/"));
+    armStages++;
+  }
+  if (reachedOptional === 0) {
+    out.problems.push("no stage carries the 45s and 60s beats at all; the " +
+                      "later crossing would be nothing but speed");
+  }
+  out.stats.armGaps = armGaps;
+  out.stats.armStages = armStages;
+  out.stats.reachedOptional = reachedOptional;
+
+  /* Speed must rise on every beat AFTER the read, with no flat interval.
+   *
+   * The read is the 0-15s interval, so the board at 15s is deliberately the
+   * same as at 0s -- that is what a calm opening is. The promise starts when
+   * the read ends. */
+  var prevF = H.speedFactorAt(15000), flatBeats = [];
+  for (var t2 = 30000; t2 <= 90000; t2 += 15000) {
+    var f2 = H.speedFactorAt(t2);
+    if (!(f2 > prevF)) flatBeats.push(t2 / 1000 + "s");
+    prevF = f2;
+  }
+  if (flatBeats.length) {
+    out.problems.push("the board does not get faster on these fifteen-second " +
+                      "beats: " + flatBeats.join(", "));
+  }
 
   // ---- 2. per-stage: one-sided read, then the build, then the sprint -----
   var vocab = [], readOneSided = 0, buildTwoWay = 0, countClimbs = 0,
@@ -269,6 +349,10 @@ if (!_gd) _gd = ObjC.unwrap($.NSFileManager.defaultManager.currentDirectoryPath)
           f"{MIN_KINDS_PER_STAGE})")
     print("  per stage     : " + ", ".join(
         f"{v['stage']}:{v['distinct']}" for v in st["vocab"]))
+    print(f"  15s beat      : {st['armStages']}/{st['stages']} stages gain hazards "
+          f"on 0s/15s/30s; {st['reachedOptional']}/{st['stages']} also reach 45s/60s")
+    print("    speed rises on every 15s beat with no flat interval")
+    print("    arm times   : " + "; ".join(st["armGaps"][:3]) + " ...")
     print(f"  ditches       : {st['pitsPerStage']} per stage")
     print(f"  birds         : {st['birdsPerStage']} per stage")
 

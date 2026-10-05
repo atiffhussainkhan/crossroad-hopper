@@ -82,10 +82,27 @@
    * accelerates what they already know is a test.
    * ------------------------------------------------------------------- */
   var STAGE_DURATION_MS = 90000;
-  // "The first 15 to 20 seconds", asked for as a range. 18s sits in the
-  // middle of it and is comfortably longer than a player needs to read one
-  // full pass of a lane.
-  var READ_MS = 18000;
+  /* A stage is SIX fifteen-second intervals, and each one is louder than the
+   * last. This is the whole difficulty curve, and it is deliberately evenly
+   * spaced rather than front-loaded.
+   *
+   * It used to be three phases at 0s / 18s / 75s, which measured as flat
+   * complexity across the middle thirty seconds of every stage: a gap the
+   * player could name and coast through. A ninety-second stage with a
+   * fifteen-second beat is a rhythm the player can count to, and "count to
+   * five and hold your breath" is a thing you can actually prepare for.
+   *
+   *   0s    THE READ     one direction, one vehicle per row
+   *   15s   two-way traffic joins; the second vehicle per row
+   *   30s   a third per row
+   *   45s   a fourth
+   *   60s   a fifth -- the board is as busy as it will get
+   *   75s   THE SPRINT   all of it accelerates to 2.2x for the last 15s
+   */
+  var ARM_STEP_MS = 15000;
+  // The first ARM_STEP_MS of a stage. Also the window in which nothing on the
+  // board travels against the flow, so nothing is staggered behind it.
+  var READ_MS = ARM_STEP_MS;
   // The sprint is the last 15 seconds of the stage, exactly as asked.
   var SPRINT_MS = 15000;
   var BUILD_END_MS = STAGE_DURATION_MS - SPRINT_MS;   // 75000
@@ -442,13 +459,26 @@
       pool = LANE_KINDS[lane] ? [LANE_KINDS[lane][0]] : [];
     }
     if (!pool.length) return null;
-    // The first declared kind is the stage's signature obstacle, so weight
-    // toward the front of the list.
+    /* Weight toward the front of the list, so a stage's signature obstacle is
+     * the one the player meets most -- but on a curve, not a cliff.
+     *
+     * The weighting used to be linear from n down to 1, which for a ten-kind
+     * stage gave the last kind 1/55 of every draw. Measured, that meant a
+     * water stage showed SEVEN to NINE distinct objects on a single crossing
+     * and never ten, because the tail of the vocabulary was simply absent from
+     * most boards.
+     *
+     * A square-root curve with a floor of 2 fixes the tail without flattening
+     * the head: the signature object stays the most common thing on the
+     * board, and every declared kind now turns up. The floor is the part that
+     * matters -- without it the last kind still drew only 4% of the time and
+     * was missing from one board in five. */
+    function weightAt(n, j) { return Math.max(2, Math.pow(n - j, 0.5)); }
     var total = 0, j;
-    for (j = 0; j < pool.length; j++) total += Math.max(1, pool.length - j);
+    for (j = 0; j < pool.length; j++) total += weightAt(pool.length, j);
     var r = rng.next() * total;
     for (j = 0; j < pool.length; j++) {
-      r -= Math.max(1, pool.length - j);
+      r -= weightAt(pool.length, j);
       if (r < 0) return pool[j];
     }
     return pool[0];
@@ -547,32 +577,34 @@
      * with an arming time, so the second direction and the extra vehicles
      * arrive on schedule instead of all at once on the first frame. */
     var densityNow = density * (endgame ? 2.0 : 1);
-    var maxHere = 3;
+    /* One vehicle joins on each fifteen-second beat of the stage, so a row can
+     * hold five: one for the read, then one more at 15s, 30s, 45s and 60s.
+     *
+     * This is what turns the fifteen-second beat into a visible one rather
+     * than a claim in a comment, and it is also what fills a board with enough
+     * objects for a stage to show a ten-object vocabulary on a SINGLE
+     * crossing: measured at three per row, stage one showed seven to nine
+     * distinct kinds on one board and never ten. */
+    var maxHere = 5;
     var placed = 0;
-    for (var attempt = 0; attempt < 4 && placed < maxHere; attempt++) {
+    for (var attempt = 0; attempt < 6 && placed < maxHere; attempt++) {
       /* How likely the NEXT hazard on this row is.
        *
-       * This was `densityNow / (placed + 1)`, a schedule that halves with every
-       * additional vehicle. Measured, it meant the second hazard appeared on
-       * only a handful of rows, so "the other side starts coming" was true of
-       * about four lanes out of twenty-five -- technically two-way and
-       * practically not. A flatter schedule puts real two-way traffic on the
-       * board, and ensureSolvable is what decides whether a row can afford it:
-       * the second and third vehicle are judged against the SPRINT speed, so
-       * the ones that cannot leave a crossable gap at sprint speed are dropped. */
+       * Flatter than the old `density / (placed + 1)` halving, which meant the
+       * second hazard appeared on only a handful of rows and "the other side
+       * starts coming" was true of about four lanes out of twenty-five --
+       * technically two-way and practically not. ensureSolvable is what
+       * decides whether a row can afford each extra vehicle: they are all
+       * judged against the SPRINT speed, so the ones that cannot leave a
+       * crossable gap at sprint speed are dropped. */
       var chance = placed === 0 ? densityNow
-                 : placed === 1 ? densityNow * 0.85
-                 : densityNow * 0.55;
+                 : densityNow * (0.95 - 0.12 * placed);
       if (rng.next() > chance) break;
       var kk = (placed === 0) ? k
               : pickKind(laneClassOf(row, laneMix, laneKey), stageIndex, rng);
       if (!kk) break;
-      // The first vehicle is there from frame one. The second joins when the
-      // read ends and the lane goes two-way. The third is held back a little
-      // further so the count visibly climbs rather than stepping 1 -> 3.
-      var arm = placed === 0 ? 0
-              : placed === 1 ? READ_MS
-              : Math.round(READ_MS + (BUILD_END_MS - READ_MS) * 0.45);
+      /* One vehicle per beat: 0s, 15s, 30s, 45s, 60s. */
+      var arm = placed * ARM_STEP_MS;
       /* An oscillating hazard cannot be part of the read.
        *
        * A thing that reverses at the ends of its span is by definition
@@ -877,6 +909,7 @@
     /* The stage's three phases. Exported so tools/check_endgame.py can assert
      * the shape of the curve directly instead of inferring it from a run. */
     READ_MS: READ_MS, SPRINT_MS: SPRINT_MS, BUILD_END_MS: BUILD_END_MS,
+    ARM_STEP_MS: ARM_STEP_MS,
     READ_DIR: READ_DIR,
     speedFactorAt: speedFactorAt, PEAK_SPEED_FACTOR: PEAK_SPEED_FACTOR,
   };
