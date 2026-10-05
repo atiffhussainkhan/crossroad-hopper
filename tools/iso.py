@@ -298,7 +298,19 @@ def cube(c: Canvas, col: float, row: float, base_z: float, height: float, colour
 
 
 def tile(c: Canvas, col: float, row: float, colour: str, height: float = 0.0) -> None:
-    """A flat ground tile. Drawn as a rhombus so it reads as ground, not a slab."""
+    """A flat ground tile. Drawn as a rhombus so it reads as ground, not a slab.
+
+    Carries the same ambient-occlusion seam the browser renderer draws, along
+    the two edges that face the camera. `project_s` puts the near corner of a
+    tile at the BOTTOM of the screen (y = -row * TILE_H), so those are the two
+    edges meeting at (col, row).
+
+    The seam is a SOLID darkened tone here rather than translucent black as it
+    is in the browser. Translucency would need `blend_poly`, which clears a
+    full-size scratch layer per call -- two hundred tiles of that turns a
+    preview sheet into a coffee break. The read is the same: a dark line that
+    separates one lane from the next.
+    """
     c.poly(
         [
             project_s(col, row, height),
@@ -308,6 +320,11 @@ def tile(c: Canvas, col: float, row: float, colour: str, height: float = 0.0) ->
         ],
         colour,
     )
+    near = project_s(col, row, height)
+    seam_dark = shade(colour, 0.74)
+    seam_mid = shade(colour, 0.85)
+    c.line([near, project_s(col + 1, row, height)], seam_dark, 1.7)
+    c.line([near, project_s(col, row + 1, height)], seam_mid, 1.7)
 
 
 def tile_shadow(c: Canvas, col: float, row: float, opacity: int = 18) -> None:
@@ -392,6 +409,15 @@ def cube_frac(c: Canvas, col: float, row: float, size_col: float, size_row: floa
             project_s(c0, r1, base_z + height), project_s(c0, r0, base_z + height)], left)
     c.poly([project_s(c1, r0, base_z), project_s(c1, r1, base_z),
             project_s(c1, r1, base_z + height), project_s(c1, r0, base_z + height)], right)
+
+    # A lit hairline along the top face's two far edges -- the same cel-shading
+    # silhouette the browser renderer draws. Three face tones make a box read
+    # as a box; this is what stops it dissolving into the background exactly
+    # where the lit top turns away from the eye.
+    peak = project_s(c1, r1, base_z + height)
+    edge = mix(colour, "#ffffff", 0.55)
+    c.line([peak, project_s(c0, r1, base_z + height)], edge, 1.1)
+    c.line([peak, project_s(c1, r0, base_z + height)], edge, 1.1)
 
 
 def blob(c: Canvas, col: float, row: float, size_col: float, size_row: float,

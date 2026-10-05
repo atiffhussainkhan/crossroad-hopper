@@ -967,13 +967,28 @@
     // Ground.
     for (var ri = 0; ri < rows.length; ri++) {
       var row = rows[ri];
+      /* Aerial perspective.
+       *
+       * project() puts a larger row HIGHER on the screen and further from the
+       * camera, so the far end of the board is the top of the frame. Lifting
+       * the far rows toward the light and dropping the near ones is the same
+       * trick a landscape photograph uses, and it gives the board a direction
+       * of depth that flat fills cannot: the player reads "up there is far
+       * away" without being told, which is the cue they need to judge how long
+       * they have to read a vehicle before it reaches them. */
+      var depth = (row - row0) / Math.max(1, viewRows - 1);   // 0 near, 1 far
+      var lift = 1 + depth * 0.13;
       for (var c = 0; c < cols; c++) {
         var l = laneOf(row, scene);
         var base = l === "road" ? scene.road
                  : l === "rail" ? scene.road
                  : l === "water" ? scene.water
                  : ((row + c) % 2 === 0 ? scene.ground : scene.groundAlt);
-        I.tile(ctx, c, row, base);
+        /* A little per-cell value jitter, so a long lane is a surface and not
+         * one flat colour. It is deterministic in (row, col) so the board does
+         * not shimmer between frames. */
+        var jitter = 1 + (((row * 7 + c * 13) % 5) - 2) * 0.012;
+        I.tile(ctx, c, row, I.shade(base, lift * jitter));
       }
     }
 
@@ -1078,6 +1093,26 @@
       sc.forEach(function (x) {
         if (FALLBACK[x[2]]) FALLBACK[x[2]](ctx, x[0], x[1], scene);
       });
+    }
+
+    /* A vignette, last, over everything.
+     *
+     * The board is drawn edge to edge, so the corners of the frame are as
+     * bright and as busy as the middle and the eye has nothing to settle on.
+     * Darkening the outer band the way a lens does pulls attention to the
+     * player's own row, which is the one part of the board they are reading
+     * anyway. Kept light on purpose: at 0.16 it is felt rather than seen, and
+     * a heavier hand reads as dirt on the screen instead of depth. */
+    if (width > 40 && height > 40) {
+      var g = ctx.createRadialGradient(
+        width / 2, height * 0.62, Math.min(width, height) * 0.22,
+        width / 2, height * 0.62, Math.max(width, height) * 0.78);
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, "rgba(0,0,0,0.16)");
+      ctx.save();
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
     }
 
     return { rows: rows, hazards: hazards, scenery: sc };

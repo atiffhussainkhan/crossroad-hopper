@@ -219,16 +219,33 @@
 
   function cubeFrac(ctx, col, row, sizeCol, sizeRow, baseZ, height, colour) {
     var c0 = col, c1 = col + sizeCol, r0 = row, r1 = row + sizeRow;
-    poly(ctx, [projectS(c0, r0, baseZ + height), projectS(c1, r0, baseZ + height),
-               projectS(c1, r1, baseZ + height), projectS(c0, r1, baseZ + height)],
+    var zt = baseZ + height;
+    poly(ctx, [projectS(c0, r0, zt), projectS(c1, r0, zt),
+               projectS(c1, r1, zt), projectS(c0, r1, zt)],
          shade(colour, LIGHT_TOP));
     poly(ctx, [projectS(c0, r0, baseZ), projectS(c0, r1, baseZ),
-               projectS(c0, r1, baseZ + height), projectS(c0, r0, baseZ + height)],
+               projectS(c0, r1, zt), projectS(c0, r0, zt)],
          shade(colour, LIGHT_LEFT));
     // Right face lies in the row+1 plane. See note 1 above.
     poly(ctx, [projectS(c0, r1, baseZ), projectS(c1, r1, baseZ),
-               projectS(c1, r1, baseZ + height), projectS(c0, r1, baseZ + height)],
+               projectS(c1, r1, zt), projectS(c0, r1, zt)],
          shade(colour, LIGHT_RIGHT));
+    /* A lit hairline along the top face's two far edges.
+     *
+     * The face factors alone give a box three distinct tones, which is what
+     * makes it a box. What it does not give is a SILHOUETTE -- the edge where
+     * the lit top face turns away from the eye has no value of its own, so
+     * the form dissolves into the background at exactly the point the light
+     * turns. One bright line there, the same trick a cel-shaded model uses,
+     * closes the shape. */
+    var peak = projectS(c1, r1, zt);
+    /* NOTE: shade() and mix() both return an "rgb(r,g,b)" STRING, not hex, and
+     * rgba() here parses hex. Wrapping either one produced
+     * "rgba(NaN,11,NaN,0.85)" and every caller's stroke came out NaN -- which
+     * is why this is passed straight to line() rather than through rgba(). */
+    var edge = shade(colour, 1.5);
+    line(ctx, [peak, projectS(c0, r1, zt)], edge, 1.1);
+    line(ctx, [peak, projectS(c1, r0, zt)], edge, 1.1);
   }
 
   function blob(ctx, col, row, sizeCol, sizeRow, baseZ, height, colour) {
@@ -249,8 +266,26 @@
   }
 
   function tile(ctx, col, row, colour) {
-    poly(ctx, [projectS(col, row, 0), projectS(col + 1, row, 0),
-               projectS(col + 1, row + 1, 0), projectS(col, row + 1, 0)], colour);
+    /* One line on purpose: tools/check_js_runtime.py discovers multi-declarator
+     * names with a line-bounded pattern, so a wrapped `var a = ...,` / `b = ...`
+     * list leaves every name after the newline reading as undeclared. It is
+     * valid JavaScript and the gate is wrong about it, but the fix belongs in
+     * the gate, not in every file that happens to wrap a declaration. */
+    var a = projectS(col, row, 0), b = projectS(col + 1, row, 0), c = projectS(col + 1, row + 1, 0), d = projectS(col, row + 1, 0);
+    poly(ctx, [a, b, c, d], colour);
+    /* Ambient occlusion along the two edges that face the viewer.
+     *
+     * project() puts the NEAR corner of a tile at the BOTTOM of the screen
+     * (y = -row * TILE_H, so a larger row is higher up and further away), so
+     * the two edges meeting at (col, row) are the ones the camera sees the
+     * ground bending away along.
+     *
+     * This is the single cheapest thing that makes the board read as a
+     * surface rather than a flat wash of colour. Without it a forty-row stage
+     * is one solid slab of asphalt with shapes sitting on it; with it the
+     * lanes have separation and the eye can count the gaps it has to jump. */
+    line(ctx, [a, b], "rgba(0,0,0,0.13)", 1.7);
+    line(ctx, [a, d], "rgba(0,0,0,0.09)", 1.7);
   }
 
   function castShadow(ctx, col, row, height, length, alpha) {
