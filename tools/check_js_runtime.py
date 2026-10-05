@@ -30,12 +30,18 @@ JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/js
 
 CHAIN = ["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js",
          "src/render/iso.js", "src/scenery.js", "src/render/scene.js",
-         "src/roster.js", "src/render/character.js"]
+         "src/roster.js", "src/render/sprite.js", "src/render/character.js"]
 
 DOM_ENTRY = "src/main.js"
 
+# src/render/sprite.js is in the chain because index.html loads it and
+# src/main.js reads the SpriteSheets global it declares. It is the one module
+# that is OPTIONAL at runtime: if its sheets fail to load the game falls back
+# to the procedural roster. It is still a real module with a real export, so
+# the graph check must see it -- an unknown global in main.js is exactly the
+# ReferenceError-on-frame-1 defect this gate exists to catch.
 GLOBALS = {"Stages", "Tiles", "Hazards", "SimCore", "Roster", "Iso",
-           "Scenery", "Scene", "CharacterRenderer"}
+           "Scenery", "Scene", "CharacterRenderer", "SpriteSheets"}
 
 # Everything src/render/scene.js and src/scenery.js read off a scene object.
 # src/main.js sceneFor() has to forward all of it.
@@ -54,6 +60,10 @@ BUILTINS = {
     "performance", "Float32Array", "Uint8Array", "Int32Array", "require",
     "module", "exports", "arguments", "Image", "navigator", "location",
     "history", "fetch", "eval", "ResizeObserver", "matchMedia",
+    # XMLHttpRequest arrived with src/render/sprite.js, which fetches the
+    # sprite manifest. It is a host object like `Image` and `fetch`, not a
+    # variable anything declares.
+    "XMLHttpRequest", "XMLSerializer",
 }
 
 RESERVED = {

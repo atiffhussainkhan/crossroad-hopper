@@ -1,0 +1,145 @@
+{
+ "tileRatio": 0.7142857142857143,
+ "frameHeight": 96,
+ "quality": 82,
+ "characters": {
+  "Knight": {
+   "Idle": {
+    "file": "Knight-Idle.webp",
+    "frames": 16,
+    "fps": 8,
+    "frameW": 134,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 60100,
+    "source": "16 of 40"
+   },
+   "Walk": {
+    "file": "Knight-Walk.webp",
+    "frames": 10,
+    "fps": 12,
+    "frameW": 124,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 35918,
+    "source": "10 of 20"
+   },
+   "Jump": {
+    "file": "Knight-Jump.webp",
+    "frames": 8,
+    "fps": 12,
+    "frameW": 127,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 1,
+    "bytes": 23900,
+    "source": "8 of 40"
+   },
+   "Die": {
+    "file": "Knight-Die.webp",
+    "frames": 10,
+    "fps": 12,
+    "frameW": 182,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 38560,
+    "source": "10 of 14"
+   }
+  },
+  "Princess": {
+   "Idle": {
+    "file": "Princess-Idle.webp",
+    "frames": 16,
+    "fps": 8,
+    "frameW": 78,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 49064,
+    "source": "16 of 40"
+   },
+   "Walk": {
+    "file": "Princess-Walk.webp",
+    "frames": 10,
+    "fps": 12,
+    "frameW": 86,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 27606,
+    "source": "10 of 20"
+   },
+   "Jump": {
+    "file": "Princess-Jump.webp",
+    "frames": 8,
+    "fps": 12,
+    "frameW": 88,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 1,
+    "bytes": 24796,
+    "source": "8 of 20"
+   },
+   "Die": {
+    "file": "Princess-Die.webp",
+    "frames": 10,
+    "fps": 12,
+    "frameW": 182,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 38942,
+    "source": "10 of 13"
+   }
+  },
+  "Dragon": {
+   "Idle": {
+    "file": "Dragon-Idle.webp",
+    "frames": 16,
+    "fps": 8,
+    "frameW": 146,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 65060,
+    "source": "16 of 40"
+   },
+   "Walk": {
+    "file": "Dragon-Walk.webp",
+    "frames": 10,
+    "fps": 12,
+    "frameW": 139,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 35118,
+    "source": "10 of 20"
+   },
+   "Jump": {
+    "file": "Dragon-Jump.webp",
+    "frames": 8,
+    "fps": 12,
+    "frameW": 172,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 1,
+    "bytes": 30242,
+    "source": "8 of 20"
+   },
+   "Die": {
+    "file": "Dragon-Die.webp",
+    "frames": 10,
+    "fps": 12,
+    "frameW": 182,
+    "frameH": 69,
+    "cols": 8,
+    "rows": 2,
+    "bytes": 37528,
+    "source": "10 of 20"
+   }
+  }
+ }
+}

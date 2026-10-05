@@ -274,7 +274,20 @@
         ctx.translate(0, -Iso.BLOCK_H * lift);
       }
       ctx.translate(-pivot[0], -pivot[1]);
-      CharacterRenderer.drawCharacter(ctx, col, row, 0.95, who || undefined);
+      /* Which animation the character is in.
+       *
+       * This is presentation only. The simulation has already decided whether
+       * the player is alive and where they are; all this does is pick the pose
+       * that matches. A dead player shows the death clip, a player who is
+       * mid-hop shows the jump, and anyone standing still breathes. */
+      var anim = "Idle";
+      if (!ps.alive) anim = "Die";
+      else if (lift > 0 || hopAnim) anim = "Jump";
+      /* performance.now() rather than the frame timestamp: render() takes no
+       * arguments, so the frame's `nowMs` is not in scope here. This is the
+       * same single captured origin hopProgress() uses, per NF-05. */
+      CharacterRenderer.drawCharacter(ctx, col, row, 0.95, who || undefined,
+                                       anim, performance.now());
       ctx.restore();
     }
 
@@ -590,5 +603,15 @@
     // be read as a swipe.
     downId = null; dragged = false; downX = 0; downY = 0;
   });
+  /* Start fetching the raster character sheets.
+   *
+   * This does NOT block the game. Until the sheets arrive the procedural
+   * roster draws, which is why there is no loading screen: the fallback is the
+   * same code path the game has always used. If the sheets never arrive --
+   * offline, blocked, or simply not deployed -- nothing about the game
+   * changes except that the characters stay procedural. */
+  if (typeof SpriteSheets !== "undefined" && SpriteSheets.load) {
+    SpriteSheets.load();
+  }
   requestAnimationFrame(function (t) { lastFrameMs = t; frame(t); });
 })();

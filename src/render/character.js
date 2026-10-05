@@ -29,13 +29,39 @@
 
   function zz(z, h, scale) { return (z + h) * scale; }
 
-  function drawCharacter(ctx, col, row, scale, ch) {
+  function drawCharacter(ctx, col, row, scale, ch, anim, animMs) {
     scale = scale === undefined ? 1 : scale;
     ch = ch || (global.Roster ? global.Roster.getCharacter("pip") : {
       body: "#f7e3c8", accent: "#2fbfa0", earColor: "#f0b9c0", mark: "#ffffff",
       bodyW: 0.56, bodyH: 0.28, headW: 0.64, headH: 0.36,
       earKind: "triangle", earScale: 1, eyeScale: 1,
     });
+
+    /* A raster character, when this roster member has one and its sheet has
+     * finished loading.
+     *
+     * The shadow is still drawn from the isometric engine rather than baked
+     * into the sprite, so a character keeps the same contact shadow as every
+     * other object on the board. That is what stops the sprite looking like it
+     * is floating a centimetre above the lane.
+     *
+     * If the sheet is missing or still loading, this returns false and the
+     * procedural roster below draws instead. There is no state in which a
+     * player sees nothing. */
+    var S = global.SpriteSheets;
+    if (S && ch.sprite && S.has(ch.sprite)) {
+      var f = S.frame(ch.sprite, anim, animMs || 0);
+      if (f) {
+        I.castShadow(ctx, col, row, 0.90, 0.42);
+        var p = I.projectS(col, row, 0);
+        // Feet on the tile, body rising from it, centred on the column.
+        var k = (f.drawH / f.sh) * scale;
+        var dw = f.sw * k, dh = f.sh * k;
+        ctx.drawImage(f.img, f.sx, f.sy, f.sw, f.sh,
+                      p[0] - dw / 2, p[1] - dh, dw, dh);
+        return true;
+      }
+    }
 
     // `ch.ear` never existed -- the roster key is `earColor`. Reading the
     // wrong key gave every character an undefined ear colour, which a canvas

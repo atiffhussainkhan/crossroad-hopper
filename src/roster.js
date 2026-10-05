@@ -20,6 +20,7 @@
   var ROSTER = [
     {
       id: "pip", name: "Pip", role: "The starter",
+      sprite: "Knight",
       body: "#f7e3c8", accent: "#2fbfa0", earColor: "#f0b9c0", mark: "#ffffff",
       bodyW: 0.56, bodyH: 0.28, headW: 0.64, headH: 0.36,
       earKind: "triangle", earScale: 1.0, eyeScale: 1.0,
@@ -27,6 +28,7 @@
     },
     {
       id: "bloop", name: "Bloop", role: "The round one",
+      sprite: "Princess",
       body: "#8fd6e8", accent: "#ff9f43", earColor: "#bfeaf3", mark: "#ffffff",
       bodyW: 0.64, bodyH: 0.30, headW: 0.68, headH: 0.40,
       earKind: "antenna", earScale: 1.0, eyeScale: 1.25,
@@ -34,6 +36,7 @@
     },
     {
       id: "nib", name: "Nib", role: "The tall one",
+      sprite: "Dragon",
       body: "#c9a0e8", accent: "#ffe066", earColor: "#e0c8f2", mark: "#ffffff",
       bodyW: 0.44, bodyH: 0.34, headW: 0.50, headH: 0.34,
       earKind: "tall", earScale: 1.5, eyeScale: 0.9,
