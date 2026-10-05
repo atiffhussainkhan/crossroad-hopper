@@ -423,6 +423,265 @@
       I.ellipse(ctx, q[0], q[1], 3, 2.4, "#f0e8ff");
     }
   }
+  /* ---------------------------------------------------------------------
+   * The objects added when the per-stage vocabulary floor went to ten.
+   *
+   * Every one of them is drawn to be identified in the half second the player
+   * has to decide. That means the silhouette carries the identity and the
+   * colour only supports it: a van with a roof light, a truck with a drum, a
+   * rider hunched over two wheels, an open cart under a canopy. If two of
+   * these could be mistaken for each other at a glance, the vocabulary is ten
+   * words long and says less than that.
+   * ------------------------------------------------------------------- */
+
+  function drawAmbulance(ctx, col, row, scene, h) {
+    // White van, red stripe, roof light. The cross is the whole identity.
+    wheeled(ctx, col, row, h.spec, "#f4f7fb", "#bfe3f5", { h: 0.40 });
+    var mid = I.projectS(col + 0.5, row + 0.26, 0.20);
+    I.ellipse(ctx, mid[0] - 2, mid[1] + 3, 13, 3.4, "#e03a3a");
+    // Cross on the flank.
+    var c0 = I.projectS(col + 0.46, row + 0.30, 0.26);
+    I.ellipse(ctx, c0[0], c0[1], 2.2, 5.0, "#e03a3a");
+    I.ellipse(ctx, c0[0], c0[1], 5.0, 2.2, "#e03a3a");
+    // Light bar on the roof, flashing.
+    var b0 = I.projectS(col + 0.58, row + 0.26, 0.50);
+    I.ellipse(ctx, b0[0] - 3, b0[1], 3.2, 2.2, "#4ad9ff");
+    I.ellipse(ctx, b0[0] + 3, b0[1], 3.2, 2.2, "#ff5a5a");
+  }
+
+  function drawCementmixer(ctx, col, row, scene, h) {
+    var cab = "#f0b429";
+    hazardShadow(ctx, col, row, h.spec.len, 0.18);
+    // Cab at the nose.
+    I.cubeFrac(ctx, col + 0.60, row + 0.16, 0.38, 0.30, 0.10, 0.32, cab);
+    I.cubeFrac(ctx, col + 0.64, row + 0.18, 0.22, 0.24, 0.42, 0.14, "#cfe6f5");
+    I.cubeFrac(ctx, col + 0.18, row + 0.14, 0.44, 0.30, 0.06, 0.22, "#9aa0a8");
+    // The drum: a fat tilted barrel, which is the entire silhouette.
+    var d = I.projectS(col + 0.50, row + 0.42, 0.34);
+    I.ellipse(ctx, d[0], d[1], 15, 11, I.shade("#e8e4dc", 0.72));
+    I.ellipse(ctx, d[0], d[1] - 1, 12, 8.5, "#e8e4dc");
+    I.ellipse(ctx, d[0] - 1, d[1] - 2, 5, 3.4, "#cfc9bf");
+    // Chassis wheels.
+    for (var w = 0; w < 3; w++) {
+      var q = I.projectS(col + 0.26 + w * 0.24, row + 0.18, 0.0);
+      I.ellipse(ctx, q[0], q[1] + 3, 4.6, 4.6, "#1c1c20");
+    }
+  }
+
+  function drawMotorbike(ctx, col, row, scene, h) {
+    /* Low, leaning, two wheels close together: nothing else on the board has
+     * that profile, which is the point.
+     *
+     * It is drawn much larger than a 0.7-tile box would suggest, on purpose.
+     * A rider you cannot identify is a hazard you cannot avoid, and the
+     * alternative -- a tiny sprite matching a tiny hitbox -- is exactly the
+     * "looks walkable, is lethal" class of defect. The hitbox is 0.90 tiles to
+     * match what is painted. */
+    hazardShadow(ctx, col, row, h.spec.len, 0.14);
+    var body = "#e0407a";
+    var x0 = col + (1 - h.spec.len) / 2;
+    // Tank and seat.
+    I.cubeFrac(ctx, x0 + 0.10, row + 0.28, h.spec.len * 0.52, 0.22, 0.18, 0.20, body);
+    I.cubeFrac(ctx, x0 + 0.06, row + 0.28, h.spec.len * 0.30, 0.20, 0.38, 0.10, "#2f3b52");
+    // Rider: a hunched torso, a helmet, and an arm reaching to the bars.
+    I.cubeFrac(ctx, x0 + 0.26, row + 0.26, 0.30, 0.20, 0.38, 0.34, "#2f3b52");
+    var hd = I.projectS(x0 + 0.34, row + 0.28, 0.76);
+    I.ellipse(ctx, hd[0], hd[1], 8.0, 7.4, "#ffd23d");
+    I.ellipse(ctx, hd[0] + 1.8, hd[1] - 0.8, 3.4, 2.6, "#1b1b1b");
+    I.ellipse(ctx, hd[0] - 1.4, hd[1] - 1.2, 2.4, 1.8, "#fff3c0");
+    var sh = I.projectS(x0 + 0.24, row + 0.28, 0.66);
+    I.ellipse(ctx, sh[0], sh[1], 6.4, 2.4, "#ffd23d");   // helmet flash
+    // Handlebars and a headlight.
+    var ba = I.projectS(x0 + h.spec.len - 0.16, row + 0.30, 0.52);
+    I.line(ctx, [[ba[0] - 6, ba[1]], [ba[0] + 6, ba[1]]], "#9aa0a8", 2.4);
+    I.ellipse(ctx, ba[0] + 7, ba[1] + 1, 3.0, 2.4, "#fff3c0");
+    for (var w = 0; w < 2; w++) {
+      var q = I.projectS(x0 + 0.14 + w * (h.spec.len - 0.28), row + 0.24, 0.0);
+      I.ellipse(ctx, q[0], q[1] + 2, 8.0, 8.0, "#1c1c20");
+      I.ellipse(ctx, q[0], q[1] + 2, 3.2, 3.2, "#c8c8cc");
+    }
+  }
+
+  function drawGolfcart(ctx, col, row, scene, h) {
+    // An open cart under a canopy: no cabin, and the posts are the shape.
+    var body = "#7ac94f";
+    hazardShadow(ctx, col, row, h.spec.len, 0.14);
+    I.cubeFrac(ctx, col + 0.18, row + 0.18, 0.66, 0.28, 0.08, 0.18, body);
+    I.cubeFrac(ctx, col + 0.24, row + 0.20, 0.40, 0.22, 0.26, 0.12, "#3f6b2a");
+    var hd = I.projectS(col + 0.36, row + 0.26, 0.38);
+    I.ellipse(ctx, hd[0], hd[1], 5.4, 5.0, "#f0c9a0");
+    // Canopy on two posts.
+    I.cubeFrac(ctx, col + 0.26, row + 0.20, 0.46, 0.06, 0.44, 0.10, I.shade(body, 0.86));
+    for (var pI = 0; pI < 2; pI++) {
+      var p = I.projectS(col + (pI ? 0.70 : 0.28), row + 0.26, 0.40);
+      I.line(ctx, [[p[0], p[1]], [p[0], p[1] - 15]], "#4a4a52", 2.0);
+    }
+    var wh = I.projectS(col + 0.78, row + 0.26, 0.26);
+    I.ellipse(ctx, wh[0], wh[1], 3.0, 2.4, "#fff3c0");
+    for (var w = 0; w < 2; w++) {
+      var q = I.projectS(col + 0.32 + w * 0.36, row + 0.20, 0.0);
+      I.ellipse(ctx, q[0], q[1] + 2, 5.2, 5.2, "#1c1c20");
+    }
+  }
+
+  function drawFreighttrain(ctx, col, row, scene, h) {
+    // A heavy, dark locomotive with a funnel. Reads as "slow and long" against
+    // the bright passenger train, which is the distinction that matters when
+    // the player is judging a gap in half a second.
+    var body = h.spec.body || "#4a5560";
+    hazardShadow(ctx, col, row, h.spec.len, 0.22);
+    var x0 = col + (1 - h.spec.len) / 2;
+    I.cubeFrac(ctx, x0, row + 0.08, h.spec.len, 0.34, 0.0, 0.46, I.shade(body, 0.55));
+    I.cubeFrac(ctx, x0 + 0.02, row + 0.10, h.spec.len - 0.04, 0.30, 0.46, 0.20, body);
+    I.cubeFrac(ctx, x0, row + 0.08, h.spec.len, 0.34, 0.66, 0.08, I.shade(body, 1.18));
+    // Funnel and a hot lamp at the nose.
+    var fn = I.projectS(x0 + 0.30, row + 0.30, 0.80);
+    I.ellipse(ctx, fn[0], fn[1], 7, 5, "#2f3742");
+    var lamp = I.projectS(x0 + h.spec.len - 0.10, row + 0.28, 0.34);
+    I.ellipse(ctx, lamp[0], lamp[1], 4.6, 3.6, "#ffe9a8");
+    for (var i = 0; i < 5; i++) {
+      var x = x0 + (i + 0.5) * (h.spec.len / 5);
+      var q = I.projectS(x, row + 0.42, 0.50);
+      I.ellipse(ctx, q[0], q[1] + 2, 4.2, 4.2, "#1c1c20");
+    }
+  }
+
+  function drawSubway(ctx, col, row, scene, h) {
+    /* A tube, not a row of carriages.
+     *
+     * This was drawn with big ellipses for the roof and the window band, which
+     * is wrong for an isometric box: an ellipse is a circle on the ground, so
+     * it came out as a lumpy white bathtub lying across the lane. The bands are
+     * parallelograms now, and the roof is a box, which is what both of those
+     * things actually are once the lane has been tilted. */
+    var body = h.spec.body || "#d8dde3";
+    var x0 = col + (1 - h.spec.len) / 2;
+    hazardShadow(ctx, col, row, h.spec.len, 0.20);
+    // Lower body, then a narrower upper body, so it has a shoulder.
+    I.cubeFrac(ctx, x0, row + 0.10, h.spec.len, 0.32, 0.0, 0.18, I.shade(body, 0.58));
+    I.cubeFrac(ctx, x0 + 0.02, row + 0.12, h.spec.len - 0.04, 0.28, 0.18, 0.26, body);
+    I.cubeFrac(ctx, x0 + 0.06, row + 0.13, h.spec.len - 0.12, 0.26, 0.44, 0.14, I.shade(body, 1.08));
+    // Rounded roof, as a shallow box rather than a disc.
+    I.cubeFrac(ctx, x0 + 0.10, row + 0.14, h.spec.len - 0.20, 0.22, 0.58, 0.08, I.shade(body, 1.20));
+    // One continuous window band, drawn as a skewed panel.
+    var a = I.projectS(x0 + 0.10, row + 0.34, 0.26);
+    var b = I.projectS(x0 + h.spec.len - 0.10, row + 0.34, 0.26);
+    I.line(ctx, [[a[0], a[1] - 1], [b[0], b[1] - 1]], "#2f3b52", 7.0);
+    var a2 = I.projectS(x0 + 0.10, row + 0.34, 0.26);
+    var b2 = I.projectS(x0 + h.spec.len - 0.10, row + 0.34, 0.26);
+    I.line(ctx, [[a2[0], a2[1] - 3], [b2[0], b2[1] - 3]], "#4a5d7d", 2.0);
+    // Destination stripe along the shoulder.
+    var s0 = I.projectS(x0 + 0.06, row + 0.30, 0.44);
+    var s1 = I.projectS(x0 + h.spec.len - 0.06, row + 0.30, 0.44);
+    I.line(ctx, [[s0[0], s0[1]], [s1[0], s1[1]]], "#e05c4b", 2.6);
+    // Headlamp.
+    var hl = I.projectS(x0 + h.spec.len - 0.06, row + 0.30, 0.12);
+    I.ellipse(ctx, hl[0], hl[1], 3.4, 2.6, "#fff3c0");
+  }
+
+  function drawCanoe(ctx, col, row, scene, h) {
+    // A long thin hull with a paddler. Narrow on purpose: it is the one water
+    // hazard the player can miss on purpose, which makes it a different
+    // decision from the log it shares a lane with.
+    var hull = "#d94f2b";
+    var x0 = col + (1 - h.spec.len) / 2;
+    var mid = I.projectS(col + 0.5, row + 0.34, 0.06);
+    I.ellipse(ctx, mid[0], mid[1], 26, 6.5, I.shade(hull, 0.66));
+    I.ellipse(ctx, mid[0], mid[1] - 1.5, 22, 4.2, hull);
+    // Gunwales, tapering to points at both ends.
+    I.line(ctx, [[mid[0] - 25, mid[1]], [mid[0] + 25, mid[1]]], I.shade(hull, 1.25), 1.6);
+    // Paddler.
+    I.cubeFrac(ctx, col + 0.42, row + 0.20, 0.20, 0.16, 0.10, 0.22, "#2f3b52");
+    var hd = I.projectS(col + 0.50, row + 0.22, 0.34);
+    I.ellipse(ctx, hd[0], hd[1], 5.0, 4.8, "#f0c9a0");
+    // Paddle, angled into the water.
+    var pa = I.projectS(col + 0.68, row + 0.40, 0.14);
+    I.line(ctx, [[pa[0] - 2, pa[1] - 12], [pa[0] + 3, pa[1] + 2]], "#8a5a2b", 2.0);
+    I.ellipse(ctx, pa[0] + 3, pa[1] + 2, 3.4, 2.0, "#2f3b52");
+  }
+
+  function drawDuck(ctx, col, row, scene, h) {
+    // Small, round, and the only bright yellow thing on the water lanes.
+    var yellow = "#ffd23d";
+    var b = I.projectS(col + 0.44, row + 0.42, 0.02);
+    I.ellipse(ctx, b[0], b[1], 11, 7, I.shade(yellow, 0.80));
+    I.ellipse(ctx, b[0], b[1] - 1.5, 9, 5.4, yellow);
+    var h0 = I.projectS(col + 0.64, row + 0.38, 0.16);
+    I.ellipse(ctx, h0[0], h0[1] - 2, 6.2, 6.0, yellow);
+    // Bill and eye.
+    I.ellipse(ctx, h0[0] + 5, h0[1] - 1, 4.4, 2.4, "#f08a1e");
+    I.ellipse(ctx, h0[0] + 1.4, h0[1] - 3.6, 1.5, 1.5, "#1b1b1b");
+    // Wing.
+    I.ellipse(ctx, b[0] - 1, b[1] - 0.5, 5.6, 3.0, I.shade(yellow, 1.18));
+  }
+
+  function drawSwan(ctx, col, row, scene, h) {
+    // White hull, long S-neck. The neck is what separates it from the duck at
+    // a glance; without it the two are the same shape at gameplay speed.
+    var white = "#f7f9fb";
+    var b = I.projectS(col + 0.44, row + 0.44, 0.02);
+    I.ellipse(ctx, b[0], b[1], 15, 8, I.shade(white, 0.72));
+    I.ellipse(ctx, b[0], b[1] - 1.5, 12.5, 6.0, white);
+    // Neck: three links arcing up and back, then the head.
+    var n1 = I.projectS(col + 0.62, row + 0.40, 0.22);
+    var n2 = I.projectS(col + 0.72, row + 0.36, 0.38);
+    I.line(ctx, [[b[0] + 4, b[1] - 3], [n1[0], n1[1]]], white, 5.0);
+    I.line(ctx, [[n1[0], n1[1]], [n2[0], n2[1]]], white, 4.4);
+    I.ellipse(ctx, n2[0], n2[1] - 1, 5.0, 4.4, white);
+    I.ellipse(ctx, n2[0] + 4.4, n2[1] - 0.5, 4.0, 2.2, "#f08a1e");
+    I.ellipse(ctx, n2[0] + 1.2, n2[1] - 2.6, 1.4, 1.4, "#1b1b1b");
+  }
+
+  function drawIcefloe(ctx, col, row, scene, h) {
+    // A chunky tilted slab with a dark undercut and a crack down it. The
+    // frozen lake's answer to a log: same job, completely different read. It
+    // is drawn with a visible dark base because a white slab on pale water has
+    // no edge, and a hazard you cannot see the edge of is one you time wrongly.
+    var ice = "#dff0fb";
+    var x0 = col + (1 - h.spec.len) / 2;
+    I.castShadow(ctx, x0 + 0.5, row, h.spec.len, 0.5, 0.18);
+    // Dark waterline so the floe sits IN the river rather than on it.
+    I.cubeFrac(ctx, x0, row + 0.16, h.spec.len, 0.30, 0.0, 0.12, "#4f7f9c");
+    I.cubeFrac(ctx, x0 + 0.02, row + 0.13, h.spec.len - 0.04, 0.26, 0.12, 0.20, ice);
+    I.cubeFrac(ctx, x0 + 0.05, row + 0.12, h.spec.len - 0.10, 0.22, 0.32, 0.16, "#ffffff");
+    // Two angled peaks, so the silhouette is not a rectangle.
+    var p1 = I.projectS(x0 + 0.26, row + 0.24, 0.48);
+    I.poly(ctx, [[p1[0] - 9, p1[1] + 2], [p1[0], p1[1] - 6], [p1[0] + 9, p1[1] + 2]], "#ffffff");
+    var p2 = I.projectS(x0 + h.spec.len - 0.30, row + 0.22, 0.44);
+    I.poly(ctx, [[p2[0] - 7, p2[1] + 2], [p2[0], p2[1] - 5], [p2[0] + 7, p2[1] + 2]], "#eaf6fd");
+    // Crack.
+    var a = I.projectS(x0 + 0.14, row + 0.26, 0.48);
+    var c = I.projectS(x0 + h.spec.len - 0.16, row + 0.24, 0.48);
+    I.line(ctx, [[a[0], a[1]], [c[0], c[1] - 1]], "#7fb4d0", 1.6);
+  }
+
+  function drawSled(ctx, col, row, scene, h) {
+    // A deep upturned hull with a rider and a trailing scarf. Drawn as solid
+    // masses rather than thin panels: at speed a thin pink line on blue water
+    // is not a hazard, it is a smudge.
+    var hull = "#c94f6d";
+    var x0 = col + (1 - h.spec.len) / 2;
+    // Runner.
+    var base = I.projectS(col + 0.5, row + 0.38, 0.02);
+    I.line(ctx, [[base[0] - 20, base[1] + 4], [base[0] + 20, base[1] + 4]],
+          I.shade(hull, 0.50), 4.0);
+    // Hull body, a solid mass, then a raised prow at each end.
+    I.cubeFrac(ctx, x0, row + 0.14, h.spec.len, 0.34, 0.04, 0.22, I.shade(hull, 0.72));
+    I.cubeFrac(ctx, x0 + 0.02, row + 0.17, h.spec.len - 0.04, 0.30, 0.22, 0.18, hull);
+    I.cubeFrac(ctx, x0, row + 0.14, h.spec.len, 0.34, 0.40, 0.06, I.shade(hull, 1.22));
+    // Upturned nose and tail, so it reads as a sled and not a brick.
+    var l = I.projectS(x0 + 0.04, row + 0.32, 0.30);
+    var r = I.projectS(x0 + h.spec.len - 0.04, row + 0.32, 0.30);
+    I.poly(ctx, [[l[0] - 5, l[1] + 6], [l[0] + 2, l[1] - 8], [l[0] + 6, l[1] + 5]], hull);
+    I.poly(ctx, [[r[0] - 6, r[1] + 5], [r[0] - 2, r[1] - 8], [r[0] + 5, r[1] + 6]], hull);
+    // Rider: parka, helmet, scarf.
+    I.cubeFrac(ctx, col + 0.40, row + 0.18, 0.28, 0.22, 0.20, 0.30, "#2f3b52");
+    var hd = I.projectS(col + 0.48, row + 0.20, 0.50);
+    I.ellipse(ctx, hd[0], hd[1], 7.0, 6.6, "#f0c9a0");
+    I.ellipse(ctx, hd[0] + 1.4, hd[1] - 1.0, 1.8, 1.8, "#1b1b1b");
+    I.line(ctx, [[hd[0] - 3, hd[1] - 3], [hd[0] - 15, hd[1] + 1]], "#ffd23d", 3.0);
+  }
+
   function drawLog(ctx, col, row, scene, h) {
     var wood = scene.log || "#8a5a2b";
     I.cubeFrac(ctx, col + (1 - h.spec.len) / 2, row + 0.06, h.spec.len, 0.28, 0.0, 0.26, I.shade(wood, 0.80));
@@ -662,10 +921,15 @@
     limousine: drawLimousine, truck: drawTruck,
     bus: drawBus, tractor: drawTractor, forklift: drawForklift,
     roller: drawRoller, tumbleweed: drawTumbleweed,
+    ambulance: drawAmbulance, cementmixer: drawCementmixer,
+    motorbike: drawMotorbike, golfcart: drawGolfcart,
     train: drawTrain, tram: drawTram, monorail: drawMonorail,
+    freighttrain: drawFreighttrain, subway: drawSubway,
     sinkhole: drawSinkhole,
     log: drawLog, turtle: drawTurtle, alligator: drawAlligator,
     crocodile: drawCrocodile,
+    canoe: drawCanoe, duck: drawDuck, swan: drawSwan,
+    icefloe: drawIcefloe, sled: drawSled,
     snake: drawSnake, boulder: drawBoulder, hawk: drawHawk,
   };
   // The timed ones are not a plain lookup: what they draw depends on whether
@@ -755,6 +1019,14 @@
       for (var si = 0; si < simHazards.length; si++) {
         var sh = simHazards[si];
         if (sh.row < row0 || sh.row >= row0 + viewRows) continue;
+        /* A hazard the stage has not armed yet is not drawn at all.
+         *
+         * The whole board is generated at stage start and the clock switches
+         * phases on, so the un-armed ones are real objects sitting in the
+         * array. Drawing them would show the player a second car in a lane that
+         * is supposed to be running one-way, which contradicts the phase the
+         * game is in and teaches them to distrust the lane. */
+        if (Hazards.isStaged(sh)) continue;
         hazards.push([sh.x, sh.row, sh.kind, sh]);
       }
     } else {
@@ -820,9 +1092,14 @@
     drawTruck: drawTruck, drawBus: drawBus, drawTractor: drawTractor,
     drawForklift: drawForklift, drawRoller: drawRoller,
     drawTumbleweed: drawTumbleweed,
+    drawAmbulance: drawAmbulance, drawCementmixer: drawCementmixer,
+    drawMotorbike: drawMotorbike, drawGolfcart: drawGolfcart,
     drawTrain: drawTrain, drawTram: drawTram, drawMonorail: drawMonorail,
+    drawFreighttrain: drawFreighttrain, drawSubway: drawSubway,
     drawLog: drawLog, drawTurtle: drawTurtle, drawAlligator: drawAlligator,
     drawCrocodile: drawCrocodile, drawSnake: drawSnake, drawBoulder: drawBoulder,
+    drawCanoe: drawCanoe, drawDuck: drawDuck, drawSwan: drawSwan,
+    drawIcefloe: drawIcefloe, drawSled: drawSled,
     drawHawk: drawHawk,
     drawGeyser: drawGeyser,
     HAZARD_FNS: HAZARD_FNS, TIMED_FNS: TIMED_FNS,

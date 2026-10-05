@@ -83,34 +83,34 @@ def _turtle_colour(scene: dict) -> str:
 SCENES = [
     dict(id=1,  name="Suburb",       sky=("#8fc7f0", "#d8ecf9"), ground="#7ba05b", alt="#6f9450",
          road="#4a4a52", water="#3f7fb5", hazard="#ff4d3d", hazard2="#f2a03d",
-         foliage="#3f8a3d", foliage2="#57a84f", trunk="#7a5433", accent="#ffffff", hazardKinds=["car", "taxi", "police", "tractor", "forklift", "roller", "tumbleweed", "sinkhole"], scenery=["hedge", "tree", "mailbox", "bush", "flowerbed", "fence"]),
+         foliage="#3f8a3d", foliage2="#57a84f", trunk="#7a5433", accent="#ffffff", hazardKinds=["car","taxi","police","tractor","forklift","roller","tumbleweed","ambulance","golfcart","geyser","boulder","sinkhole"], scenery=["hedge", "tree", "mailbox", "bush", "flowerbed", "fence"]),
     dict(id=2,  name="River",        sky=("#7fb6e0", "#dcecf7"), ground="#3f7fb5", alt="#37719f",
          road="#4a4a52", water="#2f6f9f", hazard="#ff4d3d", hazard2="#8a5a2b",
-         foliage="#2f6b40", foliage2="#438a52", trunk="#6b4a2b", accent="#e8f4ff", hazardKinds=["log", "turtle", "alligator", "snake", "crocodile", "sinkhole"], scenery=["reed", "lily", "rock", "lily", "reed"]),
+         foliage="#2f6b40", foliage2="#438a52", trunk="#6b4a2b", accent="#e8f4ff", hazardKinds=["log","turtle","alligator","snake","crocodile","canoe","duck","swan","boulder","steamvent","sinkhole"], scenery=["reed", "lily", "rock", "lily", "reed"]),
     dict(id=3,  name="Desert",       sky=("#f0c88a", "#fce9c4"), ground="#d9b168", alt="#cfa45c",
          road="#5a5048", water="#3f7fb5", hazard="#ff4d3d", hazard2="#a89a3a",
-         foliage="#5f8a3f", foliage2="#7aa84f", trunk="#8a6a3a", accent="#fff6e0", hazardKinds=["car", "tumbleweed", "tractor", "racecar", "bus", "truck", "sinkhole"], scenery=["cactus", "rock", "bone", "boulder"]),
+         foliage="#5f8a3f", foliage2="#7aa84f", trunk="#8a6a3a", accent="#fff6e0", hazardKinds=["car","tumbleweed","tractor","racecar","bus","truck","taxi","limousine","cementmixer","motorbike","golfcart","boulder","sinkhole"], scenery=["cactus", "rock", "bone", "boulder"]),
     dict(id=4,  name="Farmland",     sky=("#c2d8b0", "#eef4dc"), ground="#d9d264", alt="#cbbc58",
          road="#54585e", water="#3f7fb5", hazard="#ff4d3d", hazard2="#e8b53d",
-         foliage="#4a7a3a", foliage2="#5f9c48", trunk="#7a5433", accent="#fffce8", hazardKinds=["tractor", "car", "limousine", "truck", "train", "tram", "sinkhole"], scenery=["haybale", "fence", "tree", "windmill"]),
+         foliage="#4a7a3a", foliage2="#5f9c48", trunk="#7a5433", accent="#fffce8", hazardKinds=["tractor","car","limousine","truck","train","tram","forklift","cementmixer","roller","monorail","subway","tumbleweed","boulder","sinkhole"], scenery=["haybale", "fence", "tree", "windmill"]),
     dict(id=5,  name="Night City",   sky=("#131a2e", "#38445f"), ground="#2b3040", alt="#262b39",
          road="#1e222c", water="#26405e", hazard="#ff4d3d", hazard2="#4ad9ff",
-         foliage="#2a3a4a", foliage2="#365068", trunk="#2a2f38", accent="#7de8ff", hazardKinds=["taxi", "tram", "bus", "police", "racecar", "train", "sinkhole"], scenery=["neon", "building", "streetlamp", "hydrant", "postbox"]),
+         foliage="#2a3a4a", foliage2="#365068", trunk="#2a2f38", accent="#7de8ff", hazardKinds=["taxi","tram","bus","police","racecar","train","car","truck","ambulance","motorbike","monorail","subway","forklift","geyser","sinkhole"], scenery=["neon", "building", "streetlamp", "hydrant", "postbox"]),
     dict(id=6,  name="Frozen Lake",  sky=("#b8d8e8", "#edf7fc"), ground="#c8e4f0", alt="#bcd9e8",
          road="#262b33", water="#5aa0c0", hazard="#ff4d3d", hazard2="#6b4a8a",
-         foliage="#3d6b5a", foliage2="#4f8570", trunk="#5a4636", accent="#ffffff", hazardKinds=["sled", "turtle", "log", "crocodile", "alligator", "sinkhole"], scenery=["pine", "iceberg", "pine", "rock"]),
+         foliage="#3d6b5a", foliage2="#4f8570", trunk="#5a4636", accent="#ffffff", hazardKinds=["sled","turtle","log","crocodile","alligator","icefloe","swan","duck","canoe","boulder","steamvent","sinkhole"], scenery=["pine", "iceberg", "pine", "rock"]),
     dict(id=7,  name="Rainforest",   sky=("#6ba87a", "#cce7c6"), ground="#3f7a4a", alt="#387044",
          road="#4a4438", water="#2f6f8a", hazard="#ff4d3d", hazard2="#7ac94f",
-         foliage="#24522f", foliage2="#357a42", trunk="#5a4028", accent="#e8ffd8", hazardKinds=["log", "snake", "car", "boulder", "turtle", "alligator", "sinkhole"], scenery=["vine", "fern", "tree", "bush"]),
+         foliage="#24522f", foliage2="#357a42", trunk="#5a4028", accent="#e8ffd8", hazardKinds=["log","snake","car","boulder","turtle","alligator","crocodile","canoe","duck","geyser","steamvent","tractor","sinkhole"], scenery=["vine", "fern", "tree", "bush"]),
     dict(id=8,  name="Construction", sky=("#b8bec8", "#e8ecf2"), ground="#9aa0a8", alt="#8f959d",
          road="#6b7078", water="#4a6a8a", hazard="#ff4d3d", hazard2="#e05c4b",
-         foliage="#7a8a4a", foliage2="#8fa85a", trunk="#8a6a3a", accent="#ffffff", hazardKinds=["forklift", "roller", "monorail", "truck", "tram", "tractor", "sinkhole"], scenery=["scaffold", "cone", "crate", "pylon"]),
+         foliage="#7a8a4a", foliage2="#8fa85a", trunk="#8a6a3a", accent="#ffffff", hazardKinds=["forklift","roller","monorail","truck","tram","tractor","cementmixer","golfcart","train","subway","boulder","sinkhole"], scenery=["scaffold", "cone", "crate", "pylon"]),
     dict(id=9,  name="Storm",        sky=("#3a4450", "#727d8c"), ground="#4a5560", alt="#434d57",
          road="#333a44", water="#38566b", hazard="#ff4d3d", hazard2="#7ac9e8",
-         foliage="#2f3742", foliage2="#3d4a58", trunk="#33383f", accent="#d8e8f4", hazardKinds=["limousine", "tram", "tumbleweed", "train", "bus", "monorail", "sinkhole"], scenery=["pylon", "puddle", "pylon", "debris"]),
+         foliage="#2f3742", foliage2="#3d4a58", trunk="#33383f", accent="#d8e8f4", hazardKinds=["limousine","tram","tumbleweed","train","bus","monorail","car","police","ambulance","subway","freighttrain","steamvent","sinkhole"], scenery=["pylon", "puddle", "pylon", "debris"]),
     dict(id=10, name="Volcano",      sky=("#3a1f1c", "#9c4326"), ground="#5a3a34", alt="#52342e",
          road="#3a2a26", water="#8a3a1a", hazard="#ff4d3d", hazard2="#ffd23d",
-         foliage="#2a1a18", foliage2="#3f2622", trunk="#3a2a26", accent="#ffb03d", hazardKinds=["bus", "steamvent", "log", "train", "roller", "tram", "alligator", "sinkhole"], scenery=["lavaVent", "obsidian", "boulder", "debris"]),
+         foliage="#2a1a18", foliage2="#3f2622", trunk="#3a2a26", accent="#ffb03d", hazardKinds=["bus","steamvent","log","train","roller","tram","alligator","freighttrain","subway","crocodile","canoe","duck","boulder","sinkhole"], scenery=["lavaVent", "obsidian", "boulder", "debris"]),
 ]
 
 
@@ -169,6 +169,153 @@ def draw_sled(c: Canvas, col: float, row: float, scene: dict) -> None:
     c.poly([(rx, ry - 10), (rx - 5, ry + 2), (rx + 5, ry + 2)], "#2b2b30")
     hx, hy = project_s(col + 0.44, row + 0.24, 0.34)
     c.line([(hx, hy), (hx + 12, hy - 6)], CHAR_OUTLINE, width=2)
+
+
+def draw_ambulance(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """A white van with a red stripe, a red cross and a roof light bar."""
+    cast_shadow(c, col, row, 0.5, 0.45)
+    cube_frac(c, col + 0.16, row + 0.12, 0.68, 0.30, 0.0, 0.14, "#c8ced6")
+    cube_frac(c, col + 0.18, row + 0.14, 0.64, 0.28, 0.14, 0.40, "#f4f7fb")
+    mx, my = project_s(col + 0.5, row + 0.30, 0.30)
+    c.ellipse(mx, my, 12, 4, "#e03a3a")
+    cx, cy = project_s(col + 0.46, row + 0.32, 0.34)
+    c.ellipse(cx, cy, 2.4, 5.4, "#e03a3a")
+    c.ellipse(cx, cy, 5.4, 2.4, "#e03a3a")
+    bx, by = project_s(col + 0.58, row + 0.28, 0.50)
+    c.ellipse(bx - 3, by, 3.2, 2.2, "#4ad9ff")
+    c.ellipse(bx + 3, by, 3.2, 2.2, "#ff5a5a")
+
+
+def draw_cementmixer(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """A truck cab with a fat rotating drum on the back."""
+    cast_shadow(c, col, row, 0.5, 0.45)
+    cube_frac(c, col + 0.18, row + 0.14, 0.44, 0.30, 0.06, 0.22, "#9aa0a8")
+    cube_frac(c, col + 0.60, row + 0.16, 0.38, 0.30, 0.10, 0.32, "#f0b429")
+    dx, dy = project_s(col + 0.50, row + 0.44, 0.36)
+    c.ellipse(dx, dy, 15, 11, "#cfc9bf")
+    c.ellipse(dx, dy - 1, 12, 8.5, "#e8e4dc")
+    c.ellipse(dx - 1, dy - 2, 5, 3.4, "#cfc9bf")
+    for k in range(3):
+        wx, wy = project_s(col + 0.26 + k * 0.24, row + 0.18, 0.0)
+        c.ellipse(wx, wy + 3, 4.6, 4.6, "#1c1c20")
+
+
+def draw_motorbike(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """A rider hunched low over two wheels: the lowest profile on the board."""
+    cast_shadow(c, col, row, 0.3, 0.4)
+    cube_frac(c, col + 0.30, row + 0.26, 0.44, 0.20, 0.14, 0.16, "#e0407a")
+    cube_frac(c, col + 0.40, row + 0.26, 0.22, 0.16, 0.30, 0.20, "#2f3b52")
+    hx, hy = project_s(col + 0.50, row + 0.28, 0.50)
+    c.ellipse(hx, hy, 6.0, 5.6, "#ffd23d")
+    c.ellipse(hx + 1.4, hy - 0.6, 2.6, 2.0, "#1b1b1b")
+    ax, ay = project_s(col + 0.66, row + 0.28, 0.44)
+    c.ellipse(ax, ay, 4.5, 1.8, "#9aa0a8")
+    for k in range(2):
+        wx, wy = project_s(col + 0.32 + k * 0.34, row + 0.22, 0.0)
+        c.ellipse(wx, wy + 2, 6.5, 6.5, "#1c1c20")
+        c.ellipse(wx, wy + 2, 2.6, 2.6, "#c8c8cc")
+
+
+def draw_golfcart(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """An open cart under a canopy on two posts: no cabin, and that is the shape."""
+    cast_shadow(c, col, row, 0.3, 0.4)
+    body = "#7ac94f"
+    cube_frac(c, col + 0.18, row + 0.20, 0.66, 0.28, 0.08, 0.18, body)
+    cube_frac(c, col + 0.24, row + 0.22, 0.40, 0.22, 0.26, 0.12, "#3f6b2a")
+    hx, hy = project_s(col + 0.36, row + 0.28, 0.38)
+    c.ellipse(hx, hy, 5.4, 5.0, "#f0c9a0")
+    cube_frac(c, col + 0.26, row + 0.22, 0.46, 0.06, 0.44, 0.10, shade(body, 0.86))
+    for px in (0.28, 0.70):
+        pxx, pyy = project_s(col + px, row + 0.28, 0.40)
+        c.line([(pxx, pyy), (pxx, pyy - 15)], "#4a4a52", width=2)
+    for k in range(2):
+        wx, wy = project_s(col + 0.32 + k * 0.36, row + 0.20, 0.0)
+        c.ellipse(wx, wy + 2, 5.2, 5.2, "#1c1c20")
+
+
+def draw_freighttrain(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """A heavy dark locomotive with a funnel: long and slow against the train."""
+    body = scene.get("hazard2", "#4a5560")
+    cast_shadow(c, col, row, 0.55, 0.5)
+    cube_frac(c, col + 0.02, row + 0.10, 0.96, 0.34, 0.0, 0.46, shade(body, 0.55))
+    cube_frac(c, col + 0.04, row + 0.12, 0.92, 0.30, 0.46, 0.20, body)
+    fnx, fny = project_s(col + 0.30, row + 0.32, 0.80)
+    c.ellipse(fnx, fny, 7, 5, "#2f3742")
+    lx, ly = project_s(col + 0.88, row + 0.30, 0.34)
+    c.ellipse(lx, ly, 4.6, 3.6, "#ffe9a8")
+    for k in range(5):
+        wx, wy = project_s(col + 0.10 + k * 0.20, row + 0.44, 0.50)
+        c.ellipse(wx, wy + 2, 4.2, 4.2, "#1c1c20")
+
+
+def draw_subway(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """A rounded tube with one continuous window band: a city train, not carriages."""
+    body = scene.get("hazard2", "#d8dde3")
+    cast_shadow(c, col, row, 0.55, 0.5)
+    cube_frac(c, col + 0.04, row + 0.12, 0.92, 0.32, 0.0, 0.40, shade(body, 0.60))
+    cube_frac(c, col + 0.06, row + 0.14, 0.88, 0.28, 0.40, 0.24, body)
+    rx, ry = project_s(col + 0.5, row + 0.30, 0.64)
+    c.ellipse(rx, ry, 38, 9, shade(body, 1.12))
+    c.ellipse(rx, ry - 1, 34, 6, body)
+    wx, wy = project_s(col + 0.5, row + 0.32, 0.40)
+    c.ellipse(wx, wy, 32, 6.5, "#2f3b52")
+    sx, sy = project_s(col + 0.5, row + 0.24, 0.24)
+    c.ellipse(sx, sy, 38, 3.2, "#e05c4b")
+
+
+def draw_canoe(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """A long thin hull with a paddler: narrow on purpose, easy to miss."""
+    hull = "#d94f2b"
+    mx, my = project_s(col + 0.5, row + 0.36, 0.06)
+    c.ellipse(mx, my, 26, 6.5, shade(hull, 0.66))
+    c.ellipse(mx, my - 1.5, 22, 4.2, hull)
+    c.line([(mx - 25, my), (mx + 25, my)], shade(hull, 1.25), width=2)
+    cube_frac(c, col + 0.42, row + 0.22, 0.20, 0.16, 0.10, 0.22, "#2f3b52")
+    hx, hy = project_s(col + 0.50, row + 0.24, 0.34)
+    c.ellipse(hx, hy, 5.0, 4.8, "#f0c9a0")
+    px, py = project_s(col + 0.68, row + 0.42, 0.14)
+    c.line([(px - 2, py - 12), (px + 3, py + 2)], "#8a5a2b", width=2)
+
+
+def draw_duck(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Small, round, and the only bright yellow thing on the water lanes."""
+    yellow = "#ffd23d"
+    bx, by = project_s(col + 0.44, row + 0.44, 0.02)
+    c.ellipse(bx, by, 11, 7, shade(yellow, 0.80))
+    c.ellipse(bx, by - 1.5, 9, 5.4, yellow)
+    hx, hy = project_s(col + 0.64, row + 0.40, 0.16)
+    c.ellipse(hx, hy - 2, 6.2, 6.0, yellow)
+    c.ellipse(hx + 5, hy - 1, 4.4, 2.4, "#f08a1e")
+    c.ellipse(hx + 1.4, hy - 3.6, 1.5, 1.5, "#1b1b1b")
+
+
+def draw_swan(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """A white hull with a long S-neck: the neck is what separates it from the duck."""
+    white = "#f7f9fb"
+    bx, by = project_s(col + 0.44, row + 0.46, 0.02)
+    c.ellipse(bx, by, 15, 8, shade(white, 0.72))
+    c.ellipse(bx, by - 1.5, 12.5, 6.0, white)
+    n1x, n1y = project_s(col + 0.62, row + 0.42, 0.22)
+    n2x, n2y = project_s(col + 0.72, row + 0.38, 0.38)
+    c.line([(bx + 4, by - 3), (n1x, n1y)], white, width=5)
+    c.line([(n1x, n1y), (n2x, n2y)], white, width=4)
+    c.ellipse(n2x, n2y - 1, 5.0, 4.4, white)
+    c.ellipse(n2x + 4.4, n2y - 0.5, 4.0, 2.2, "#f08a1e")
+    c.ellipse(n2x + 1.2, n2y - 2.6, 1.4, 1.4, "#1b1b1b")
+
+
+def draw_icefloe(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """An angular cracked slab: the frozen lake's answer to a log."""
+    ice = "#dff0fb"
+    cast_shadow(c, col, row, 0.5, 0.45)
+    cube_frac(c, col + 0.04, row + 0.12, 0.92, 0.28, 0.0, 0.16, shade(ice, 0.62))
+    cube_frac(c, col + 0.06, row + 0.15, 0.88, 0.24, 0.16, 0.12, ice)
+    cube_frac(c, col + 0.04, row + 0.12, 0.92, 0.28, 0.28, 0.05, "#ffffff")
+    ax, ay = project_s(col + 0.14, row + 0.26, 0.30)
+    bxx, byy = project_s(col + 0.88, row + 0.22, 0.30)
+    c.line([(ax, ay), (bxx, byy - 1)], "#9cc6de", width=2)
+    cx, cy = project_s(col + 0.56, row + 0.28, 0.30)
+    c.ellipse(cx, cy, 5.0, 2.4, "#c9e4f2")
 
 
 def draw_animal(c: Canvas, col: float, row: float, scene: dict) -> None:

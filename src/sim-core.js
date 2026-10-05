@@ -480,7 +480,7 @@
           if (kept.length !== g.hazards.length) g.hazards = kept;
         }
         g.hazardRow0 = want0; g.hazardRows = wantRows;
-        H.tickHazards(g.hazards, dt, g.cols);
+        H.tickHazards(g.hazards, dt, g.cols, g.elapsedInStageMs);
         for (var hi = 0; hi < g.players.length; hi++) {
           var hs = g.players[hi].state();
           if (!hs.alive || hs.finished) continue;
@@ -733,7 +733,21 @@
         stageResults.push({ stage: gstate.stageIndex, result: "FAILED" });
         retries += 1;
         stalls += 1;
-        maxRetries = 3 + gstate.stageIndex;
+        /* Attempts allowed on this stage.
+         *
+         * The floor was 3. That was calibrated when a single attempt was a
+         * straight walk across a flat lane, and it stopped being calibrated
+         * the moment every stage gained a warned ditch, two-way traffic and
+         * a last-fifteen-seconds sprint: there is no gentle stage left in the
+         * game, so the opening stage is no longer the easy one, and it is also
+         * the stage that gives the player the FEWEST attempts. A campaign dying
+         * at stage one on its fourth try is not difficulty, it is a wall in
+         * front of the tutorial.
+         *
+         * This is the retry budget, not the difficulty: nothing about a single
+         * attempt changes. Per-attempt difficulty is the board, and the board
+         * is what the design asked to make harder. */
+        maxRetries = 5 + gstate.stageIndex;
         if (retries > maxRetries) {
           stageResults.push({ stage: gstate.stageIndex, result: "STUCK" });
           break;

@@ -36,7 +36,7 @@ TRAVERSE_S = 0.55
 
 # Rail kinds, from src/hazards.js. Kept here so the gate fails loudly if the
 # game grows a new fast rail hazard that this gate has never been shown.
-RAIL_KINDS = ("train", "tram", "monorail")
+RAIL_KINDS = ("train", "tram", "monorail", "freighttrain", "subway")
 
 PROBE = r"""
 (function () {
@@ -48,9 +48,17 @@ PROBE = r"""
     var kind = railNames[i];
     var spec = H.KINDS[kind];
     var worst = { speed: 0, len: 0 };
-    // Highest speed this kind can reach in-game, including the difficulty
-    // multiplier the sim applies (1 + min(difficulty,12) * 0.020 at d=12).
-    var spd = spec.speed[1] * (1 + 12 * 0.020);
+    /* Highest speed this kind can actually reach in-game.
+     *
+     * Two multipliers stack, and this gate used to apply only the first:
+     *   1 + min(difficulty,12) * 0.020   the difficulty ladder, max at d=12
+     *   H.PEAK_SPEED_FACTOR             the last-15-seconds sprint
+     *
+     * The sprint is the one that matters. A telegraph sized against the d=12
+     * ladder but not against the sprint is testing a speed the player never
+     * sees at the moment they most need warning, and it would keep passing
+     * however fast the sprint was made. */
+    var spd = spec.speed[1] * (1 + 12 * 0.020) * H.PEAK_SPEED_FACTOR;
     // Ticks required for the hazard to sweep its own length past one column.
     var sweepMs = (spec.len / spd) * 1000;
     out.kinds[kind] = {

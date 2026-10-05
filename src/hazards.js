@@ -53,6 +53,73 @@
   var ENDGAME_BIRD_EVERY = 2;
   var ENDMOD = 0;
 
+  /* ---------------------------------------------------------------------
+   * THE THREE PHASES OF A STAGE.
+   *
+   * A stage used to be one flat difficulty for ninety seconds: every lane ran
+   * its traffic at the same speed, in the same direction, for the whole
+   * crossing. That is not an escalation, it is a wall you either clear or you
+   * do not, and the player learns the opening ten seconds and then coasts.
+   *
+   * The stage now has a shape, and it is the same shape on every stage:
+   *
+   *   1. THE READ    first ~18s. One direction per lane, at most one hazard
+   *                  per row. The player can watch a whole lane go by and
+   *                  learn its rhythm, because there is only ever one thing
+   *                  moving on it.
+   *   2. THE BUILD  ~18s to the sprint. The opposite direction joins, so a
+   *                  lane is now two streams meeting, and extra hazards arm
+   *                  progressively rather than all at once. The player who
+   *                  memorised "left to right" has to start reading the lane
+   *                  as a whole.
+   *   3. THE SPRINT last ~15s. Everything already on the board speeds up
+   *                  together, hard. Nothing new appears, so the board is
+   *                  exactly the board they have been reading -- it is simply
+   *                  moving too fast to read at the old pace.
+   *
+   * Phase 3 deliberately spawns nothing new. A last fifteen seconds that
+   * introduces an obstacle the player has never seen is a coin flip; one that
+   * accelerates what they already know is a test.
+   * ------------------------------------------------------------------- */
+  var STAGE_DURATION_MS = 90000;
+  // "The first 15 to 20 seconds", asked for as a range. 18s sits in the
+  // middle of it and is comfortably longer than a player needs to read one
+  // full pass of a lane.
+  var READ_MS = 18000;
+  // The sprint is the last 15 seconds of the stage, exactly as asked.
+  var SPRINT_MS = 15000;
+  var BUILD_END_MS = STAGE_DURATION_MS - SPRINT_MS;   // 75000
+
+  /* The direction the whole board runs during the read. Every armed-at-zero
+   * hazard points this way; the opposite is what joins when the read ends. */
+  var READ_DIR = 1;
+
+  /* How much faster everything moves at a given point in the stage.
+   *
+   * 1.0 through the read. A slow climb through the build, because the threat
+   * there is the second direction arriving, not raw pace. Then a hard run to
+   * 2.2x across the sprint: fast enough that a gap which was comfortable to
+   * read at 1.0 has to be committed to rather than watched, and 1.76x faster
+   * than the board was at the end of the build.
+   *
+   * This is a pure function of elapsed time, which is what makes it testable:
+   * tools/check_phases.py can assert the curve without running a game. */
+  function speedFactorAt(elapsedMs) {
+    var t = elapsedMs || 0;
+    if (t <= READ_MS) return 1.0;
+    if (t < BUILD_END_MS) {
+      // 1.0 -> 1.25 across the build.
+      return 1.0 + 0.25 * ((t - READ_MS) / (BUILD_END_MS - READ_MS));
+    }
+    // 1.25 -> 2.2 across the sprint.
+    var s = Math.min(1, (t - BUILD_END_MS) / SPRINT_MS);
+    return 1.25 + 0.95 * s;
+  }
+
+  // The fastest the board will ever run. Solvability is checked against THIS,
+  // not against the opening speed: a gap that only exists at 1.0x is not a gap.
+  var PEAK_SPEED_FACTOR = speedFactorAt(STAGE_DURATION_MS);
+
   /* Every obstacle the game can spawn, and what makes it a decision.
    *
    *   len     hitbox length in tiles. A truck that is 2.6 long occupies most
@@ -84,15 +151,44 @@
     roller:    { len: 1.70, speed: [0.6, 1.0], kind: "ground" },
     tumbleweed:{ len: 0.80, speed: [2.4, 3.4], kind: "ground",
                  osc: { span: 14, periodMs: 2600 } },
+    /* The next four were added when the stage vocabulary floor went to ten.
+     * A water-only stage had eight legal kinds and a rail stage had six, so
+     * neither could reach ten however the list was written: the pool, not the
+     * declaration, was the limit. They are deliberately different in silhouette
+     * from each other and from the vehicles above -- a van, a drum, a rider on
+     * two wheels and an open cart read apart at a glance, which is the whole
+     * test for an object the player has to identify in under half a second. */
+    ambulance:  { len: 1.55, speed: [1.4, 2.1], kind: "ground" },
+    cementmixer:{ len: 1.85, speed: [0.8, 1.3], kind: "ground" },
+    motorbike:  { len: 0.90, speed: [2.2, 3.2], kind: "ground" },
+    golfcart:   { len: 0.95, speed: [0.9, 1.4], kind: "ground" },
     // --- rail ------------------------------------------------------------
     train:     { len: 3.40, speed: [4.0, 6.0], kind: "rail" },
     tram:      { len: 2.20, speed: [2.0, 3.0], kind: "rail" },
     monorail:  { len: 2.80, speed: [3.0, 4.4], kind: "rail" },
+    /* Two more rail kinds, for the same reason as the four above: three was
+     * not a vocabulary, it was a sample. */
+    freighttrain: { len: 3.60, speed: [3.2, 4.6], kind: "rail" },
+    subway:    { len: 2.60, speed: [2.4, 3.4], kind: "rail" },
     // --- water -----------------------------------------------------------
     log:       { len: 0.90, speed: [0.7, 1.3], kind: "water" },
     turtle:    { len: 0.62, speed: [0.3, 0.6], kind: "water" },
     alligator: { len: 2.20, speed: [0.5, 0.9], kind: "water" },
     crocodile: { len: 2.60, speed: [0.4, 0.8], kind: "water" },
+    /* Four more, so a river or a frozen lake can carry a ten-kind vocabulary
+     * on water alone. A canoe is a decision (a long thin target you can miss
+     * on purpose), the duck and the swan are small fast reads, and the ice
+     * floe is the Frozen Lake's own idea of a log. */
+    canoe:     { len: 1.30, speed: [0.6, 1.1], kind: "water" },
+    duck:      { len: 0.55, speed: [0.8, 1.4], kind: "water" },
+    swan:      { len: 0.80, speed: [0.7, 1.2], kind: "water" },
+    icefloe:   { len: 1.45, speed: [0.3, 0.7], kind: "water" },
+    /* The Frozen Lake has declared `sled` since the stage was written, and has
+     * had art for it the whole time, but it was never added here -- so it was a
+     * declaration the game could not honour, and the lake was quietly a
+     * five-kind stage. Adding the spec is what makes the existing art mean
+     * something. */
+    sled:      { len: 1.10, speed: [0.9, 1.5], kind: "water" },
     // --- anything --------------------------------------------------------
     // Frogger rule: the snake impersonates a log. It belongs on WATER, not
     // on land, and that is the whole point -- it is the safe-looking tile
@@ -145,6 +241,9 @@
     return !!(h && h.tel && h.tel.t > 0);
   }
 
+  // Does this kind reverse inside a span rather than wrapping off the board?
+  function spec_osc(spec) { return !!(spec && spec.osc); }
+
   // Park a rail hazard at the lane entry edge and start its warning.
   function armTelegraph(h, cols, xMin) {
     var lo = xMin === undefined ? 0 : xMin;
@@ -152,7 +251,7 @@
     h.tel = { t: TELEGRAPH_MS, ms: TELEGRAPH_MS };
   }
 
-  function makeHazard(kind, row, cols, rng, difficulty, xMin) {
+  function makeHazard(kind, row, cols, rng, difficulty, xMin, armMs) {
     var spec = KINDS[kind];
     if (!spec) return null;
     var dir = rng.bool() ? 1 : -1;
@@ -162,7 +261,17 @@
     sp *= 1 + Math.min(difficulty, 12) * 0.020;
     var h = {
       kind: kind, spec: spec, row: row, dir: dir,
-      speed: sp * dir,
+      /* `baseSpeed` is what the hazard runs at during the read. `speed` is
+       * recomputed from it every tick against the stage clock, so the sprint
+       * accelerates the board without ever needing to rebuild it. `speed`
+       * keeps carrying the sign, because direction is stored in it. */
+      baseSpeed: sp, speed: sp * dir,
+      /* `armMs` is when this hazard joins the board. Zero means it is there
+       * from the first frame. The second hazard in a row carries the read
+       * length, so a lane is genuinely one-directional until the build
+       * begins. `now` is the stage clock as of the last tick, which is what
+       * isStaged() reads. */
+      armMs: armMs || 0, now: 0,
       // Oscillating hazards reverse inside a span instead of wrapping off the
       // board, so they come back at you and cannot be counted on.
       osc: spec.osc ? { span: spec.osc.span, periodMs: spec.osc.periodMs,
@@ -263,6 +372,22 @@
     return T.laneOf(row, laneMix, laneKey);
   }
 
+  /* The one endgame row that is guaranteed to open a ditch.
+   *
+   * Deterministic, because it is derived only from the stage's own lane cycle:
+   * walk in from the start of the closing stretch and take the first row that
+   * is not lawn. Every stage therefore has a pit on the same row every time,
+   * which is the difference between "every stage has a ditch" and "most
+   * boards happen to". A stage that is pure grass in its closing stretch has
+   * no such row, and gets -1, which simply means no guarantee for it. */
+  function firstEndgamePitRow(laneMix, laneKey, goalRow) {
+    var from = Math.ceil((goalRow - SAFE_GOAL_ROWS) * 0.62);
+    for (var r = from; r < goalRow - SAFE_GOAL_ROWS; r++) {
+      if (laneClassOf(r, laneMix, laneKey) !== "grass") return r;
+    }
+    return -1;
+  }
+
   /* What kind of hazard a row may carry.
    *
    * This is where a stage stops being a recolour of Suburb. It used to be a
@@ -279,9 +404,11 @@
    */
   var LANE_KINDS = {
     road: ["car", "racecar", "taxi", "police", "truck", "bus", "tractor",
-           "forklift", "roller", "tumbleweed", "limousine"],
-    rail: ["train", "tram", "monorail"],
-    water: ["log", "turtle", "snake", "alligator", "crocodile"],
+           "forklift", "roller", "tumbleweed", "limousine",
+           "ambulance", "cementmixer", "motorbike", "golfcart"],
+    rail: ["train", "tram", "monorail", "freighttrain", "subway"],
+    water: ["log", "turtle", "snake", "alligator", "crocodile",
+            "canoe", "duck", "swan", "icefloe", "sled"],
   };
   var OPEN_KINDS = ["geyser", "steamvent", "boulder"];
 
@@ -365,7 +492,23 @@
      * check_js_runtime.py exists to catch. A hole belongs in the road, on the
      * rails, or in the water. */
     var thisLane = laneClassOf(row, laneMix, laneKey);
-    if (endgame && thisLane !== "grass" && (row % 3 === 0) && rng.next() < 0.34) {
+    /* A ditch in EVERY stage, guaranteed, plus extras on a roll.
+     *
+     * This was `(row % 3 === 0) && rng.next() < 0.34`, which is a third of a
+     * chance per eligible row and no guarantee at all: measured over whole
+     * boards, Desert and Farmland often came through with no ditch anywhere.
+     * "A ditch in each stage" cannot be a probability. The first eligible
+     * endgame row is deterministic -- it is found by walking the same lane
+     * cycle the renderer draws, so it is the same row every time -- and that
+     * one always opens a pit. The rest stay a roll, so a stage has one or it
+     * has several depending on how hard the finish is. */
+    var firstPitRow = firstEndgamePitRow(laneMix, laneKey, goalRow);
+    var wantPit = false;
+    if (endgame && thisLane !== "grass") {
+      if (row === firstPitRow) wantPit = true;
+      else if (row % 3 === 0 && rng.next() < 0.34) wantPit = true;
+    }
+    if (wantPit) {
       var pit = makeHazard("sinkhole", row, cols, rng, difficulty || 0, xMin);
       if (pit) { pit.x = 0; pit.speed = 0; out.push(pit); }
     }
@@ -379,7 +522,9 @@
     if (row % ENDGAME_BIRD_EVERY === 0 && endgame) {
       var bh = makeHazard("hawk", row, cols, rng, difficulty || 0, xMin);
       if (bh) {
-        bh.dir = (row % 2) ? 1 : -1;
+        // The bird follows the board's direction too, so the read really is
+        // one-sided: nothing in the sky is crossing against the traffic yet.
+        bh.dir = READ_DIR;
         bh.speed = Math.abs(bh.speed) * bh.dir;
         bh.x = bh.dir > 0 ? xMin - 0.5 : cols + 0.5;
         out.push(bh);
@@ -394,27 +539,65 @@
      * A row used to hold at most one hazard, so the busiest board in the game
      * was a single vehicle per lane. It now holds up to three, and the endgame
      * multiplier is higher, which roughly doubles the objects the player has
-     * to read at once without changing what any single one does. */
+     * to read at once without changing what any single one does.
+     *
+     * The hazards are all generated NOW, at stage start, and the stage's three
+     * phases decide which of them are on the board yet. The first is live
+     * immediately: that is the one-sided read. Everything after it is stamped
+     * with an arming time, so the second direction and the extra vehicles
+     * arrive on schedule instead of all at once on the first frame. */
     var densityNow = density * (endgame ? 2.0 : 1);
-    var maxHere = endgame ? 3 : 2;
+    var maxHere = 3;
     var placed = 0;
     for (var attempt = 0; attempt < 4 && placed < maxHere; attempt++) {
-      if (rng.next() > densityNow / (placed + 1)) break;
+      /* How likely the NEXT hazard on this row is.
+       *
+       * This was `densityNow / (placed + 1)`, a schedule that halves with every
+       * additional vehicle. Measured, it meant the second hazard appeared on
+       * only a handful of rows, so "the other side starts coming" was true of
+       * about four lanes out of twenty-five -- technically two-way and
+       * practically not. A flatter schedule puts real two-way traffic on the
+       * board, and ensureSolvable is what decides whether a row can afford it:
+       * the second and third vehicle are judged against the SPRINT speed, so
+       * the ones that cannot leave a crossable gap at sprint speed are dropped. */
+      var chance = placed === 0 ? densityNow
+                 : placed === 1 ? densityNow * 0.85
+                 : densityNow * 0.55;
+      if (rng.next() > chance) break;
       var kk = (placed === 0) ? k
               : pickKind(laneClassOf(row, laneMix, laneKey), stageIndex, rng);
       if (!kk) break;
-      var h = makeHazard(kk, row, cols, rng, difficulty || 0, xMin);
+      // The first vehicle is there from frame one. The second joins when the
+      // read ends and the lane goes two-way. The third is held back a little
+      // further so the count visibly climbs rather than stepping 1 -> 3.
+      var arm = placed === 0 ? 0
+              : placed === 1 ? READ_MS
+              : Math.round(READ_MS + (BUILD_END_MS - READ_MS) * 0.45);
+      /* An oscillating hazard cannot be part of the read.
+       *
+       * A thing that reverses at the ends of its span is by definition
+       * something that comes back at you from the other end, and it does that
+       * the instant it appears -- so leaving it on the board during the read
+       * put a counter-flow object on a board whose entire promise is that
+       * nothing goes against the flow yet. It holds back until the read ends,
+       * which is also where it belongs dramatically: "then things start coming
+       * the other way" describes a tumbling weed better than it describes a
+       * car. */
+      if (spec_osc(KINDS[kk])) arm = Math.max(arm, READ_MS);
+      var h = makeHazard(kk, row, cols, rng, difficulty || 0, xMin, arm);
       if (!h) break;
-      // Guarantee the row is not all one direction. The first hazard takes the
-      // row's own direction hint; anything after it may be reversed, so a lane
-      // reads as two-way traffic rather than a conveyor.
+      // The whole board runs ONE way during the read. This used to alternate
+      // per row, which looked like a rule but was two rules, and the
+      // escalation the design asks for -- "then they start coming from the
+      // other side" -- only means something if there was a single side to
+      // begin with. Every armed-at-zero hazard therefore points the same way,
+      // and the opposite direction is what arrives when the read ends.
       if (placed === 0) {
-        var dirHint = ((row * 7) % 3) - 1;   // -1, 0, 1
-        if (dirHint === 0) h.dir = 1;
-      } else if (endgame || placed === 1) {
-        h.dir = -h.dir;                        // the other way down the lane
+        h.dir = READ_DIR;
+      } else {
+        h.dir = -READ_DIR;                     // the other way down the lane
       }
-      h.speed = Math.abs(h.speed) * h.dir;
+      h.speed = Math.abs(h.baseSpeed) * h.dir;
       out.push(h);
       placed++;
     }
@@ -470,8 +653,9 @@
    * player actually experiences. It is a floor, not a proof, and the search
    * in the Phase 3 gate is the proof.
    */
-  function laneHasGap(list, row, needGap) {
+  function laneHasGap(list, row, needGap, speedScale) {
     var period = 6.0;                 // seconds; long enough for a wrap cycle
+    var k = speedScale || 1;
     for (var col = 0; col < 9; col++) {
       var clearFor = 0;
       for (var s = 0; s <= period * 20; s++) {
@@ -483,7 +667,27 @@
           // A train still inside its warning window occupies no lane, so it
           // cannot be the thing that closes the last crossing gap.
           if (isTelegraphing(h)) continue;
-          var x = h.x + h.speed * (s / 20);
+          // At peak speed every hazard in the row is armed, so the sweep below
+          // is the sprint board. There is no phase in which a staged hazard is
+          // the only thing standing between the player and the far side.
+          //
+          // A row-wide hazard -- a ditch -- is the case this used to get
+          // wrong. `hits()` returns true for EVERY column while a pit is open,
+          // but the sweep below measured it with its 0.92-tile length like any
+          // other vehicle, concluded there was a gap nine columns wide, and
+          // kept the row. The filter was therefore proving a lane crossable
+          // that the game itself would not let you cross, which is the exact
+          // shape of the "looks walkable, is lethal" defect. A pit blocks the
+          // whole row, and only for as long as it is actually open.
+          if (h.spec.rowWide) {
+            var open = true;
+            if (h.cycle) {
+              open = ((h.cycle.t + s * 50) % h.cycle.periodMs) < h.cycle.on;
+            }
+            if (open) { blocked = true; break; }
+            continue;
+          }
+          var x = h.x + h.speed * k * (s / 20);
           if (x > 10.5) x -= 12;      // wrap, matching tickHazards
           if (x < -1.5) x += 12;
           if (Math.abs(x - col) < (h.spec.len / 2 + 0.30)) { blocked = true; break; }
@@ -502,12 +706,22 @@
   function ensureSolvable(list, opts) {
     opts = opts || {};
     var needGap = opts.needGap || 0.9;   // seconds of clear lane to cross
+    /* Solvability is judged at the speed the board reaches in the sprint, not
+     * at the speed it runs at during the read.
+     *
+     * This matters because the sprint is the part of the stage where a player
+     * is most likely to lose, and a gap measured at 1.0x can be gone by 1.8x.
+     * Checking the easy case would be a guarantee about a moment of the stage
+     * that is not the one being tested. Dropping a hazard that fails this is
+     * the cheap local fix, and ensureSolvable already treats dropping as safe:
+     * the lane reverts to clear ground, which is always passable. */
+    var k = opts.speedScale || PEAK_SPEED_FACTOR;
     var out = [];
     for (var i = 0; i < list.length; i++) {
       var h = list[i];
       var rest = [];
       for (var j = 0; j < list.length; j++) if (j !== i) rest.push(list[j]);
-      if (laneHasGap(rest, h.row, needGap)) out.push(h);
+      if (laneHasGap(rest, h.row, needGap, k)) out.push(h);
       // else: dropped. The lane reverts to safe ground, which is always
       // passable. Dropping is safe; keeping an impassable lane is not.
     }
@@ -517,11 +731,38 @@
   /* dt is in MILLISECONDS. speed is in tiles per SECOND. The conversion below
    * is the whole reason collision is a timing puzzle rather than a coin flip;
    * without it a hazard crosses the entire board roughly 2.7 times per frame
-   * and the autoplay's safety model, which uses seconds, is wrong by 1000x. */
-  function tickHazards(list, dtMs, cols) {
+   * and the autoplay's safety model, which uses seconds, is wrong by 1000x.
+   *
+   * `elapsedMs` is the stage clock. It is what turns the flat ninety seconds
+   * into the three-phase shape: it holds back hazards that have not armed yet,
+   * and it sets the speed every hazard runs at right now.
+   *
+   * A hazard that has not armed is not merely harmless, it is ABSENT: it does
+   * not move, it cannot be hit with, and the renderer skips it. Anything else
+   * would show the player a vehicle that is not there yet, or leave a car
+   * frozen in mid-lane before it starts. */
+  function tickHazards(list, dtMs, cols, elapsedMs) {
     var dt = dtMs / 1000;
+    var now = elapsedMs || 0;
+    var factor = speedFactorAt(now);
     for (var i = 0; i < list.length; i++) {
       var h = list[i];
+      h.now = now;
+      if (h.armMs && now < h.armMs) continue;     // not on the board yet
+      // Re-derive speed from the base every tick, keeping the sign. The sprint
+      // is this line: nothing is rebuilt, every vehicle on the board just
+      // starts running faster at the same moment.
+      //
+      // Guarded on `baseSpeed` being a real number. A hazard assembled by hand
+      // rather than by makeHazard -- which is what tools/check_js_runtime.py
+      // does to test the death beat -- has no base speed, and multiplying
+      // undefined through here produced NaN. A NaN speed is worse than a slow
+      // one: the hazard still renders, still looks lethal, and silently can
+      // never hit anybody, because every comparison against NaN is false.
+      if (h.spec.kind !== "air" &&
+          typeof h.baseSpeed === "number" && isFinite(h.baseSpeed)) {
+        h.speed = h.baseSpeed * factor * (h.speed < 0 ? -1 : 1);
+      }
       if (h.spec.kind === "air") continue;          // steel is suspended
       // An announced rail hazard holds at the entry edge and does not move.
       // It cannot hit anything until its warning has run out.
@@ -578,8 +819,23 @@
     return (h.cycle.t % h.cycle.periodMs) >= (h.cycle.periodMs - warn);
   }
 
+  /* Has this hazard joined the board yet?
+   *
+   * The stage's later phases are populated at stage start and switched on by
+   * the clock, so "not armed yet" has to be a real state rather than an
+   * absence. It is checked by everything that can see or touch a hazard:
+   * collision, the renderer, and the solvability sweep. A hazard that is on the
+   * board but not yet armed is a car the player can see that cannot hurt them,
+   * which is the one thing this must never be. */
+  function isStaged(h) {
+    if (!h || !h.armMs) return false;
+    return (h.now || 0) < h.armMs;
+  }
+
   function hits(h, playerCol, playerRow, playerHalf) {
     if (h.row !== playerRow) return false;
+    // Not on the board yet: not drawn, not moved, not lethal.
+    if (isStaged(h)) return false;
     // Dormant means harmless. An "air" hazard used to be excluded outright,
     // which made every such obstacle decorative; now they kill while they are
     // up, which is the whole point of a geyser.
@@ -617,6 +873,11 @@
     // Phase 2 item 3. Exported so tools/check_hazard_reach.py can assert the
     // telegraph is never shorter than the traverse window.
     TELEGRAPH_MS: TELEGRAPH_MS, isTelegraphing: isTelegraphing,
-    isWarning: isWarning, isActive: isActive,
+    isWarning: isWarning, isActive: isActive, isStaged: isStaged,
+    /* The stage's three phases. Exported so tools/check_endgame.py can assert
+     * the shape of the curve directly instead of inferring it from a run. */
+    READ_MS: READ_MS, SPRINT_MS: SPRINT_MS, BUILD_END_MS: BUILD_END_MS,
+    READ_DIR: READ_DIR,
+    speedFactorAt: speedFactorAt, PEAK_SPEED_FACTOR: PEAK_SPEED_FACTOR,
   };
 })(typeof window !== "undefined" ? window : (typeof global !== "undefined" ? global : this));
