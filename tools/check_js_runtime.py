@@ -30,7 +30,8 @@ JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/js
 
 CHAIN = ["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js",
          "src/render/iso.js", "src/scenery.js", "src/render/scene.js",
-         "src/roster.js", "src/render/sprite.js", "src/render/character.js"]
+         "src/roster.js", "src/render/sprite.js",
+         "src/render/deathfx.js", "src/render/character.js"]
 
 DOM_ENTRY = "src/main.js"
 
@@ -41,7 +42,8 @@ DOM_ENTRY = "src/main.js"
 # the graph check must see it -- an unknown global in main.js is exactly the
 # ReferenceError-on-frame-1 defect this gate exists to catch.
 GLOBALS = {"Stages", "Tiles", "Hazards", "SimCore", "Roster", "Iso",
-           "Scenery", "Scene", "CharacterRenderer", "SpriteSheets"}
+           "Scenery", "Scene", "CharacterRenderer", "SpriteSheets",
+           "DeathFX"}
 
 # Everything src/render/scene.js and src/scenery.js read off a scene object.
 # src/main.js sceneFor() has to forward all of it.
@@ -906,10 +908,12 @@ var x0 = g.state().hazards[0].x;
 for (var k = 0; k < 30; k++) g.tick(16.667);
 out.push("moved=" + (Math.abs(g.state().hazards[0].x - x0) > 0.01 ? "yes" : "no"));
 out.push("stillDead=" + g.state().phase);
-for (var m = 0; m < 90; m++) g.tick(16.667);
+for (var m = 0; m < 220; m++) g.tick(16.667);
 out.push("after=" + g.state().phase);
 out.push("alive=" + g.state().players[0].state().alive);
 out.push("lives=" + g.state().players[0].state().lives);
+out.push("row=" + g.state().players[0].state().row);
+out.push("clock=" + Math.round(g.state().elapsedInStageMs));
 print(out.join(" | "));
 """
     text = run_jsc(script)
@@ -929,11 +933,31 @@ print(out.join(" | "));
         problems.append("the board kept moving during the death beat; it should hold still")
     if kv.get("stillDead") != "DEAD":
         problems.append("the death beat ended immediately; there is no beat to read")
-    if kv.get("after") != "RUNNING" or kv.get("alive") != "true":
+    # Death now RESTARTS THE STAGE, so the beat ends in READY -- a fresh
+    # stage waits for a tap -- rather than RUNNING. The phase name is not the
+    # contract; being alive, back at row zero, on a reset clock is.
+    if kv.get("after") not in ("RUNNING", "READY"):
+        problems.append(
+            f"after the death beat the game is in an unexpected phase "
+            f"({kv.get('after')})"
+        )
+    if kv.get("alive") != "true":
         problems.append(
             f"the player was not put back on the board after the beat "
             f"(phase={kv.get('after')} alive={kv.get('alive')})"
         )
+    if kv.get("row") not in ("0", "None"):
+        problems.append(
+            f"the player is not back at the start of the stage after dying "
+            f"(row={kv.get('row')})"
+        )
+    if kv.get("clock") not in ("0", "None"):
+        problems.append(
+            f"the stage clock was not reset by the death "
+            f"(clock={kv.get('clock')}ms)"
+        )
+    if kv.get("lives") == "0":
+        problems.append("the death beat consumed every life instead of one")
     return problems
 
 

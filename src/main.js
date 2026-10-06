@@ -142,7 +142,15 @@
     var s = game.state();
     var ps = s.players[index].state();
     var pose = { col: ps.col, row: ps.row, lift: 0, squash: 1, sway: 0, dead: !ps.alive };
-    if (pose.dead) { pose.squash = 0.30; return pose; }
+    /* The squash was for the procedural roster, which has no death animation
+     * and needs to read as "flattened". A character with a real Die clip does
+     * not need it, and applying it stretched the sprite vertically by 1.7x --
+     * a cartoon knight pulled into a column. Let the animation do the work. */
+    var who0 = (typeof Roster !== "undefined" && Roster.ROSTER)
+      ? Roster.ROSTER[index % Roster.ROSTER.length] : null;
+    var hasSprite = !!(who0 && who0.sprite &&
+      typeof SpriteSheets !== "undefined" && SpriteSheets.has(who0.sprite));
+    if (pose.dead) { if (!hasSprite) pose.squash = 0.30; return pose; }
     var prog = hopProgress();
     if (!prog) return pose;
     var a = prog.done, p = prog.p;
@@ -159,12 +167,29 @@
     return pose;
   }
 
+  // Death-beat timing, kept at module scope so render() can remember when the
+  // beat began and drawBoom/drawSoul can be timed from the hit.
+  var lastPhase = null;
+  var deadBeatStart = 0;
+
   // ---------- Rendering --------------------------------------------------
 
   function render() {
     var s = game.state();
     var stage = game.currentStage();
     if (!stage) return;
+
+    /* When the death beat began.
+     *
+     * The boom and the soul are timed from the moment of the hit, so the burst
+     * lands with the impact rather than whenever this frame happened to notice
+     * the phase had changed. */
+    if (s.phase === SimCore.PHASES.DEAD) {
+      if (lastPhase !== SimCore.PHASES.DEAD) deadBeatStart = performance.now();
+    } else {
+      deadBeatStart = 0;
+    }
+    lastPhase = s.phase;
 
     // CSS pixels. VIEW_SCALE was a leftover from an earlier draft and was
     // never declared: reading it threw on frame 1, which killed the
@@ -289,6 +314,19 @@
       CharacterRenderer.drawCharacter(ctx, col, row, 0.95, who || undefined,
                                        anim, performance.now());
       ctx.restore();
+
+      /* The death beat: boom, then the soul, drawn over the top of the board.
+       *
+       * The world is frozen while this plays, so the burst sits on exactly the
+       * lane that did it. Both are pure decoration -- src/render/deathfx.js
+       * cannot touch a hazard, a score or a life. */
+      if (s.phase === SimCore.PHASES.DEAD && !ps.finished) {
+        var age = (performance.now() - deadBeatStart);
+        if (typeof DeathFX !== "undefined") {
+          DeathFX.drawBoom(ctx, col, row, sceneFor(s.stageIndex), age);
+          DeathFX.drawSoul(ctx, col, row, sceneFor(s.stageIndex), age);
+        }
+      }
     }
 
     /* The pursuer, drawn as an actual bird.

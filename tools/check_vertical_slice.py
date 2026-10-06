@@ -219,7 +219,11 @@ g.hop("forward");
 var p = g.state().players[0];
 for (var d = 0; d < 4; d++) {
   g.applyDeath(0);
-  for (var b = 0; b < 120 && g.state().phase === SimCore.PHASES.DEAD; b++) {
+  // 200 ticks, not 120. The death beat is 2100ms -- the boom, then the soul --
+  // and 120 ticks is 2000ms, so the loop used to time out one frame short, with
+  // the player still dead. applyDeath then correctly refused the next death
+  // ("already dead") and the probe measured the beat rather than the lives rule.
+  for (var b = 0; b < 200 && g.state().phase === SimCore.PHASES.DEAD; b++) {
     g.tick(16.667);
   }
 }

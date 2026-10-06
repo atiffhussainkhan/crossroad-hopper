@@ -1034,15 +1034,18 @@
       for (var si = 0; si < simHazards.length; si++) {
         var sh = simHazards[si];
         if (sh.row < row0 || sh.row >= row0 + viewRows) continue;
-        /* A hazard the stage has not armed yet is not drawn at all.
+        /* A hazard the stage has not armed yet is drawn as a GHOST.
          *
-         * The whole board is generated at stage start and the clock switches
-         * phases on, so the un-armed ones are real objects sitting in the
-         * array. Drawing them would show the player a second car in a lane that
-         * is supposed to be running one-way, which contradicts the phase the
-         * game is in and teaches them to distrust the lane. */
-        if (Hazards.isStaged(sh)) continue;
-        hazards.push([sh.x, sh.row, sh.kind, sh]);
+         * It used to be skipped entirely, and that was the defect playtesting
+         * found: a vehicle generated at the player's own column sat invisible
+         * and harmless for fifteen seconds and then turned lethal, so the death
+         * had no visible cause. A ghost is still unmistakably there to be read
+         * and stepped around, and it brightens the moment it arms. The point is
+         * not to hide the ramp -- it is that nothing should ever change from
+         * "harmless" to "lethal" without the player having been able to see it
+         * coming. */
+        if (Hazards.isStaged(sh)) hazards.push([sh.x, sh.row, sh.kind, sh, true]);
+        else hazards.push([sh.x, sh.row, sh.kind, sh]);
       }
     } else {
       for (var h = 0; h < rows.length - 1; h++) {
@@ -1061,14 +1064,17 @@
     hazards.sort(function (a, b) { return (b[0] + b[1]) - (a[0] + a[1]); });
     hazards.forEach(function (x) {
       var h = x[3];
+      var ghost = x[4] === true;
       // Phase 2 item 3: a rail hazard that is still only ANNOUNCED is drawn
       // as a level-crossing signal at the edge it will enter from, and its
       // body is withheld until the warning has run out. The player can see it
       // coming and can therefore time the crossing, which is the difference
       // between a hard lane and an unclearable one.
       if (h && h.tel && h.tel.t > 0) { drawTelegraph(ctx, x[1], scene, h); return; }
-      if (TIMED_FNS[x[2]]) { TIMED_FNS[x[2]](ctx, x[0], x[1], scene, h); return; }
-      if (HAZARD_FNS[x[2]]) HAZARD_FNS[x[2]](ctx, x[0], x[1], scene, h);
+      if (ghost) ctx.globalAlpha = 0.30;
+      if (TIMED_FNS[x[2]]) { TIMED_FNS[x[2]](ctx, x[0], x[1], scene, h); }
+      else if (HAZARD_FNS[x[2]]) HAZARD_FNS[x[2]](ctx, x[0], x[1], scene, h);
+      if (ghost) ctx.globalAlpha = 1;
     });
 
     // Scenery, placed from the stage's own declared object vocabulary.

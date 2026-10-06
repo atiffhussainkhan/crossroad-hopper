@@ -23,7 +23,7 @@
   var PURSUER_DISTANCE_THRESHOLD = 20;
   // How long the world holds still after a hit before the player is put back.
   // Long enough to read "You died", short enough not to break the rhythm.
-  var DEAD_BEAT_MS = 1100;
+  var DEAD_BEAT_MS = 2100;   // boom, then the soul leaves, then restart
   // How far BEHIND the player the pursuer starts. It used to start ON their
   // row, which meant it had no gap to close: the instant it stopped
   // telegraphing it was already past them, so standing still for one second
@@ -393,11 +393,26 @@
         // the player was hit on is still the board they are looking at.
         g.deadForMs += dt;
         if (g.deadForMs >= DEAD_BEAT_MS) {
-          for (var dv = 0; dv < g.players.length; dv++) {
-            if (!g.players[dv].state().alive) g.players[dv].revive();
+          /* Death restarts the STAGE, not just the player.
+           *
+           * A dead player was revived at row 0 but kept the same board and
+           * the same clock, so every death was also a slow bleed of the time
+           * they needed to finish. The request was to go back to the start of
+           * the stage and start it again, and that is the fairer version: a
+           * fresh board and a full clock, so the next attempt is a real one.
+           *
+           * Lives are carried across. startStage() refills them to four, and
+           * calling it as-is here would make a player unkillable -- four lives,
+           * die, four lives again, forever. Whatever was left when they died is
+           * what they take back in. */
+          var left = [];
+          for (var lv = 0; lv < g.players.length; lv++) {
+            left.push(g.players[lv].state().lives);
           }
-          g.phase = PHASES.RUNNING;
-          g.deadForMs = 0;
+          startStage(g.stageIndex);
+          for (var lr = 0; lr < g.players.length; lr++) {
+            g.players[lr].state().lives = left[lr];
+          }
         }
         return g.phase;
       }
@@ -480,6 +495,47 @@
           if (kept.length !== g.hazards.length) g.hazards = kept;
         }
         g.hazardRow0 = want0; g.hazardRows = wantRows;
+
+        /* A hazard that is about to ARM must not do it on top of a player.
+         *
+         * Hazards are generated for the whole board at stage start and every
+         * later vehicle is generated at a random column -- which can be the
+         * column a player is standing in. It then sits there doing nothing for
+         * fifteen seconds, and the instant its beat arrives it becomes lethal.
+         * Playtested, that reads as "killed for no reason": the player had no
+         * opportunity to see it, react, or move, because nothing about it
+         * changed except whether it counted.
+         *
+         * So a hazard arming while overlapping somebody is pushed back to the
+         * lane entry and DRIVES IN instead of materialising. That is the same
+         * fairness rule the railway telegraph already uses: a vehicle enters a
+         * lane from the edge, it does not appear in the middle of one. */
+        for (var ai = 0; ai < g.hazards.length; ai++) {
+          var ah = g.hazards[ai];
+          if (!ah.armMs) continue;
+          // Only ever act ONCE, on the frame this hazard arms.
+          //
+          // The first version of this checked every hazard against every
+          // player on every frame, which on a dense board is fifty hazards
+          // times two players times every tick -- enough to make the 1000-seed
+          // gate take 27 minutes instead of 5. A hazard arms once and stays
+          // armed, so a one-shot flag is not an optimisation, it is the actual
+          // semantics.
+          if (ah.armDone) continue;
+          if (g.elapsedInStageMs < ah.armMs) continue;
+          ah.armDone = true;
+          var halfA = ah.spec.len / 2;
+          for (var aj = 0; aj < g.players.length; aj++) {
+            var pj = g.players[aj].state();
+            if (!pj.alive || pj.finished) continue;
+            if (pj.row !== ah.row) continue;
+            if (Math.abs(ah.x - pj.col) > halfA + 0.45) continue;
+            ah.x = ah.speed >= 0 ? (g.playMin - 0.6 - ah.spec.len)
+                                : (g.cols - g.playMin + 0.6 + ah.spec.len);
+            break;
+          }
+        }
+
         H.tickHazards(g.hazards, dt, g.cols, g.elapsedInStageMs);
         for (var hi = 0; hi < g.players.length; hi++) {
           var hs = g.players[hi].state();
@@ -747,7 +803,7 @@
          * This is the retry budget, not the difficulty: nothing about a single
          * attempt changes. Per-attempt difficulty is the board, and the board
          * is what the design asked to make harder. */
-        maxRetries = 5 + gstate.stageIndex;
+        maxRetries = 7 + gstate.stageIndex;
         if (retries > maxRetries) {
           stageResults.push({ stage: gstate.stageIndex, result: "STUCK" });
           break;
