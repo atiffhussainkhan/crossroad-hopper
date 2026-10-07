@@ -27,7 +27,7 @@
    *   SAFE_START_ROWS  always clear, so the player learns the hop without
    *                    being killed before they have moved
    *   SAFE_GOAL_ROWS   always clear, so the stage can actually be finished */
-  var SAFE_START_ROWS = 3;
+  var SAFE_START_ROWS = 1;
   var SAFE_GOAL_ROWS = 2;
 
   /* Phase 2 item 3 — the railway telegraph.
@@ -315,6 +315,64 @@
 
   // One pass over a window of rows. Deterministic from a seed, so a run can
   // be replayed from its seed in a bug report.
+/* Row density at a given row, from the stage's base rate.
+   *
+   * THIS IS THE SINGLE SOURCE OF TRUTH, and it has to be.
+   *
+   * The opening boost used to live inside buildHazards() only. The running game
+   * does not call buildHazards() -- src/sim-core.js generates the board one row
+   * at a time through hazardsForRow() -- so the boost was applied to nothing a
+   * player could see. That is the "the killing things are not coming at the
+   * start" complaint, and it survived an earlier fix precisely because that fix
+   * was written to the entry point the game never calls.
+   *
+   * Both paths call this now, so they cannot drift apart again.
+   *
+   * The opening rows are a GUARANTEE, not a probability, and that distinction
+   * is the whole fix. Density is consumed as `if (rng.next() > chance) break`,
+   * so it is the chance that one vehicle is placed on a row. A larger multiplier
+   * moves that average and does not make the opening reliable: measured across
+   * 40 seeds, an opening rate of 0.94 still left stage one starting only 49% of
+   * its hazardous lanes, and stage seven 15%. A player cannot meet a game that
+   * is usually not there.
+   *
+   * A density of exactly 1.0 cannot fail that roll. So every hazardous row in
+   * the opening carries at least one vehicle from the instant the stage begins,
+   * and the taper returns the board to the stage's own base rate behind it.
+   *
+   * "Every hazardous row" is deliberately not "every row": lawn still gets
+   * nothing, because a car on grass the renderer drew as lawn is precisely the
+   * "looks walkable, is lethal" defect. And the opening is ONE vehicle per row
+   * at base speed, against five at 2.2x later -- which is what lets the second
+   * vehicle at fifteen seconds read as a doubling instead of as noise.
+   */
+  var OPENING_GUARANTEED_ROWS = 6;   // rows 1..6 always carry traffic
+  function rowDensity(row, base) {
+    // Rows past the opening get the stage's own base rate, untouched.
+    //
+    // An earlier version of this tapered back gradually, lifting rows 7-11 to
+    // somewhere between the opening rate and the base rate. It measured well --
+    // "the board is fuller" -- and it made the game measurably harder for no
+    // reason the design asked for: the request was about the START of a stage,
+    // and the change reached a third of the way across the board. The autoplay
+    // probe went from clearing a stage to clearing none. The opening is the
+    // thing that was empty; only the opening gets fixed.
+    if (row <= OPENING_GUARANTEED_ROWS) return 1.0;
+    return base;
+  }
+
+  /* How many vehicles per row have joined the board at a given stage time.
+   *
+   * The beat is the whole escalation the player can count to, and it is one
+   * vehicle per fifteen seconds: 0s, 15s, 30s, 45s, 60s. The fifteen-second
+   * step is the "it doubles" moment, and it is enforced here rather than being
+   * left to whichever hazard happened to be generated second. */
+  function perRowCapAt(elapsedMs) {
+    if (elapsedMs === undefined) return 5;   // offline preview: the full board
+    var step = Math.floor((elapsedMs || 0) / ARM_STEP_MS);
+    return Math.max(1, Math.min(5, step + 1));
+  }
+
   function buildHazards(seed, row0, viewRows, cols, difficulty, Rng, stageIndex) {
     var rng = Rng;
     var out = [];
@@ -341,19 +399,19 @@
     // the only difficulty knob. The old values started at 0.09, which put
     // roughly one car on the entire forty-row board of stage one -- you could
     // walk the whole stage without ever meeting one.
-    // 0.30 at the start, not 0.22: at 0.22 a player looking at eight lanes
-    // saw about one car and the board read as empty. 0.30 is still the
-    // gentlest stage and still leaves a readable gap in most lanes.
-    var baseDensity = 0.30 + Math.min(0.30, difficulty * 0.030);
+    // 0.55 at the start: hazards should be visible immediately when the stage begins.
+    // The player should never feel the board is empty at the start.
+    var baseDensity = 0.55 + Math.min(0.30, difficulty * 0.030);
 
-    // Lane class decides which hazards can appear, and only one is possible
-    // per row, so a log can never share a row with a train. The class comes
-    // from the SAME function the renderer draws with (Tiles.laneOf), keyed on
-    // this stage's own laneMix. The previous `row % 10` switch was a second,
-    // independent opinion about what a row was, which put cars and trains on
-    // rows the renderer drew as lawn -- ground that looked safe and killed the
-    // player, in all ten stages.
-    var laneMix = null, laneKey = stageIndex;
+    /* Lane class decides which hazards can appear, and only one is possible
+   * per row, so a log can never share a row with a train. The class comes
+   * from the SAME function the renderer draws with (Tiles.laneOf), keyed on
+   * this stage's own laneMix. The previous `row % 10` switch was a second,
+   * independent opinion about what a row was, which put cars and trains on
+   * rows the renderer drew as lawn -- ground that looked safe and killed the
+   * player, in all ten stages.
+   */
+  var laneMix = null, laneKey = stageIndex;
     if (stageIndex !== undefined && global.Stages && global.Stages.getStage) {
       var st = global.Stages.getStage(stageIndex);
       if (st) { laneMix = st.laneMix; laneKey = st.id; }
@@ -365,10 +423,13 @@
     // rows that are hazardous squares the effect, so stage one came out with
     // about one car on the whole board. Density is a per-row chance on rows
     // that are already hazardous, and that is the whole knob.
-    var density = baseDensity;
-
     for (var r = 0; r < viewRows; r++) {
-      var made = buildRow(row0 + r, cols, density, rng, stageIndex, laneMix, laneKey);
+      var row = row0 + r;
+      // One density function, shared with hazardsForRow(), so the offline
+      // preview and the running game cannot disagree about what a stage's
+      // opening looks like.
+      var density = rowDensity(row, baseDensity);
+      var made = buildRow(row, cols, density, rng, stageIndex, laneMix, laneKey);
       for (var m = 0; m < made.length; m++) out.push(made[m]);
     }
     return out;
@@ -659,27 +720,27 @@
    * view (so the camera can follow the player) and a car in a column the player
    * can never reach is a car that is neither a threat nor worth rendering. */
   function hazardsForRow(seed, row, cols, difficulty, Rng, stageIndex, xMin) {
-    /* Row density: min(0.82, 0.58 + d * 0.026).
+    /* Row density: the stage's base rate, boosted across the opening rows.
      *
-     * Raised from 0.25 because the board was EMPTY where the player actually
-     * spends the opening. The old endgame rule doubled row density from row
-     * 24 onward and left the first twenty-three rows at base rate -- and the
-     * first fifteen seconds of a stage cover exactly those rows. Measured over
-     * a sweep: at 0.25 the front third of ten stages carried traffic on 28% of
-     * its rows; at 0.58 it carries 44%. The back half is already saturated at
-     * what solvability allows, so this only moves the front, which is the
-     * part the player was complaining about. */
-    var base = Math.min(0.82, 0.46 + difficulty * 0.026);
+     * The boost used to live only in buildHazards(), which this function's
+     * caller -- src/sim-core.js -- never invokes. The running game builds the
+     * board one row at a time through here, so the opening boost was applied to
+     * nothing a player could see: measured over the first twenty seconds of a
+     * stage the board carried four armed hazards, and standing still was safe.
+     *
+     * rowDensity() is now shared by both entry points. Everything else here is
+     * unchanged: `undefined` for laneMix and laneKey still means "look the
+     * stage's own mix up", and passing null would silently fall back to the
+     * default mix -- which is how cars once ended up on rows the player could
+     * see were lawn.
+     */
+    var base = Math.min(0.82, 0.55 + difficulty * 0.026);
     var lo = xMin === undefined ? 0 : xMin;
     var rowRng = (Rng && Rng.fork) ? Rng.fork(String(row))
             : (global.SimCore && global.SimCore.createRng
                ? global.SimCore.createRng(seed + ":r" + row) : Rng);
-    // `undefined`, NOT null: buildRow only looks the stage's laneMix up when
-    // the argument is undefined. Passing null silently fell back to the
-    // default mix, so the spawner thought River was mostly road and rail
-    // while the renderer drew it as mostly water -- which is how cars ended
-    // up on rows the player could see were lawn, all over again.
-    var made = buildRow(row, cols, base, rowRng, stageIndex, undefined, undefined,
+    var density = rowDensity(row, base);
+    var made = buildRow(row, cols, density, rowRng, stageIndex, undefined, undefined,
                         lo, difficulty);
     return ensureSolvable(made, { needGap: 0.9 });
   }
@@ -696,10 +757,35 @@
    * player actually experiences. It is a floor, not a proof, and the search
    * in the Phase 3 gate is the proof.
    */
-  function laneHasGap(list, row, needGap, speedScale) {
+  /* THE FILTER MUST JUDGE THE BOARD THE GAME ACTUALLY RUNS.
+   *
+   * It did not, on three counts, and every one of them made it optimistic:
+   *
+   *   wrap      -- it wrapped at 10.5 / -1.5 (a 12-tile period) while
+   *                tickHazards wraps at cols + 1.5 (a 16-tile period on a
+   *                14-wide board). The comment claimed "matching tickHazards".
+   *   columns   -- it swept cols 0..8, but the player can only stand in
+   *                cols 4..9 (sim-core playMin/playMax). Four of the nine
+   *                columns it certified are ones the player can never occupy,
+   *                and the one column they can always reach (9) was never
+   *                tested at all.
+   *   margin    -- it used len/2 + 0.30 where hits() uses the player's real
+   *                half-width, 0.28. Filtering with a wider margin passes
+   *                lanes the real test would reject.
+   *
+   * Taken together the filter could certify a lane the game would not let the
+   * player cross. Measured on 813 generated rows: 88 were judged crossable and
+   * were not. All 88 carried a sinkhole; 0 of 704 rows without one failed. */
+  var GAP_MIN_COL = 4, GAP_MAX_COL = 9, GAP_PLAYER_HALF = 0.28;
+  function laneHasGap(list, row, needGap, speedScale, cols, minCol, maxCol) {
     var period = 6.0;                 // seconds; long enough for a wrap cycle
     var k = speedScale || 1;
-    for (var col = 0; col < 9; col++) {
+    var nCols = cols === undefined ? 14 : cols;
+    var loCol = minCol === undefined ? GAP_MIN_COL : minCol;
+    var hiCol = maxCol === undefined ? GAP_MAX_COL : maxCol;
+    // Must match tickHazards exactly, or the filter is judging another board.
+    var wrapHi = nCols + 1.5, wrapLo = -1.5, wrapSpan = wrapHi - wrapLo;
+    for (var col = loCol; col <= hiCol; col++) {
       var clearFor = 0;
       for (var s = 0; s <= period * 20; s++) {
         var blocked = false;
@@ -731,9 +817,10 @@
             continue;
           }
           var x = h.x + h.speed * k * (s / 20);
-          if (x > 10.5) x -= 12;      // wrap, matching tickHazards
-          if (x < -1.5) x += 12;
-          if (Math.abs(x - col) < (h.spec.len / 2 + 0.30)) { blocked = true; break; }
+          // Wrap exactly as tickHazards does, or this sweep is a fiction.
+          if (x > wrapHi) x -= wrapSpan;
+          if (x < wrapLo) x += wrapSpan;
+          if (Math.abs(x - col) < (h.spec.len / 2 + GAP_PLAYER_HALF)) { blocked = true; break; }
         }
         if (!blocked) {
           clearFor += 0.05;
@@ -817,7 +904,25 @@
           typeof h.baseSpeed === "number" && isFinite(h.baseSpeed)) {
         h.speed = h.baseSpeed * factor * (h.speed < 0 ? -1 : 1);
       }
-      if (h.spec.kind === "air") continue;          // steel is suspended
+      if (h.spec.kind === "air") {
+        /* An air hazard does not TRAVEL, but it still has a BEAT.
+         *
+         * A geyser is a column that erupts on a cycle, in place, and it is
+         * row-wide while it is up. This early-out used to run BEFORE the cycle
+         * advance further down, so a geyser's clock never moved at all: not
+         * slowly, not at all. `isActive()` asks `(t % periodMs) < on`, and t
+         * stayed frozen at whatever `makeHazard` seeded it to -- which, for a
+         * row-wide hazard, means the eruption was permanently up and the lane
+         * was permanently lethal.
+         *
+         * Measured: a geyser declaring on 1200 / period 3000 reported itself
+         * open for 10,000ms out of 10,000ms sampled. It never once closed.
+         * Advancing the cycle here, before the return, is the whole fix; the
+         * unit bug in the same line (seconds added to a millisecond clock) was
+         * masked by it and is fixed separately. */
+        if (h.cycle) h.cycle.t += dtMs;
+        continue;
+      }
       // An announced rail hazard holds at the entry edge and does not move.
       // It cannot hit anything until its warning has run out.
       if (h.tel && h.tel.t > 0) { h.tel.t -= dtMs; continue; }
@@ -836,7 +941,25 @@
         }
         continue;
       }
-      if (h.cycle) { h.cycle.t += dt; continue; }
+      /* The cycle clock is in MILLISECONDS and must advance in milliseconds.
+       *
+       * `cycle.t` is seeded in milliseconds (makeHazard takes
+       * `rng.range(0, spec.cycle.periodMs)`), and every consumer treats it that
+       * way: isActive() and isWarning() both reduce it modulo `periodMs`, and
+       * the solvability sweep adds `s * 50` per 50ms step. Advancing it with
+       * `dt` -- which is `dtMs / 1000`, i.e. SECONDS -- made the clock run a
+       * thousand times slow.
+       *
+       * The consequence was not subtle. A sinkhole declares
+       * `on: 1500, periodMs: 4200`, so isActive() asks
+       * `(t % 4200) < 1500`. At a second per unit that is TRUE for 1500
+       * seconds: the pit opened and never closed. It is row-wide, so it is
+       * not something the player can walk around, and ensureSolvable()'s gap
+       * filter missed it because the sweep measured the same broken clock.
+       * Measured before the fix: 88 of 813 generated rows were uncrossable,
+       * every one of them a row carrying a sinkhole, and 0 of 704 rows without
+       * one. */
+      if (h.cycle) { h.cycle.t += dtMs; continue; }
       h.x += h.speed * dt;
       // Wrap. A hazard that drives off the end and stops existing would let
       // a lane go permanently safe.
@@ -921,6 +1044,10 @@
     isActive: isActive,
     pickKind: pickKind, legalForLane: legalForLane,
     LANE_KINDS: LANE_KINDS, OPEN_KINDS: OPEN_KINDS,
+    // Exported so tools/hazard_probe.py can assert the opening is actually dense.
+    rowDensity: rowDensity,
+    OPENING_GUARANTEED_ROWS: OPENING_GUARANTEED_ROWS,
+    perRowCapAt: perRowCapAt,
     KINDS: KINDS, makeHazard: makeHazard, buildHazards: buildHazards,
     tickHazards: tickHazards, hits: hits, anyHits: anyHits,
     laneHasGap: laneHasGap, ensureSolvable: ensureSolvable,

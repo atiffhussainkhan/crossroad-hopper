@@ -52,7 +52,6 @@
     if (S && ch.sprite && S.has(ch.sprite)) {
       var f = S.frame(ch.sprite, anim, animMs || 0);
       if (f) {
-        I.castShadow(ctx, col, row, 0.90, 0.42);
         var p = I.projectS(col, row, 0);
         // Feet on the tile, body rising from it, centred on the column.
         var k = (f.drawH / f.sh) * scale;
@@ -73,8 +72,6 @@
     // A head wider than the body hides the body completely, which is how four
     // of the six became a head with eyes in a crate.
     bw = Math.max(bw, hw);
-
-    I.castShadow(ctx, col, row, 0.90, 0.42);
 
     // Feet, body, scarf, head: strictly increasing z, decreasing occlusion.
     // The feet are the same width as the body. Narrower, they peek out from

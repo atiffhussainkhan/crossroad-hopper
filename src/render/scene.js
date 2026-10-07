@@ -315,14 +315,13 @@
     I.line(ctx, [[a[0] - 4, a[1] + 5], [a[0] + 4, a[1] + 5]], col, 2.2);
   }
 
-  /* The sink hole, in its three states.
+  /* The sink hole, redesigned as a proper circular stone well.
    *
    * The contract with the player is the sign: it goes up for `warn` ms BEFORE
    * the hole opens, and the gate check_hazard_reach.py asserts that warning is
    * never shorter than the hop cadence, so a player who reads it always has
    * time to step off. Closed, it is a manhole cover and nothing more. */
   function drawSinkhole(ctx, col, row, scene, h) {
-    var cols = 9;
     var open = Hazards.isActive(h);
     var warn = Hazards.isWarning(h);
     // How far through the warning we are, for the pulse.
@@ -332,49 +331,97 @@
       phase = Math.max(0, Math.min(1, (p - (h.cycle.periodMs - (h.cycle.warn || 1))) / (h.cycle.warn || 1)));
     }
 
-    var x0 = col + 0.10, x1 = col + 0.90;
+    // Well centre: isometric projection of the tile centre at z=0.
+    var cx = col + 0.5, cy = row + 0.5;
+    var centre = I.projectS(cx, cy, 0);
+    // Stone rim radii (in projected pixels — rx wider than ry for isometric squish).
+    var rimRx = 22, rimRy = 12;
+
     if (open) {
-      // The ditch: a dark gap right across the lane.
-      var a = I.projectS(x0, row + 0.5, 0.5);
-      var b = I.projectS(x1, row + 0.5, 0.5);
-      I.line(ctx, [[a[0], a[1] - 7], [b[0], b[1] - 7]], "#120b08", 7);
-      I.line(ctx, [[a[0], a[1] - 3], [b[0], b[1] - 3]], "#2a1a12", 5);
-      // Torn edge, so it reads as broken ground and not a painted stripe.
-      for (var e = 0; e <= 8; e++) {
-        var ex = x0 + (x1 - x0) * (e / 8);
-        var q = I.projectS(ex, row + 0.32, 0.5);
-        I.line(ctx, [[q[0] - 3, q[1]], [q[0] + 3, q[1] - 2]], "#6b5340", 1.6);
+      // ---- OPEN WELL: draw the dark pit FIRST, then the stone rim on top ----
+      // Inner dark pit: deep ellipse with a slight rim highlight.
+      I.ellipse(ctx, centre[0], centre[1] + 1, rimRx - 5, rimRy - 3, "#0a0705");
+      I.ellipse(ctx, centre[0], centre[1], rimRx - 5, rimRy - 3, "#1a1210");
+      // A concentric ring to suggest curved wall depth.
+      I.ellipse(ctx, centre[0], centre[1] + 1, rimRx - 7, rimRy - 4, "rgba(80,60,40,0.35)");
+      // Outer stone rim with radial brick lines — drawn ON TOP of the pit.
+      I.ellipse(ctx, centre[0], centre[1], rimRx, rimRy, "#8a7060");
+      I.ellipse(ctx, centre[0], centre[1], rimRx - 2.5, rimRy - 1.5, "#9a8068");
+      // Brick/mortar lines radiating from centre on the stone.
+      ctx.save();
+      ctx.strokeStyle = "#5a4535";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (var b = 0; b < 8; b++) {
+        var ang = (b / 8) * Math.PI * 2;
+        var cos = Math.cos(ang), sin = Math.sin(ang);
+        ctx.moveTo(centre[0] + cos * (rimRx - 2), centre[1] + sin * (rimRy - 1.5));
+        ctx.lineTo(centre[0] + cos * rimRx, centre[1] + sin * rimRy);
       }
+      ctx.stroke();
+      ctx.restore();
     } else {
-      // Closed: a bolted cover sitting flush with the ground.
-      var c0 = I.projectS(x0, row + 0.5, 0.5);
-      var c1 = I.projectS(x1, row + 0.5, 0.5);
-      var cover = warn ? "#8a5a3a" : "#5a5f66";
-      I.line(ctx, [[c0[0], c0[1]], [c1[0], c1[1]]], cover, 6);
-      I.line(ctx, [[c0[0], c0[1] - 2], [c1[0], c1[1] - 2]], I.shade(cover, 0.35), 1.6);
+      // ---- CLOSED WELL: stone rim with a manhole cover ----
+      // Outer stone rim.
+      I.ellipse(ctx, centre[0], centre[1], rimRx, rimRy, "#8a7060");
+      I.ellipse(ctx, centre[0], centre[1], rimRx - 2, rimRy - 1.5, "#9a8070");
+      // Brick lines on rim.
+      ctx.save();
+      ctx.strokeStyle = "#5a4535";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (var c = 0; c < 8; c++) {
+        var ang = (c / 8) * Math.PI * 2;
+        var cos = Math.cos(ang), sin = Math.sin(ang);
+        ctx.moveTo(centre[0] + cos * (rimRx - 2), centre[1] + sin * (rimRy - 1.5));
+        ctx.lineTo(centre[0] + cos * rimRx, centre[1] + sin * rimRy);
+      }
+      ctx.stroke();
+      ctx.restore();
+      // Iron manhole cover in the centre.
+      var coverColor = warn ? "#b83020" : "#4a4a52";
+      I.ellipse(ctx, centre[0], centre[1], rimRx - 5, rimRy - 3, coverColor);
+      I.ellipse(ctx, centre[0], centre[1], rimRx - 8, rimRy - 5, I.shade(coverColor, 0.75));
+      // Cover handle cross.
+      ctx.save();
+      ctx.strokeStyle = I.shade(coverColor, 0.6);
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(centre[0] - 6, centre[1]);
+      ctx.lineTo(centre[0] + 6, centre[1]);
+      ctx.moveTo(centre[0], centre[1] - 3);
+      ctx.lineTo(centre[0], centre[1] + 3);
+      ctx.stroke();
+      ctx.restore();
+      // Warning chevrons on cover when about to open.
       if (warn) {
-        // Hazard chevrons: the cover itself starts looking wrong.
-        for (var c = 0; c <= 4; c++) {
-          var cx = x0 + (x1 - x0) * (c / 4);
-          var cq = I.projectS(cx, row + 0.5, 0.5);
-          I.line(ctx, [[cq[0] - 2, cq[1] + 2], [cq[0], cq[1] - 2]], "#ffd23d", 1.6);
-          I.line(ctx, [[cq[0], cq[1] - 2], [cq[0] + 2, cq[1] + 2]], "#ffd23d", 1.6);
+        ctx.save();
+        ctx.strokeStyle = "#ffd23d";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        for (var ch = 0; ch < 3; ch++) {
+          var ox = centre[0] - 8 + ch * 8;
+          ctx.moveTo(ox, centre[1] + 2);
+          ctx.lineTo(ox + 3, centre[1] - 2);
+          ctx.lineTo(ox + 6, centre[1] + 2);
         }
+        ctx.stroke();
+        ctx.restore();
       }
     }
 
+    // The sign: only when not fully open.
     if (!open) {
-      // The sign itself, planted at the near edge so it is on screen before the
-      // player ever needs it. It pulses faster as the hole nears opening.
-      var s = I.projectS(x0 + 0.12, row + 0.30, 0.5);
+      var s = I.projectS(cx - 0.20, cy - 0.05, 0.5);
       var beat = 0.55 + 0.45 * Math.sin((h.cycle ? h.cycle.t : 0) / (70 + phase * 40));
       var lamp = warn ? (phase > 0.5 ? "#ff3b30" : "#ffd23d") : "#6b5a2a";
       I.line(ctx, [[s[0], s[1] - 15], [s[0], s[1] + 4]], "#3a3226", 2.2);
       I.ellipse(ctx, s[0], s[1] - 15, 4.2, 4.2, lamp);
       if (warn) {
-        ctx.save && ctx.save();
+        ctx.save();
         I.ellipse(ctx, s[0], s[1] - 15, 6.4 * beat + 2, 6.4 * beat + 2, "rgba(255,90,60," +
                  Math.round(90 * beat) + ")");
+        ctx.restore();
       }
     }
   }
@@ -875,7 +922,14 @@
     if (isHazardLane(row, scene)) return null;
     if (col === focusCol && row === focusRow) return null;
     if (!densityAt(col, row)) return null;
-    return pickScenery(scene.scenery, col, row);
+    var kind = pickScenery(scene.scenery, col, row);
+    // Split tree into two rendering passes: treeBack (upper foliage, before player)
+    // and treeFront (trunk + lower foliage, after player). This fixes the half-vanishing
+    // overlap between the tree's upper z-space and the player's sprite z-space.
+    if (kind === "tree") {
+      return (hash2(col + 7, row + 3) % 2 === 0) ? "treeBack" : "treeFront";
+    }
+    return kind;
   }
 
   // ---------- lane texture ----------------------------------------------
@@ -1088,15 +1142,21 @@
       }
     }
     sc.sort(function (a, b) { return (b[0] + b[1]) - (a[0] + a[1]); });
+    // Split treeBack (upper foliage — drawn before player) from treeFront
+    // (trunk + lower foliage — drawn after player so player appears in front).
+    var scBack = [], scFront = [], scOther = [];
+    sc.forEach(function (x) {
+      if (x[2] === "treeBack") scBack.push(x);
+      else if (x[2] === "treeFront") scFront.push(x);
+      else scOther.push(x);
+    });
     if (S) {
-      sc.forEach(function (x) { S.draw(x[2], ctx, x[0], x[1], scene); });
+      scBack.forEach(function (x) { if (S[x[2]]) S[x[2]](ctx, x[0], x[1], scene); });
+      scOther.forEach(function (x) { S.draw(x[2], ctx, x[0], x[1], scene); });
     } else {
-      // Only reachable if src/scenery.js failed to load. Draw the old generic
-      // objects rather than nothing, and let check_js_renderer catch the load
-      // failure -- a stage that silently loses its scenery is worse than one
-      // that loses its detail.
-      var FALLBACK = { tree: drawTree, bush: drawBush, rock: drawRock };
-      sc.forEach(function (x) {
+      var FALLBACK = { tree: drawTree, treeBack: drawTree, treeFront: drawTree,
+                       bush: drawBush, rock: drawRock };
+      scBack.concat(scOther).forEach(function (x) {
         if (FALLBACK[x[2]]) FALLBACK[x[2]](ctx, x[0], x[1], scene);
       });
     }
@@ -1121,8 +1181,20 @@
       ctx.restore();
     }
 
-    return { rows: rows, hazards: hazards, scenery: sc };
+    return { rows: rows, hazards: hazards, scenery: sc, sceneryFront: scFront };
   }
+
+  // Draws treeFront items (trunk + lower foliage) after the player has been
+  // rendered, so the tree appears in front of the character and looks correct.
+  var _lastScFront = [];
+  function drawSceneryFront(ctx, scene) {
+    if (!scene) return;
+    var S = global.Scenery;
+    _lastScFront.forEach(function (x) {
+      if (S && S[x[2]]) S[x[2]](ctx, x[0], x[1], scene);
+    });
+  }
+  function setSceneryFront(scFront) { _lastScFront = scFront || []; }
 
   global.Scene = {
     laneOf: laneOf, isHazardLane: isHazardLane, buildLaneCycle: buildLaneCycle,
@@ -1146,5 +1218,6 @@
     HAZARD_FNS: HAZARD_FNS, TIMED_FNS: TIMED_FNS,
     drawSinkhole: drawSinkhole, drawTelegraph: drawTelegraph,
     drawTree: drawTree, drawBush: drawBush, drawRock: drawRock,
+    drawSceneryFront: drawSceneryFront, setSceneryFront: setSceneryFront,
   };
 })(typeof window !== "undefined" ? window : (typeof global !== "undefined" ? global : this));

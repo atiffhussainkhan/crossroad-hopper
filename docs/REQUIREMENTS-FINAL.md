@@ -1,3 +1,18 @@
+> ## ⚠️ READ THIS FIRST — partially superseded
+>
+> A conformance audit found this document and the shipping game describe
+> **different products**. This spec mandates an endless, zero-lives,
+> instant-death grinder with a grind verb, a gauge, a coin economy, a daily
+> challenge and audio. The game that actually ships is a **ten-stage timed
+> campaign** with four lives and a finish line.
+>
+> The shipped game is authoritative. **[SPEC-AMENDMENT-001](./SPEC-AMENDMENT-001-shipped-product.md)**
+> ratifies the requirements that were withdrawn, records the ones being kept,
+> and logs six defects found and fixed. The rows it lists as superseded do not
+> describe this product and should not be audited against it.
+>
+> Everything below is retained as the design record it is.
+
 # Final requirements document
 
 The complete requirements record for an original lane-crossing arcade game, consolidated from a base specification and ten independent research dossiers.

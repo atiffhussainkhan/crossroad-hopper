@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick Your Character</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f0f1e;
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 2.4em;
+    color: #f8d210;
+    text-shadow: 0 0 20px #f8d21066;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 24px;
+    font-size: 1.05em;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .card {
+    background: #1a1a3a;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 3px solid #2a2a5a;
+    cursor: pointer;
+    transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+    position: relative;
+  }
+  .card:hover {
+    transform: scale(1.06);
+    border-color: #f8d210;
+    box-shadow: 0 0 16px #f8d21044;
+  }
+  .card.selected {
+    border-color: #00ff88;
+    box-shadow: 0 0 20px #00ff8866;
+  }
+  .card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 6px; right: 8px;
+    background: #00ff88;
+    color: #0f0f1e;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+  }
+  .card .num {
+    background: #f8d210;
+    color: #0f0f1e;
+    font-weight: bold;
+    font-size: 1em;
+    text-align: center;
+    padding: 5px;
+  }
+  .card .name {
+    background: #16213e;
+    color: #ccc;
+    font-size: 0.78em;
+    text-align: center;
+    padding: 4px 4px 6px;
+    line-height: 1.2;
+  }
+  #sel-info {
+    text-align: center;
+    margin: 18px 0 6px;
+    font-size: 1.15em;
+    color: #00ff88;
+    min-height: 28px;
+  }
+  #play-btn {
+    display: none;
+    margin: 16px auto;
+    padding: 14px 48px;
+    font-size: 1.2em;
+    background: #f8d210;
+    color: #0f0f1e;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px #f8d21055;
+  }
+  #play-btn:hover {
+    transform: scale(1.06);
+    box-shadow: 0 6px 28px #f8d21088;
+  }
+  .legend {
+    max-width: 1100px;
+    margin: 24px auto 0;
+    background: #16213e;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border: 1px solid #2a2a5a;
+    color: #888;
+    font-size: 0.82em;
+    line-height: 1.7;
+  }
+  .legend strong { color: #f8d210; }
+</style>
+</head>
+<body>
+<h1>🎮 Choose Your Hero</h1>
+<p class="subtitle">Click your character — it will appear in the game!</p>
+<div class="grid" id="grid"></div>
+<p id="sel-info">⏳ Click a character to select it</p>
+<button id="play-btn" onclick="startGame()">▶ Play!</button>
+<div class="legend">
+  <strong>Character Guide:</strong>
+  1=Boy Cap, 2=Blue Hoodie, 3=Cat, 4=Robot, 5=Dog, 6=Ninja, 7=Bunny, 8=Wizard, 9=Alien, 10=Pirate, 11=Penguin, 12=Knight, 13=Fox, 14=Astronaut, 15=Pig, 16=Superhero, 17=Bear, 18=Chef, 19=Skeleton, 20=Koala, 21=Builder, 22=Frog, 23=Firefighter, 24=Unicorn
+</div>
+
+<script>
+var CHARACTERS = [
+  { id: 1,  name: "Boy Cap",       file: "char_01.webp" },
+  { id: 2,  name: "Blue Hoodie",  file: "char_02.webp" },
+  { id: 3,  name: "Cat",          file: "char_03.webp" },
+  { id: 4,  name: "Robot",        file: "char_04.webp" },
+  { id: 5,  name: "Dog",          file: "char_05.webp" },
+  { id: 6,  name: "Ninja",        file: "char_06.webp" },
+  { id: 7,  name: "Bunny",        file: "char_07.webp" },
+  { id: 8,  name: "Wizard",       file: "char_08.webp" },
+  { id: 9,  name: "Alien",        file: "char_09.webp" },
+  { id: 10, name: "Pirate",       file: "char_10.webp" },
+  { id: 11, name: "Penguin",      file: "char_11.webp" },
+  { id: 12, name: "Knight",       file: "char_12.webp" },
+  { id: 13, name: "Fox",          file: "char_13.webp" },
+  { id: 14, name: "Astronaut",    file: "char_14.webp" },
+  { id: 15, name: "Pig",          file: "char_15.webp" },
+  { id: 16, name: "Superhero",    file: "char_16.webp" },
+  { id: 17, name: "Bear",         file: "char_17.webp" },
+  { id: 18, name: "Chef",         file: "char_18.webp" },
+  { id: 19, name: "Skeleton",     file: "char_19.webp" },
+  { id: 20, name: "Koala",        file: "char_20.webp" },
+  { id: 21, name: "Builder",      file: "char_21.webp" },
+  { id: 22, name: "Frog",          file: "char_22.webp" },
+  { id: 23, name: "Firefighter",   file: "char_23.webp" },
+  { id: 24, name: "Unicorn",      file: "char_24.webp" },
+];
+
+var selected = null;
+
+var grid = document.getElementById('grid');
+CHARACTERS.forEach(function(ch) {
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = ch.id;
+  card.innerHTML =
+    /* No ?t= cache-buster: the roster art is .webp, a filename this browser
+       has never cached, and appending a timestamp to all 24 meant refetching
+       every sprite on every visit to the picker. */
+    '<img src="assets/characters/' + ch.file + '" alt="' + ch.name + '">' +
+    '<div class="num">#' + String(ch.id).padStart(2,'0') + '</div>' +
+    '<div class="name">' + ch.name + '</div>';
+  card.onclick = function() { select(ch.id); };
+  grid.appendChild(card);
+});
+
+function select(id) {
+  selected = id;
+  localStorage.setItem('chosenCharacter', id);
+  document.querySelectorAll('.card').forEach(function(c) {
+    c.classList.toggle('selected', parseInt(c.dataset.id) === id);
+  });
+  var ch = CHARACTERS[id - 1];
+  document.getElementById('sel-info').textContent = '✅ Selected: #' + id + ' — ' + ch.name;
+  var btn = document.getElementById('play-btn');
+  btn.style.display = 'block';
+  btn.textContent = '▶ Play as ' + ch.name + '!';
+}
+
+function startGame() {
+  window.location.href = 'index.html?char=' + selected;
+}
+</script>
+</body>
+</html>

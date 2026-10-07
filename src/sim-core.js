@@ -299,6 +299,7 @@
       if (g.stageIndex === index) g.stageAttempt = (g.stageAttempt || 0) + 1;
       else { g.stageIndex = index; g.stageAttempt = 0; }
       g.phase = PHASES.READY;
+      g.deadForMs = 0;
       g.elapsedInStageMs = 0;
       g.stageScore = 0;
       g.pursuer.reset();
@@ -417,14 +418,65 @@
         return g.phase;
       }
       if (g.phase === PHASES.ENDLESS) {
-        // No clock, no goal row, no stage end: difficulty simply keeps
-        // climbing and the pursuer never stops.
+        /* No clock, no goal row, no stage end: difficulty simply keeps
+         * climbing and the pursuer never stops.
+         *
+         * "No stage end" used to be read as "no hazards either", because this
+         * block returned before the hazard update and the collision test
+         * below it. So the mode was not endless, it was INERT: measured over
+         * 600 seconds of hopping every 600ms, the hazards on the board went
+         * 14 -> 14 and not one of them moved; deaths were 0; and the pursuer's
+         * kill, which is returned by tick(), was thrown away on the floor.
+         * A player could walk to row 1001 and stay on four lives.
+         *
+         * What a mode is exempt from is the stage's SCHEDULE, not its
+         * physics. Traffic still has to run and still has to be able to hit
+         * somebody, and the pursuer's result has to be honoured. */
         g.endlessMs += dt;
-        var el = g.players[0].state().row;
-        for (var q = 1; q < g.players.length; q++) {
-          if (g.players[q].state().row > el) el = g.players[q].state().row;
+        var el2 = 0;
+        for (var q2 = 0; q2 < g.players.length; q2++) {
+          if (g.players[q2].state().row > el2) el2 = g.players[q2].state().row;
         }
-        g.pursuer.tick(dt, el, 4 + Math.floor(g.endlessMs / 15000));
+        if (global.Hazards) {
+          // Rows keep being dealt ahead of the leader, exactly as in RUNNING,
+          // or the player walks off the end of a board that stopped growing.
+          var eWant0 = Math.max(0, el2 - 4);
+          if (!g.generatedRows) g.generatedRows = {};
+          for (var er = eWant0; er < eWant0 + 16; er++) {
+            if (g.generatedRows[er]) continue;
+            g.generatedRows[er] = true;
+            var eDiff = Stages.difficultyFor(g.stageIndex, g.endlessMs);
+            var eMade = global.Hazards.hazardsForRow(
+              g.hazardSeed + ":" + g.stageIndex + ":endless", er,
+              g.cols, eDiff, g.rng, g.stageIndex, g.playMin);
+            for (var em = 0; em < eMade.length; em++) g.hazards.push(eMade[em]);
+          }
+          if (g.hazards.length) {
+            var eKept = [];
+            for (var ek = 0; ek < g.hazards.length; ek++) {
+              if (g.hazards[ek].row >= eWant0) eKept.push(g.hazards[ek]);
+              else delete g.generatedRows[g.hazards[ek].row];
+            }
+            if (eKept.length !== g.hazards.length) g.hazards = eKept;
+          }
+          global.Hazards.tickHazards(g.hazards, dt, g.cols, g.endlessMs);
+          for (var eh = 0; eh < g.players.length; eh++) {
+            var ehs = g.players[eh].state();
+            if (!ehs.alive || ehs.finished) continue;
+            if (global.Hazards.anyHits(g.hazards, ehs.col, ehs.row)) {
+              applyDeath(eh);
+              break;
+            }
+          }
+        }
+        var eResult = g.pursuer.tick(dt, el2, 4 + Math.floor(g.endlessMs / 15000));
+        if (eResult === "DEAD") {
+          for (var ej = 0; ej < g.players.length; ej++) {
+            var ejs = g.players[ej].state();
+            if (ejs.alive && !ejs.finished && ejs.row === el2) { applyDeath(ej); break; }
+          }
+        }
+        if (g.phase === PHASES.DEAD) return g.phase;
         return g.phase;
       }
       // Failure by lives exhaustion is checked before the phase guard, so a
@@ -480,8 +532,7 @@
           // than a replay of the one that just killed the player.
           var made = H.hazardsForRow(g.hazardSeed + ":" + g.stageIndex + ":" +
                                       (g.stageAttempt || 0), nr,
-                                     g.playMax, diff, g.rng, g.stageIndex,
-                                     g.playMin);
+                                     g.cols, diff, g.rng, g.stageIndex, g.playMin);
           for (var mk = 0; mk < made.length; mk++) g.hazards.push(made[mk]);
           added = true;
         }

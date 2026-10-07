@@ -33,6 +33,7 @@
 
   var manifest = null;
   var images = {};        // "Knight/Idle" -> HTMLImageElement
+  var charImages = {};    // "char_01" -> HTMLImageElement (single full-body character images)
   var failed = false;
   var onReady = [];
   var ready = false;
@@ -67,6 +68,15 @@
     var img = new Image();
     img.onload = function () { onOk(img); };
     img.onerror = function () { onBad(); };
+    /* No cache-busting query string here, and that is deliberate.
+     *
+     * A `?t=Date.now()` on every sprite was added while chasing the opaque
+     * boxes behind the roster characters. It never helped -- the boxes were in
+     * the pixels on disk, not in the browser's cache -- and it cost 24
+     * unconditional re-downloads on every single page load. The roster art now
+     * ships as .webp, a name the browser has never cached, so the assets that
+     * were fixed are also the assets that get fetched. Staleness is handled by
+     * the filename, which is the one place the HTTP cache can be told the truth. */
     img.src = url;
   }
 
@@ -98,6 +108,20 @@
           })(key, BASE + name + "/" + spec.file);
         }
       }
+
+      /* Also load the 24 character selection images as full-body sprites.
+       * These are individual JPG files stored in assets/characters/. */
+      var charManifest = m.characters24 || [];
+      for (var i = 0; i < charManifest.length; i++) {
+        var entry = charManifest[i];
+        (function (key, url) {
+          total++;
+          loadImage(url,
+            function (img) { charImages[key] = img; done++; },
+            function () { delete charImages[key]; done++; });
+        })(entry.id, "assets/characters/" + entry.file);
+      }
+
       // A short timer rather than a guess at a count: a browser may coalesce
       // a cached load, and either way `done` is the honest signal.
       var settle = function () {
@@ -118,30 +142,46 @@
   function frame(character, anim, tMs) {
     if (!manifest || !character || !ready) return null;
     if (ANIMATIONS.indexOf(anim) < 0) anim = "Idle";
+
+    // First try animated sprite sheets (Knight, Princess, Dragon)
     var entry = (manifest.characters || {})[character];
-    if (!entry) return null;
-    var spec = entry[anim];
-    if (!spec) return null;
-    var img = images[character + "/" + anim];
-    if (!img || !img.complete || !img.width) return null;
+    if (entry) {
+      var spec = entry[anim];
+      if (!spec) spec = entry["Idle"]; // fallback to Idle if this anim missing
+      if (!spec) return null;
+      var img = images[character + "/" + anim] || images[character + "/Idle"];
+      if (!img || !img.complete || !img.width) return null;
 
-    var count = spec.frames | 0;
-    if (count < 1) return null;
-    var fps = spec.fps > 0 ? spec.fps : 8;
-    var step = Math.floor((tMs / 1000) * fps) % count;
+      var count = spec.frames | 0;
+      if (count < 1) return null;
+      var fps = spec.fps > 0 ? spec.fps : 8;
+      var step = Math.floor((tMs / 1000) * fps) % count;
 
-    var sx = (step % spec.cols) * spec.frameW;
-    var sy = Math.floor(step / spec.cols) * spec.frameH;
-    if (sx + spec.frameW > img.width) return null;
-    if (sy + spec.frameH > img.height) return null;
+      var sx = (step % spec.cols) * spec.frameW;
+      var sy = Math.floor(step / spec.cols) * spec.frameH;
+      if (sx + spec.frameW > img.width) return null;
+      if (sy + spec.frameH > img.height) return null;
 
-    return {
-      img: img, sx: sx, sy: sy,
-      sw: spec.frameW, sh: spec.frameH,
-      // Nominal height in CSS pixels the sprite is drawn at. A tile is 56x40,
-      // so ~46 reads as a character standing ON the tile rather than filling it.
-      drawH: 46
-    };
+      return {
+        img: img, sx: sx, sy: sy,
+        sw: spec.frameW, sh: spec.frameH,
+        // Nominal height in CSS pixels the sprite is drawn at. A tile is 56x40,
+        // so ~46 reads as a character standing ON the tile rather than filling it.
+        drawH: 46
+      };
+    }
+
+    // Fallback: single full-body character image (char_01 through char_24)
+    var cimg = charImages[character];
+    if (cimg && cimg.complete && cimg.width) {
+      return {
+        img: cimg, sx: 0, sy: 0,
+        sw: cimg.width, sh: cimg.height,
+        drawH: 46
+      };
+    }
+
+    return null;
   }
 
   /* True once loading has finished, successfully or not, so the caller can
@@ -154,7 +194,9 @@
   }
   function has(character) {
     if (!manifest) return false;
-    return !!(manifest.characters || {})[character];
+    if ((manifest.characters || {})[character]) return true;
+    // Also check single-image characters (char_01 .. char_24)
+    return !!charImages[character];
   }
 
   global.SpriteSheets = {

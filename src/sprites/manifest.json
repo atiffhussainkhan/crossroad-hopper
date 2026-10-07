@@ -12,7 +12,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 60100,
+    "bytes": 7850,
     "source": "16 of 40"
    },
    "Walk": {
@@ -23,7 +23,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 35918,
+    "bytes": 7928,
     "source": "10 of 20"
    },
    "Jump": {
@@ -34,7 +34,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 1,
-    "bytes": 23900,
+    "bytes": 3988,
     "source": "8 of 40"
    },
    "Die": {
@@ -45,7 +45,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 38560,
+    "bytes": 8520,
     "source": "10 of 14"
    }
   },
@@ -58,7 +58,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 49064,
+    "bytes": 6512,
     "source": "16 of 40"
    },
    "Walk": {
@@ -69,7 +69,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 27606,
+    "bytes": 6240,
     "source": "10 of 20"
    },
    "Jump": {
@@ -80,7 +80,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 1,
-    "bytes": 24796,
+    "bytes": 3346,
     "source": "8 of 20"
    },
    "Die": {
@@ -91,7 +91,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 38942,
+    "bytes": 7890,
     "source": "10 of 13"
    }
   },
@@ -104,7 +104,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 65060,
+    "bytes": 8428,
     "source": "16 of 40"
    },
    "Walk": {
@@ -115,7 +115,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 35118,
+    "bytes": 7534,
     "source": "10 of 20"
    },
    "Jump": {
@@ -126,7 +126,7 @@
     "frameH": 69,
     "cols": 8,
     "rows": 1,
-    "bytes": 30242,
+    "bytes": 4248,
     "source": "8 of 20"
    },
    "Die": {
@@ -137,9 +137,131 @@
     "frameH": 69,
     "cols": 8,
     "rows": 2,
-    "bytes": 37528,
+    "bytes": 8474,
     "source": "10 of 20"
    }
   }
- }
+ },
+ "characters24": [
+  {
+   "id": "char_01",
+   "file": "char_01.webp",
+   "name": "Boy Cap"
+  },
+  {
+   "id": "char_02",
+   "file": "char_02.webp",
+   "name": "Blue Hoodie"
+  },
+  {
+   "id": "char_03",
+   "file": "char_03.webp",
+   "name": "Cat"
+  },
+  {
+   "id": "char_04",
+   "file": "char_04.webp",
+   "name": "Robot"
+  },
+  {
+   "id": "char_05",
+   "file": "char_05.webp",
+   "name": "Dog"
+  },
+  {
+   "id": "char_06",
+   "file": "char_06.webp",
+   "name": "Ninja"
+  },
+  {
+   "id": "char_07",
+   "file": "char_07.webp",
+   "name": "Bunny"
+  },
+  {
+   "id": "char_08",
+   "file": "char_08.webp",
+   "name": "Wizard"
+  },
+  {
+   "id": "char_09",
+   "file": "char_09.webp",
+   "name": "Alien"
+  },
+  {
+   "id": "char_10",
+   "file": "char_10.webp",
+   "name": "Pirate"
+  },
+  {
+   "id": "char_11",
+   "file": "char_11.webp",
+   "name": "Penguin"
+  },
+  {
+   "id": "char_12",
+   "file": "char_12.webp",
+   "name": "Knight"
+  },
+  {
+   "id": "char_13",
+   "file": "char_13.webp",
+   "name": "Fox"
+  },
+  {
+   "id": "char_14",
+   "file": "char_14.webp",
+   "name": "Astronaut"
+  },
+  {
+   "id": "char_15",
+   "file": "char_15.webp",
+   "name": "Pig"
+  },
+  {
+   "id": "char_16",
+   "file": "char_16.webp",
+   "name": "Superhero"
+  },
+  {
+   "id": "char_17",
+   "file": "char_17.webp",
+   "name": "Bear"
+  },
+  {
+   "id": "char_18",
+   "file": "char_18.webp",
+   "name": "Chef"
+  },
+  {
+   "id": "char_19",
+   "file": "char_19.webp",
+   "name": "Skeleton"
+  },
+  {
+   "id": "char_20",
+   "file": "char_20.webp",
+   "name": "Koala"
+  },
+  {
+   "id": "char_21",
+   "file": "char_21.webp",
+   "name": "Builder"
+  },
+  {
+   "id": "char_22",
+   "file": "char_22.webp",
+   "name": "Frog"
+  },
+  {
+   "id": "char_23",
+   "file": "char_23.webp",
+   "name": "Firefighter"
+  },
+  {
+   "id": "char_24",
+   "file": "char_24.webp",
+   "name": "Unicorn"
+  }
+ ]
 }

@@ -37,21 +37,29 @@
            I.shade(scene.foliage2, 1.12));
   }
 
-  function tree(ctx, col, row, scene) {
+  /* Tree split into two passes so foliage can be layered correctly around the player.
+   * treeBack: upper foliage (z > 0.90, drawn BEFORE player so player appears in front).
+   * treeFront: lower trunk + lower/outer foliage (z <= 0.90, drawn AFTER player).
+   * The player sprite sits at z ≈ 0.95, so only the uppermost foliage lobe overlaps it.
+   */
+  function treeBack(ctx, col, row, scene) {
     I.castShadow(ctx, col, row, 1.45, 0.62, 0.20);
+    // Uppermost foliage lobe only — the only part that overlaps the player's z-space.
+    I.blob(ctx, col + 0.30, row + 1.36, 0.30, 0.30, 1.36, 0.36, scene.foliage2);
+    var h = I.projectS(col + 0.42, row + 0.42, 1.30);
+    I.ellipse(ctx, h[0], h[1], 9, 5, I.shade(scene.foliage2, 1.30));
+  }
+
+  function treeFront(ctx, col, row, scene) {
     var trunk = scene.trunk || "#7a5433";
+    // Lower trunk (drawn after player, in front).
     I.cubeFrac(ctx, col + 0.44, row + 0.44, 0.12, 0.12, 0.0, 0.92, trunk);
     I.cubeFrac(ctx, col + 0.38, row + 0.38, 0.24, 0.24, 0.0, 0.10,
                I.shade(trunk, 0.80));
-    var lobes = [[0.58, 0.86, 1.30, 0.46, 0.54, scene.foliage],
-                 [0.44, 1.08, 1.50, 0.58, 0.46,
-                  I.shade(scene.foliage2, 0.92)],
-                 [0.30, 1.36, 1.72, 0.48, 0.60, scene.foliage2]];
-    lobes.forEach(function (l) {
-      I.blob(ctx, col + l[3], row + l[4], l[0], l[0], l[1], l[2] - l[1], l[5]);
-    });
-    var h = I.projectS(col + 0.42, row + 0.42, 1.30);
-    I.ellipse(ctx, h[0], h[1], 9, 5, I.shade(scene.foliage2, 1.30));
+    // Lower two foliage lobes — these are at or below the player's z-height.
+    I.blob(ctx, col + 0.46, row + 0.54, 0.58, 0.58, 0.86, 0.44, scene.foliage);
+    I.blob(ctx, col + 0.58, row + 0.46, 0.44, 0.44, 1.08, 0.42,
+           I.shade(scene.foliage2, 0.92));
   }
 
   function bush(ctx, col, row, scene) {
@@ -591,7 +599,8 @@
 
   var REGISTRY = {
     // Suburb
-    tree: tree, hedge: hedge, bush: bush, mailbox: mailbox, house: house,
+    treeBack: treeBack, treeFront: treeFront,
+    hedge: hedge, bush: bush, mailbox: mailbox, house: house,
     fence: fence, streetlamp: streetlamp, flowerbed: flowerbed,
     parkedcar: parkedcar,
     // River

@@ -6,11 +6,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1a1a1a">
 <link rel="stylesheet" href="src/style.css">
+<script>
+  // Auto-redirect to select screen if no character chosen yet
+  (function() {
+    var chosen = null;
+    try { chosen = localStorage.getItem("chosenCharacter"); } catch(e) {}
+    var params = new URLSearchParams(window.location.search);
+    if (!chosen && !params.get("char")) {
+      window.location.href = "select.html";
+    }
+  })();
+</script>
 </head>
 <body>
 <main id="app">
   <header id="topbar">
     <span id="stage-name">1. Suburb</span>
+    <button id="char-btn" type="button" onclick="window.location.href='select.html'" style="background:#f8d210;color:#1a1a1a;border:none;border-radius:6px;padding:4px 10px;font-weight:bold;cursor:pointer;font-size:0.85em;">🎮 Change Character</button>
     <button id="mode" type="button">1 player</button>
   </header>
 

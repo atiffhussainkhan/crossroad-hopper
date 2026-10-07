@@ -71,8 +71,8 @@
     if (fromCol === undefined || fromRow === undefined) return;
     if (typeof ps.col !== "number" || typeof ps.row !== "number") return;
     var m = (typeof Roster !== "undefined" && Roster.motionFor)
-      ? Roster.motionFor((typeof Roster !== "undefined" && Roster.ROSTER[
-          playerIndex % Roster.ROSTER.length] || { id: "pip" }).id) : null;
+      ? Roster.motionFor((typeof Roster !== "undefined" && Roster.getSelectedCharacter
+          ? Roster.getSelectedCharacter().id : (Roster.ROSTER[playerIndex % Roster.ROSTER.length] || { id: "pip" }).id)) : null;
     var fc = fromCol, fr = fromRow;
     var tc = ps.col, tr = ps.row;
     if (fc === tc && fr === tr) return;      // not a hop
@@ -146,8 +146,8 @@
      * and needs to read as "flattened". A character with a real Die clip does
      * not need it, and applying it stretched the sprite vertically by 1.7x --
      * a cartoon knight pulled into a column. Let the animation do the work. */
-    var who0 = (typeof Roster !== "undefined" && Roster.ROSTER)
-      ? Roster.ROSTER[index % Roster.ROSTER.length] : null;
+    var who0 = (typeof Roster !== "undefined" && Roster.getSelectedCharacter)
+      ? Roster.getSelectedCharacter() : null;
     var hasSprite = !!(who0 && who0.sprite &&
       typeof SpriteSheets !== "undefined" && SpriteSheets.has(who0.sprite));
     if (pose.dead) { if (!hasSprite) pose.squash = 0.30; return pose; }
@@ -207,8 +207,14 @@
     // that reads as a rendering fault rather than as the edge of the world.
     // A darker version of the stage's own ground fills it, so the board sits
     // in a lawn rather than being cut off.
-    var surround = Iso.shade(stage.ground, 0.86);
+    //
+    // Explicitly clear to opaque first: this guarantees no transparency bleeds
+    // through even if DPR changed or the canvas was partially uncovered.
+    ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1.0;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    var surround = Iso.shade(stage.ground, 0.86);
     ctx.fillStyle = surround;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     // Restore the device-pixel scale. The fill above deliberately drops to
@@ -217,6 +223,7 @@
     // renders the entire board at half size, anchored in the top-left
     // quadrant, with the player standing in an empty field.
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.restore();
 
     // Isometric scene from the shared renderer. Everything below is drawn in
     // the same projection, with the same face factors, so the game and the
@@ -228,7 +235,7 @@
     // The camera focuses on the player's own cell; the view slides so the
     // character sits at the bottom-centre of the frame.
     var colCentre = 0;
-    Scene.renderScene(ctx, sceneFor(stage), {
+    var sceneResult = Scene.renderScene(ctx, sceneFor(stage), {
       width: W, height: H,
       // The camera now fits the board width itself (see Iso.frameViewWindow),
       // so cols is the real board width and viewRows is just how much is drawn.
@@ -246,6 +253,9 @@
       // field of traffic with no visible goal to head for.
       goalRow: s.goalRow,
     });
+    if (sceneResult && Scene.setSceneryFront) {
+      Scene.setSceneryFront(sceneResult.sceneryFront || []);
+    }
 
     // Players, drawn through the SAME projection the simulation collides in.
     // A hand-tuned screen offset drifted further the further the player
@@ -258,8 +268,8 @@
        * them, which reads as a glitch rather than as a loss. */
       var deadNow = !ps.alive;
       if (!ps.alive && s.phase !== SimCore.PHASES.DEAD) continue;
-      var who = (typeof Roster !== "undefined" && Roster.ROSTER)
-        ? Roster.ROSTER[i % Roster.ROSTER.length] : null;
+      var who = (typeof Roster !== "undefined" && Roster.getSelectedCharacter)
+        ? Roster.getSelectedCharacter() : null;
       // Draw the character at its TRUE world position and let the projection
       // place it, exactly as the board is drawn.
       //
@@ -327,6 +337,11 @@
           DeathFX.drawSoul(ctx, col, row, sceneFor(s.stageIndex), age);
         }
       }
+    }
+
+    // Draw treeFront (trunk + lower foliage) after player so trees appear in front.
+    if (Scene.drawSceneryFront) {
+      Scene.drawSceneryFront(ctx, sceneFor(stage));
     }
 
     /* The pursuer, drawn as an actual bird.
@@ -443,7 +458,7 @@
     elLives.textContent = livesStr;
 
     if (s.phase === SimCore.PHASES.DEAD) {
-      showBanner("You died", "Tap or press any key to try again");
+      showBanner("YOU ARE DEAD", "Restarting...");
     } else if (s.phase === SimCore.PHASES.READY) {
       showBanner("Stage " + stage.id + " — " + stage.name, "Tap to start");
     } else if (s.phase === SimCore.PHASES.STAGE_CLEAR) {
@@ -480,7 +495,7 @@
     elBanner.dataset.title = title;
     elBanner.innerHTML = "";
     var h = document.createElement("div");
-    h.className = "banner-title";
+    h.className = "banner-title" + (title === "YOU ARE DEAD" ? " death" : "");
     h.textContent = title;
     var p = document.createElement("div");
     p.className = "banner-sub";
