@@ -1,7 +1,39 @@
 # Hopper Game
 
-An original lane-crossing arcade game in the Crossy Road genre, specified from a
-ten-dossier research programme covering twenty games.
+> **Start here:** **[`AGENTS.md`](AGENTS.md)** — architecture, invariants, the
+> verification gate, and the traps that will cost you an hour. Written for an AI
+> assistant or a new engineer picking this up cold.
+>
+> **The authoritative product spec is [`docs/SPEC-AMENDMENT-001-shipped-product.md`](docs/SPEC-AMENDMENT-001-shipped-product.md).**
+> `docs/REQUIREMENTS-FINAL.md` is the original design record and is largely
+> superseded: it describes an endless, zero-lives grinder with a grind verb, a
+> gauge, an economy and audio. The game that actually ships is a **ten-stage
+> timed campaign** with four lives and a finish line. The amendment records the
+> withdrawn requirements and the defects found and fixed.
+
+## Playing it
+
+Open `index.html` in any modern browser. No build step.
+
+- **Pick a character** at `select.html` — 24 to choose from
+- **Hop forward** to cross the lane; **arrow keys / WASD / A-D** to move sideways
+- **Reach the white line** before the 90-second clock expires
+- You have **four lives** per stage; ten stages, then an endless mode
+
+## Verifying it
+
+There is no browser automation in this environment, so the game is verified by
+driving the real source in JavaScriptCore:
+
+```
+python3 tools/playtest.py 10
+```
+
+Expect `RESULT: NO ERRORS`, `24/24` sprites, `main.js booted, frames=600`, and a
+**non-zero** forward-only clear rate (a zero there means a lane has become
+unclearable).
+
+## Original design record
 
 ## What is here
 
