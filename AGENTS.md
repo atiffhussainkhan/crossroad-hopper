@@ -10,137 +10,53 @@ Read this before editing anything.
 
 ## 0. The asset library — USE THIS, DO NOT GENERATE ART
 
-**All game art comes from the user's own repository. Never generate,
-redraw, or substitute placeholder art.**
+**All game art comes from the user's shared library. Never generate, redraw, or
+substitute placeholder art.**
 
 ```
-https://github.com/atiffhussainkhan/Image
+/Users/mac/.minimax/asset-library/
 ```
 
-Real size: **13.32 GB** — 12.94GB across 65 files in GitHub *Releases*, plus
-395MB of git metadata. GitHub's `repo.size` field reports only the 395MB and
-has never counted a Release asset; sizing a download or a disk budget from it
-is planning for one-thirtieth of the real footprint. Measure with:
+That directory is **not** part of this repository and belongs to no game. It
+holds 855MB: a catalogue of 114,852 2D images classified by game role, 1,760
+preview atlases that make every one of them viewable, 12 downloaded 3D packs
+(1,909 models, 791 animation clips, 11 rigged characters), and the scripts that
+query and rebuild all of it. Read `/Users/mac/.minimax/asset-library/README.md`
+first — it carries the licensing rules and two 3D traps that are expensive to
+rediscover.
+
+Query it from anywhere; the tools resolve paths against the library, not your
+working directory:
 
 ```bash
-python3 tools/image_search.py --storage
+L=/Users/mac/.minimax/asset-library
+python3 $L/tools/image_search.py character     # search 30 packs
+python3 $L/tools/image_search.py --3d --cc0    # 3D models, CC0/MIT only
+python3 $L/tools/image_search.py --storage     # the TRUE upstream size
+python3 $L/tools/build_3d_catalogue.py         # rebuild the 3D catalogue
 ```
 
-Search it — never browse it by hand:
+Upstream is `github.com/atiffhussainkhan/Image`, **13.32GB** — 12.94GB across 65
+files in GitHub *Releases* plus 395MB of git. GitHub's `repo.size` reports only
+the 395MB and has never counted a Release asset; sizing anything from it is
+planning for one-thirtieth of the real footprint. **The bytes are in Releases,
+not git.**
 
-```bash
-python3 tools/image_search.py character      # by name, category, term, alias
-python3 tools/image_search.py --3d --cc0     # only 3D models, only CC0/MIT
-python3 tools/image_search.py --list         # every usable pack
-python3 tools/image_search.py knight --json  # machine-readable
-```
+**Two hard boundaries:**
 
-**The bytes are in Releases, not git.** Cloning the repo gets you 395MB of
-metadata and no pictures. To actually obtain a pack, use the `release_url`
-the tool prints.
+- **Licensing is unresolved and is not ours to settle.** `license_status` is
+  `unverified` across the whole 114,852-image set, and the four user-supplied
+  artwork archives (2.08GB) are excluded from the import path entirely. 29 of
+  30 *packs* are CC0-1.0 or MIT and are safe to ship. Do not redistribute
+  anything the library marks unverified.
+- **A `.glb` cannot be drawn by this renderer.** `src/main.js` calls
+  `getContext("2d")` and `Iso.projectS()` returns `[x, y]` — two numbers. There
+  is no WebGL, no scene graph, no camera; every "3D" thing here is a filled 2D
+  polygon. A glTF model is a mesh hierarchy with a skeleton and animation clips.
 
-### The local working set — what is downloaded, and what is not
-
-Do not bulk-download the 13.32GB. It costs disk, takes an hour, and adds
-almost nothing: the index already carries checksums, dimensions, alpha, CLIP
-tags and licence for all 114,852 images, so the bytes only re-state what is
-known. The limit on reading this library is tokens, not storage.
-
-| Layer | Size | Where |
-|---|---|---|
-| Preview atlases + full catalog | 823MB | **local**, shallow clone of the Image repo |
-| 3D packs (~13, character + environment) | ~400MB | **local**, on demand |
-| Cleaned PNG/JPEGs (the 114,852) | 6.41GB | remote — pull one bundle when chosen |
-| EPS / clipart archives | 3.68GB | remote, mostly not game art |
-| User artwork | 2.08GB | remote **and off-limits** — licence unverified |
-
-The 823MB preview layer is the one that matters: it makes every image in the
-library viewable, which is what turns "read me the numbers" into "let me look
-at the pictures". `git clone --depth 1` from the Image repo, or simply
-re-clone — nothing in it is precious.
-
-**What is there:** 30 usable packs, 18 containing 3D models — KayKit
-Adventurers, KayKit Skeletons, Ultimate Animated Character Pack, KayKit
-Dungeon/Medieval Hex/Nature, holokat Game Assets (MIT). 29 of 30 are CC0-1.0
-or MIT and are safe to ship.
-
-**Licensing, and the one hard boundary:** the four user-supplied artwork
-archives (`workplace-art-unverified-2026-10-05`, 2.08GB) are marked **licences
-unverified**. The tool excludes them on purpose. Do not import from them until
-the user confirms terms — that is a rights question, not a technical one, and
-it is not yours to decide.
-
-**The crawler rule, which exists because getting it wrong wastes hours:** treat
-an item as usable only when `availability == "stored"`, `stored_copy` is true,
-and `release_asset` is non-empty. Four records are `reference_only` and have no
-bytes behind them. Reporting one as "you have this asset" sends the caller
-hunting for a file that does not exist.
-
-### The game-role index
-
-The library ships a CLIP semantic index for all 114,852 images. `tools/build_game_index.py`
-adds the layer that is missing: a GAME ROLE per image, so a search can answer
-"what do I put on this tile" instead of only "what resembles this".
-
-```bash
-python3 tools/build_game_index.py --source /path/to/assets.jsonl
-```
-
-Source: `game-art-search-data.zip` (139MB) inside the `game-art-search-v2-2026-10-05`
-release. It holds `assets.jsonl` (334MB), `assets.csv`, and `search.sqlite`.
-
-Measured split: 29,878 UI · 23,823 unclassified · 19,599 animal · 13,961
-character · 7,536 scenery · 6,530 food · 6,338 prop · 2,357 tile · 2,140
-pickup · 1,153 vehicle · 932 glow · 605 effect. 92,078 are sprite-ready
-(transparent, single frame, not blank, automated review passed).
-
-**Read the buckets with suspicion.** A large part of the library is desktop
-iconography, not game art, and it leaks through: "Startup Wizard" classifies as
-character, "Creative player 128 glow" as glow. The classifier is a first pass
-with real error; `unclassified` exists so that guessing can be *seen* rather
-than hidden. Trust the CLIP `visual_tags` and the title over the bucket.
-
-Two CLIP lessons are baked into the classifier, both learned the hard way:
-similarity is not identity (a farm scene suggests "tractor"), and the library's
-own metadata says so — *"suggestions, cosine similarity is not confidence"* —
-so tag lists are consulted last, above a 0.31 floor, and never on size or
-transparency alone. A first pass guessed from those and filed 13,796 flowers
-as characters.
-
-### The 3D catalogue
-
-`tools/build_3d_catalogue.py` opens the downloaded 3D packs and answers, per
-MODEL rather than per pack: is it rigged, is it animated, and what are the
-animation clips actually called.
-
-Measured over 12 packs / 377MB: **1,909 models, 791 animation clips, 11 rigged
-characters.** KayKit Adventurers and Skeletons are the good ones — 5 and 2
-skinned characters, 380 clips each. holokat is the volume play at 1,004
-models; KayKit Dungeon 422, Medieval Hexagon 263.
-
-**Two catalogue caveats, both learned by opening the files:**
-
-- **Quaternius packs ship glTF as STATIC.** "Ultimate Animated Character"
-  contains 50 `.gltf`, 50 `.fbx` and 50 `.blend`, and the glTF files have zero
-  animations — the motion lives only in FBX and blend. Counting formats instead
-  of opening them would have reported this pack as web-ready when its
-  animations need conversion first. KayKit, by contrast, has the animations
-  baked into the `.glb`.
-- **`oga-3d-character-pack.zip` contains three nested zips**, so a flat scan
-  reports zero models. It is not empty; the scanner simply does not recurse.
-  Both are fixed by inspecting the archive, not by trusting the extension.
-
-### Why this project cannot use a 3D model directly
-
-`src/main.js` calls `getContext("2d")`. `Iso.projectS()` returns `[x, y]` — two
-numbers. There is no WebGL, no scene graph, no camera; every "3D" thing in the
-game is a filled 2D polygon. A `.glb` is a mesh hierarchy with materials, a
-skeleton and animation clips, and `ctx.fill()` cannot draw one.
-
-So a 3D asset has to be **pre-rendered offline to sprite sheets** (8-direction
-turntable per character) and then drawn as 2D, or the renderer has to be
-replaced with a real 3D one. That is a renderer decision, not an import
-decision, and it should be confirmed before any 3D work begins.
+So a 3D asset must be **pre-rendered offline to sprite sheets** and drawn as
+2D, or the renderer has to be replaced with a real 3D one. That is a renderer
+decision to confirm with the user, not an import to perform.
 
 ---
 
