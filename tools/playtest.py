@@ -33,9 +33,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
 
-# index.html's script order. main.js is excluded on purpose: it owns the DOM,
-# the requestAnimationFrame loop and event listeners, none of which exist in a
-# JS engine. It is syntax-checked separately below.
+# index.html's script order.
+#
+# main.js is NOT in this list, and that is deliberate: it owns the DOM and the
+# requestAnimationFrame loop, neither of which a bare JS engine provides.
+#
+# It is NOT merely syntax-checked, though -- an earlier version of this comment
+# claimed it was, and that was wrong in a way that mattered. Section 4 boots it
+# with `new Function()` against the DOM stubs in PRELUDE_JS and then steps its
+# own rAF callback for 600 real frames, which is the only thing in this file
+# that exercises the actual browser entry point.
+#
+# Either way: none of this produces PIXELS. The Ctx stub counts calls and
+# rejects non-finite coordinates. A renderer can be verified structurally here
+# and not visually, ever. tools/probes/ and the VisualQA agent both exist
+# because of that gap.
 MODULES = [
     "src/stages.js",
     "src/tiles.js",
