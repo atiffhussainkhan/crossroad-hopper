@@ -56,6 +56,37 @@ and `release_asset` is non-empty. Four records are `reference_only` and have no
 bytes behind them. Reporting one as "you have this asset" sends the caller
 hunting for a file that does not exist.
 
+### The game-role index
+
+The library ships a CLIP semantic index for all 114,852 images. `tools/build_game_index.py`
+adds the layer that is missing: a GAME ROLE per image, so a search can answer
+"what do I put on this tile" instead of only "what resembles this".
+
+```bash
+python3 tools/build_game_index.py --source /path/to/assets.jsonl
+```
+
+Source: `game-art-search-data.zip` (139MB) inside the `game-art-search-v2-2026-10-05`
+release. It holds `assets.jsonl` (334MB), `assets.csv`, and `search.sqlite`.
+
+Measured split: 29,878 UI · 23,823 unclassified · 19,599 animal · 13,961
+character · 7,536 scenery · 6,530 food · 6,338 prop · 2,357 tile · 2,140
+pickup · 1,153 vehicle · 932 glow · 605 effect. 92,078 are sprite-ready
+(transparent, single frame, not blank, automated review passed).
+
+**Read the buckets with suspicion.** A large part of the library is desktop
+iconography, not game art, and it leaks through: "Startup Wizard" classifies as
+character, "Creative player 128 glow" as glow. The classifier is a first pass
+with real error; `unclassified` exists so that guessing can be *seen* rather
+than hidden. Trust the CLIP `visual_tags` and the title over the bucket.
+
+Two CLIP lessons are baked into the classifier, both learned the hard way:
+similarity is not identity (a farm scene suggests "tractor"), and the library's
+own metadata says so — *"suggestions, cosine similarity is not confidence"* —
+so tag lists are consulted last, above a 0.31 floor, and never on size or
+transparency alone. A first pass guessed from those and filed 13,796 flowers
+as characters.
+
 ### Why this project cannot use a 3D model directly
 
 `src/main.js` calls `getContext("2d")`. `Iso.projectS()` returns `[x, y]` — two
