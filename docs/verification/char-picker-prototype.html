@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick Your Character</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #fff; font-family: 'Segoe UI', sans-serif; min-height: 100vh; padding: 30px; }
+  h1 { text-align: center; font-size: 2.2em; margin-bottom: 8px; color: #f8d210; text-shadow: 2px 2px 8px #000; }
+  p { text-align: center; color: #aaa; margin-bottom: 30px; font-size: 1.1em; }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; }
+  .card { background: #16213e; border-radius: 14px; overflow: hidden; border: 2px solid #0f3460; transition: transform 0.2s, border-color 0.2s; cursor: pointer; }
+  .card:hover { transform: scale(1.05); border-color: #f8d210; }
+  .card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+  .card .num { background: #f8d210; color: #1a1a2e; font-weight: bold; font-size: 1.1em; text-align: center; padding: 6px; }
+  .legend { max-width: 1200px; margin: 30px auto 0; background: #16213e; border-radius: 14px; padding: 20px; border: 2px solid #0f3460; }
+  .legend h2 { color: #f8d210; margin-bottom: 12px; }
+  .legend p { color: #ccc; text-align: left; font-size: 1em; line-height: 1.6; }
+  .selected-list { max-width: 1200px; margin: 20px auto; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .sel-badge { background: #f8d210; color: #1a1a2e; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 1em; }
+</style>
+</head>
+<body>
+<h1>🎮 Pick Your Player!</h1>
+<p>Click on 4 characters you want to add to the game (1, 2, 3, 4)<br>Then tell me their numbers below</p>
+<div class="grid">
+<div class="card" onclick="toggle(1)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F2260f9eb-5f48-4ebb-a0ac-0ab1969e07ac.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083155Z&x-oss-expires=3600&x-oss-signature=46b830559f4b1f2982ecc23de59a34ad07714767aa8979a076e136badb412a8d&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">1</div></div>
+<div class="card" onclick="toggle(2)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F6dda317e-9104-4f9c-b904-2963aabcac05.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083157Z&x-oss-expires=3600&x-oss-signature=0cc5c7b3564ff061f90e827173391e8960459880e8f1ee1f56a3e1bd11c12e61&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">2</div></div>
+<div class="card" onclick="toggle(3)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2Fd36ca70c-b2c7-409c-b6ed-ff6efd03b7d8.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083159Z&x-oss-expires=3600&x-oss-signature=94d09ab61c17991cee4d19f7f87e88d74458af45f32dc47ea0b65df1b2774ec4&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">3</div></div>
+<div class="card" onclick="toggle(4)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F43cbe411-d7d6-4fb6-9648-ad352c1a276e.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083201Z&x-oss-expires=3600&x-oss-signature=acfc9bb67f637212128d098a7c1d10e271855279a05e7d67da96a32a0a1f7074&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">4</div></div>
+<div class="card" onclick="toggle(5)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F6fd22718-9b54-45c0-9d09-e9ea9db522ef.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083203Z&x-oss-expires=3600&x-oss-signature=fc8d731000c77a9c77d2d6d5a65b8f41c3c6290636ac8dcffaa15230a96c2ace&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">5</div></div>
+<div class="card" onclick="toggle(6)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F94c9b627-7d55-427e-b6a3-f647ce75e5b7.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083205Z&x-oss-expires=3600&x-oss-signature=134b4fe3ae0398cc60a9f6d231875795d575eda761942ac9b8858c8af4141c77&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">6</div></div>
+<div class="card" onclick="toggle(7)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2Ffd561e23-fd32-4cbf-93fc-6f97acd4e919.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083206Z&x-oss-expires=3600&x-oss-signature=609976b396f8ee0c3cceb76b7a4dc7ea9db3bf823484a39d6cf340c086fb6b99&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">7</div></div>
+<div class="card" onclick="toggle(8)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F82b60b44-105b-4160-9941-56854491bcbc.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083208Z&x-oss-expires=3600&x-oss-signature=2552eb6f850760d915a602ced020ae78e13c86cca6a32e0cd6b4b0cbec16d9c9&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">8</div></div>
+<div class="card" onclick="toggle(9)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2Fdd30a93c-da97-486a-8c9f-6e6d64aabcd8.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083210Z&x-oss-expires=3600&x-oss-signature=60f22d557e4b6bea6b79b8f09794b772f9373988e28eff442bdb08a15778608e&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">9</div></div>
+<div class="card" onclick="toggle(10)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2Fd4a5e9e8-c73e-4091-b3c3-29c9aa79d27f.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083212Z&x-oss-expires=3600&x-oss-signature=0b9a74cc2cefcdb224cbbd8a79cbec0d864ff98855ef8ef4d8ab75db4fd24f08&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">10</div></div>
+<div class="card" onclick="toggle(11)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F42994b38-2662-4a9e-bf0b-5068f83983ab.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083214Z&x-oss-expires=3600&x-oss-signature=6808106751bd8956280dcd9d613ed4746b3c19aed42e0e929b605e00ed84872b&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">11</div></div>
+<div class="card" onclick="toggle(12)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F6f80977d-7edb-4757-abac-e1573fdd3cb3.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083216Z&x-oss-expires=3600&x-oss-signature=a055851592605eb26f5533b2c22b4a1ce680082224bd045d28e32fb6fb64f59c&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">12</div></div>
+<div class="card" onclick="toggle(13)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F3896fdbd-c83e-452a-a97b-99376686f038.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083218Z&x-oss-expires=3600&x-oss-signature=29e448665036641235b94b4980689f17b8f8425f0d5b0f183edb6c8739424f93&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">13</div></div>
+<div class="card" onclick="toggle(14)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F530e01ec-96d7-4728-bc0f-b575ebe9f9b8.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083220Z&x-oss-expires=3600&x-oss-signature=c5f146651dc065c398bc4367520d642dedb6251f9e191a0bae2b1b2516c2ffa3&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">14</div></div>
+<div class="card" onclick="toggle(15)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2Fc6b9a98d-38eb-4855-ad8c-e6da03f689e4.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083222Z&x-oss-expires=3600&x-oss-signature=a18d5491b9ad721cbb468c7577fbec662c469cdb2d4b3c87c49d583cbde73f4e&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">15</div></div>
+<div class="card" onclick="toggle(16)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F58834394-6725-4a84-b6e6-ef600f344f95.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083224Z&x-oss-expires=3600&x-oss-signature=5b6f7b1e4000bf07b25947b6e693619bd7ea332ea6eb6aecddf7e8fced9e1a4e&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">16</div></div>
+<div class="card" onclick="toggle(17)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2Fbdbcd766-02a2-42e6-a0c4-e6bbe27d2ce0.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083226Z&x-oss-expires=3600&x-oss-signature=607d14e0065c5e6923048743b2d421db4fa10e1899ef372c8aa84da2fa499653&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">17</div></div>
+<div class="card" onclick="toggle(18)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F6dcfdc7f-3b84-46e3-9daa-de2031f688ae.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083228Z&x-oss-expires=3600&x-oss-signature=6bd575772e0b681afffd86a0a694d2f48de2e65be1c18c5ff6fc411a80471c09&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">18</div></div>
+<div class="card" onclick="toggle(19)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2Fe9ea4239-6107-4858-b848-893abb8bae9a.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083230Z&x-oss-expires=3600&x-oss-signature=98ffd1e56415a68579db6f946c2d20c1baa2e8ea665748948c8b4ad1747e6242&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">19</div></div>
+<div class="card" onclick="toggle(20)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F4c658050-7a7c-4055-94bc-c0c69148ad0f.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083232Z&x-oss-expires=3600&x-oss-signature=b671a8583acc8eac4e2599e85004d3a78d20d890dae859f9bd17623292304286&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">20</div></div>
+<div class="card" onclick="toggle(21)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F1ff5ab07-b5ad-416a-a2c7-2f163c4a6205.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083234Z&x-oss-expires=3600&x-oss-signature=e463323aeed0bd0195d8309f52b478ebea98ff5d000cd8eff285deb5f0386ca2&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">21</div></div>
+<div class="card" onclick="toggle(22)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F398998a6-789e-4285-88a2-fde9dc940f84.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083236Z&x-oss-expires=3600&x-oss-signature=effde5e6a9e3602c3bc3c4d9c7bccc9c17e618240982157c8562d0dfd9afd05b&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">22</div></div>
+<div class="card" onclick="toggle(23)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2F9935c8cb-1cc2-49d0-8659-086c3b303343.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083238Z&x-oss-expires=3600&x-oss-signature=8746d10406b642dabf172b78a449f190137f9f1e883a6fa1700fd6b49ca35ca7&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">23</div></div>
+<div class="card" onclick="toggle(24)"><img src="https://matrix-internal.oss-us-east-1.aliyuncs.com/user_file_upload_tmp%2F2026-10-06%2Fc42d2a73-739b-4526-8173-4f9e734db6bf.jpg?x-oss-credential=LTAI5t9dXq2sLrMZ8f1XfiFZ%2F20261006%2Fus-east-1%2Foss%2Faliyun_v4_request&x-oss-date=20261006T083240Z&x-oss-expires=3600&x-oss-signature=0f4a6bf3bd4dc5ed3234219f8889cfc27655d0fb3ee93c7a24d227549aa84e00&x-oss-signature-version=OSS4-HMAC-SHA256"><div class="num">24</div></div>
+</div>
+<div class="legend">
+  <h2>📋 Character Guide</h2>
+  <p>
+    <b>1</b> = Boy in red cap &amp; yellow shirt &nbsp;|&nbsp;
+    <b>2</b> = Blue hoodie character &nbsp;|&nbsp;
+    <b>3</b> = Cute cat with green scarf &nbsp;|&nbsp;
+    <b>4</b> = Friendly robot with antenna &nbsp;|&nbsp;
+    <b>5</b> = Happy dog in orange vest &nbsp;|&nbsp;
+    <b>6</b> = Purple ninja with mask<br>
+    <b>7</b> = White bunny in blue overalls &nbsp;|&nbsp;
+    <b>8</b> = Wizard with purple robe &amp; star hat &nbsp;|&nbsp;
+    <b>9</b> = Green alien in space suit &nbsp;|&nbsp;
+    <b>10</b> = Pirate with eye patch &amp; red bandana &nbsp;|&nbsp;
+    <b>11</b> = Penguin with blue scarf &nbsp;|&nbsp;
+    <b>12</b> = Knight with silver helmet<br>
+    <b>13</b> = Orange fox with yellow shirt &nbsp;|&nbsp;
+    <b>14</b> = Astronaut in white suit &nbsp;|&nbsp;
+    <b>15</b> = Pink pig with red bow tie &nbsp;|&nbsp;
+    <b>16</b> = Superhero with red cape &amp; blue mask &nbsp;|&nbsp;
+    <b>17</b> = Brown bear in green shirt &nbsp;|&nbsp;
+    <b>18</b> = Chef with white hat<br>
+    <b>19</b> = Friendly skeleton in purple shorts &nbsp;|&nbsp;
+    <b>20</b> = Grey koala with eucalyptus &nbsp;|&nbsp;
+    <b>21</b> = Construction worker with yellow hard hat &nbsp;|&nbsp;
+    <b>22</b> = Green frog with tiny red hat &nbsp;|&nbsp;
+    <b>23</b> = Firefighter with red helmet &nbsp;|&nbsp;
+    <b>24</b> = White unicorn with rainbow mane
+  </p>
+</div>
+<script>
+  let selected = [];
+  function toggle(n) {
+    const idx = selected.indexOf(n);
+    if (idx >= 0) { selected.splice(idx, 1); }
+    else if (selected.length < 4) { selected.push(n); }
+    selected.sort((a,b) => a-b);
+    document.getElementById('sel').textContent = selected.length ? '✅ Selected: ' + selected.join(', ') : '⏳ Select 4 numbers...';
+    document.querySelectorAll('.card').forEach((c, i) => {
+      c.style.borderColor = selected.includes(i+1) ? '#00ff88' : '';
+    });
+  }
+</script>
+<p id="sel" style="margin-top:24px;font-size:1.3em;color:#00ff88;">⏳ Select 4 numbers...</p>
+</body>
+</html>

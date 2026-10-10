@@ -25,6 +25,14 @@ loaded by `<script>` tags in load order.
   `docs/REQUIREMENTS-FINAL.md` is the original design record and is **largely
   superseded** — see §7.
 
+### Also in this repository
+
+| Path | What it is |
+|---|---|
+| `art/stage-references/` | The ten stage looksheets, `stage01-Suburb` … `stage10-Volcano`. The visual target each stage in `src/stages.js` is describing. |
+| `docs/verification/` | Campaign sweeps over 1000 seeds, a ten-run validation log, board/death-beat screenshots, and an early character-picker prototype. Evidence for the solvability and pacing claims. |
+| `docs/licensing/CC0-licence.txt` | **The licence covering the third-party sprite art.** The Knight/Princess/Dragon sheets and the 24 roster images derive from CC0 cartoon art. Read this before redistributing the assets or swapping in art of your own. |
+
 ---
 
 ## 2. Architecture

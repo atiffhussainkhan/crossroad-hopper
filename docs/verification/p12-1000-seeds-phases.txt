@@ -1,0 +1,8 @@
+campaign seeds        : 1000
+determinism           : OK
+reached ENDLESS        : 943/1000
+final phase histogram  : {'ENDLESS': 943, 'STAGE_FAILED': 57}
+structural probes     : OK
+campaign completion   : 943/1000 (94%)
+
+PASS
