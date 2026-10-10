@@ -1,1 +1,6 @@
 .image_index_cache.json
+
+# Derived index of the 114,852-image library: 54MB, fully regenerable.
+# The BUILDER is the artefact worth versioning -- ship that, not its output --
+# so it can be re-run against a newer library instead of silently going stale.
+game_asset_index.json
