@@ -4,3 +4,4 @@
 # The BUILDER is the artefact worth versioning -- ship that, not its output --
 # so it can be re-run against a newer library instead of silently going stale.
 game_asset_index.json
+model_catalogue.json

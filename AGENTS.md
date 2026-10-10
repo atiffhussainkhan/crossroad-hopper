@@ -39,6 +39,26 @@ python3 tools/image_search.py knight --json  # machine-readable
 metadata and no pictures. To actually obtain a pack, use the `release_url`
 the tool prints.
 
+### The local working set — what is downloaded, and what is not
+
+Do not bulk-download the 13.32GB. It costs disk, takes an hour, and adds
+almost nothing: the index already carries checksums, dimensions, alpha, CLIP
+tags and licence for all 114,852 images, so the bytes only re-state what is
+known. The limit on reading this library is tokens, not storage.
+
+| Layer | Size | Where |
+|---|---|---|
+| Preview atlases + full catalog | 823MB | **local**, shallow clone of the Image repo |
+| 3D packs (~13, character + environment) | ~400MB | **local**, on demand |
+| Cleaned PNG/JPEGs (the 114,852) | 6.41GB | remote — pull one bundle when chosen |
+| EPS / clipart archives | 3.68GB | remote, mostly not game art |
+| User artwork | 2.08GB | remote **and off-limits** — licence unverified |
+
+The 823MB preview layer is the one that matters: it makes every image in the
+library viewable, which is what turns "read me the numbers" into "let me look
+at the pictures". `git clone --depth 1` from the Image repo, or simply
+re-clone — nothing in it is precious.
+
 **What is there:** 30 usable packs, 18 containing 3D models — KayKit
 Adventurers, KayKit Skeletons, Ultimate Animated Character Pack, KayKit
 Dungeon/Medieval Hex/Nature, holokat Game Assets (MIT). 29 of 30 are CC0-1.0
@@ -86,6 +106,29 @@ own metadata says so — *"suggestions, cosine similarity is not confidence"* �
 so tag lists are consulted last, above a 0.31 floor, and never on size or
 transparency alone. A first pass guessed from those and filed 13,796 flowers
 as characters.
+
+### The 3D catalogue
+
+`tools/build_3d_catalogue.py` opens the downloaded 3D packs and answers, per
+MODEL rather than per pack: is it rigged, is it animated, and what are the
+animation clips actually called.
+
+Measured over 12 packs / 377MB: **1,909 models, 791 animation clips, 11 rigged
+characters.** KayKit Adventurers and Skeletons are the good ones — 5 and 2
+skinned characters, 380 clips each. holokat is the volume play at 1,004
+models; KayKit Dungeon 422, Medieval Hexagon 263.
+
+**Two catalogue caveats, both learned by opening the files:**
+
+- **Quaternius packs ship glTF as STATIC.** "Ultimate Animated Character"
+  contains 50 `.gltf`, 50 `.fbx` and 50 `.blend`, and the glTF files have zero
+  animations — the motion lives only in FBX and blend. Counting formats instead
+  of opening them would have reported this pack as web-ready when its
+  animations need conversion first. KayKit, by contrast, has the animations
+  baked into the `.glb`.
+- **`oga-3d-character-pack.zip` contains three nested zips**, so a flat scan
+  reports zero models. It is not empty; the scanner simply does not recurse.
+  Both are fixed by inspecting the archive, not by trusting the extension.
 
 ### Why this project cannot use a 3D model directly
 
