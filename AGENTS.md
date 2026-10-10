@@ -8,6 +8,68 @@ Read this before editing anything.
 
 ---
 
+## 0. The asset library — USE THIS, DO NOT GENERATE ART
+
+**All game art comes from the user's own repository. Never generate,
+redraw, or substitute placeholder art.**
+
+```
+https://github.com/atiffhussainkhan/Image
+```
+
+Real size: **13.32 GB** — 12.94GB across 65 files in GitHub *Releases*, plus
+395MB of git metadata. GitHub's `repo.size` field reports only the 395MB and
+has never counted a Release asset; sizing a download or a disk budget from it
+is planning for one-thirtieth of the real footprint. Measure with:
+
+```bash
+python3 tools/image_search.py --storage
+```
+
+Search it — never browse it by hand:
+
+```bash
+python3 tools/image_search.py character      # by name, category, term, alias
+python3 tools/image_search.py --3d --cc0     # only 3D models, only CC0/MIT
+python3 tools/image_search.py --list         # every usable pack
+python3 tools/image_search.py knight --json  # machine-readable
+```
+
+**The bytes are in Releases, not git.** Cloning the repo gets you 395MB of
+metadata and no pictures. To actually obtain a pack, use the `release_url`
+the tool prints.
+
+**What is there:** 30 usable packs, 18 containing 3D models — KayKit
+Adventurers, KayKit Skeletons, Ultimate Animated Character Pack, KayKit
+Dungeon/Medieval Hex/Nature, holokat Game Assets (MIT). 29 of 30 are CC0-1.0
+or MIT and are safe to ship.
+
+**Licensing, and the one hard boundary:** the four user-supplied artwork
+archives (`workplace-art-unverified-2026-10-05`, 2.08GB) are marked **licences
+unverified**. The tool excludes them on purpose. Do not import from them until
+the user confirms terms — that is a rights question, not a technical one, and
+it is not yours to decide.
+
+**The crawler rule, which exists because getting it wrong wastes hours:** treat
+an item as usable only when `availability == "stored"`, `stored_copy` is true,
+and `release_asset` is non-empty. Four records are `reference_only` and have no
+bytes behind them. Reporting one as "you have this asset" sends the caller
+hunting for a file that does not exist.
+
+### Why this project cannot use a 3D model directly
+
+`src/main.js` calls `getContext("2d")`. `Iso.projectS()` returns `[x, y]` — two
+numbers. There is no WebGL, no scene graph, no camera; every "3D" thing in the
+game is a filled 2D polygon. A `.glb` is a mesh hierarchy with materials, a
+skeleton and animation clips, and `ctx.fill()` cannot draw one.
+
+So a 3D asset has to be **pre-rendered offline to sprite sheets** (8-direction
+turntable per character) and then drawn as 2D, or the renderer has to be
+replaced with a real 3D one. That is a renderer decision, not an import
+decision, and it should be confirmed before any 3D work begins.
+
+---
+
 ## 1. What this is
 
 **Hopper** — a lane-crossing arcade game in the Crossy Road genre, played in the
