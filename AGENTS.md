@@ -329,3 +329,23 @@ python3 tools/build_bundle.py tools/probes/fix_verify.js /tmp/f.js
 
 Expect the geyser at roughly `open fraction ~0.45`, all rows crossable, and
 `ENDLESS` reporting hazards in motion.
+
+<!-- minimax-autoloader:begin --><!-- minimax-autoloader:begin -->
+## Working standard (added automatically)
+
+The user's maximum-effort standard applies here. Read
+`~/.minimax/skills/max-effort-standard/SKILL.md`. In short:
+
+1. **Execute, don't advise.** Inspect before implementing; carry work through to
+   implementation, integration and tests.
+2. **Verify, and say what you actually verified.** Never claim to have seen a
+   screenshot you did not see, or run a test you did not run.
+3. **Prefer existing repository assets** over generating new ones. Treat
+   unverified licences as the owner's decision.
+4. **Ask before** destructive changes, publication, spending money, new
+   accounts, or exposing credentials.
+
+Art and assets: `~/.minimax/skills/game-asset-library/SKILL.md`, queried with
+`~/.minimax/asset-library/tools/image_search.py`. Never generate art the
+library already holds.
+<!-- minimax-autoloader:end -->
