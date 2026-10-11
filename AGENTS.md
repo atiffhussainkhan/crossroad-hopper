@@ -273,13 +273,13 @@ what protects a grey character from being erased by a grey grid.
 
 ## 7. Known-open defects — genuine, not fixed
 
-1. **Score accrues per elapsed millisecond**, not per hop
-   (`stageScore += players * dt * 0.01`). Standing still scores; a hop scores
-   nothing. Visible in any recorded run.
-2. **`char_18` (Chef) is severed at its file boundary.** The crop clamps to the
-   source height, so a sprite that touches the edge gets no padding.
-3. **Roster sprites are sized by canvas height, not character height**, so
-   members render at 37.9–42.2px — a 10.8% spread. `drawH: 46` means "46px of
+1. ~~Score accrues per elapsed millisecond~~ — **FIXED.** `SCORE_PER_HOP = 10`,
+   awarded in `hop()`. Verified: 10s idle scores 0; 10s hopping scores 180.
+2. **`char_18` (Chef) is truncated in its source art** — 376 solid pixels on the
+   bottom row. Not a crop bug: those pixels do not exist in the original. It
+   needs a different source image. The other 23 are clean.
+3. **Roster sprites are sized by canvas height, not character height** —
+   42.0–44.3px at `drawH: 46`, a 5.5% spread. Minor. `drawH: 46` means "46px of
    canvas", not "46px of character".
 4. **~734 nearer-object occlusion inversions per 2956 frames** in the board
    render. Inferred and reproduced with a row-offset test, but never confirmed

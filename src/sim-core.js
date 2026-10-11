@@ -23,7 +23,15 @@
   var PURSUER_DISTANCE_THRESHOLD = 20;
   // How long the world holds still after a hit before the player is put back.
   // Long enough to read "You died", short enough not to break the rhythm.
-  var DEAD_BEAT_MS = 2100;   // boom, then the soul leaves, then restart
+  var DEAD_BEAT_MS = 2100;
+
+  /* Score per forward hop. A stage is 40 rows of play plus
+   * sidesteps, so a clean run banks in the low thousands -- and
+   * a stage where the player dies half way through banks what
+   * they actually earned. Before this, score accrued per
+   * elapsed millisecond and standing still scored full marks. */
+  var SCORE_PER_HOP = 10;
+  // boom, then the soul leaves, then restart
   // How far BEHIND the player the pursuer starts. It used to start ON their
   // row, which meant it had no gap to close: the instant it stopped
   // telegraphing it was already past them, so standing still for one second
@@ -363,7 +371,17 @@
       }
       if (g.phase !== PHASES.RUNNING) return false;
       g.activePlayer = idx;
-      return g.players[idx].hop(direction || "forward");
+      /* Award score HERE, on the hop that actually moved the player.
+       *
+       * Doing it in tick() instead meant score tracked elapsed time, so a
+       * player who stood still scored exactly as much as one who crossed the
+       * board. Awarding it at the point of movement is also what makes it
+       * frame-rate independent: it no longer depends on dt at all. */
+      var advanced = g.players[idx].hop(direction || "forward");
+      if (advanced && direction === "forward") {
+        g.stageScore += SCORE_PER_HOP;
+      }
+      return advanced;
     }
 
     // A single death for one player: lose a life, then respawn at the stage
@@ -490,7 +508,21 @@
 
       if (g.phase !== PHASES.RUNNING) return g.phase;
       g.elapsedInStageMs += dt;
-      g.stageScore += g.players.length * dt * 0.01;
+
+      /* Score is earned by MOVING FORWARD, not by being alive.
+       *
+       * This used to accrue per elapsed millisecond --
+       * `stageScore += players * dt * 0.01` -- so standing perfectly still on
+       * the start line scored 10 points a second and a player who crossed the
+       * stage in ten hops scored the same as one who sat there for the whole
+       * clock. It was visible in any recorded run: a stage-cleared run showed
+       * score 180 after 18 seconds, and a fresh life restarted at exactly the
+       * figure the previous death had reached, which is the tell that score
+       * was really a stopwatch.
+       *
+       * The spec (P-13) says score is the sum of forward hops. Award it where
+       * the hop actually happens, so the number measures play rather than
+       * patience. */
 
       // Pursuer applies to the leading player.
       var lead = 0;
