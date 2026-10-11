@@ -19,7 +19,7 @@ function run(label, hopEveryMs, ms) {
   var s = g.state();
   var score = s.stageScore, hops = s.players[0].state().hops;
   print("  " + pad(label, 24) + pad((el/1000).toFixed(1)+"s", 8) +
-        pad(hops, 6) + pad(Math.round(score), 7) + "  " + (hops*10));
+        pad(hops, 6) + pad(Math.round(score), 7) + "  " + (hops));
   return {score:score, hops:hops, el:el};
 }
 
@@ -29,6 +29,6 @@ print("");
 print("  idle 10s scored " + Math.round(a.score) + "  (expect 0)");
 print("  active 10s scored " + Math.round(b.score) + "  (expect " + (b.hops*10) + ")");
 print("");
-var ok = (a.score === 0) && (Math.round(b.score) === b.hops*10) && b.score > a.score;
-print(ok ? "  PASS: score tracks hops, not the clock"
-         : "  FAIL: score still tracks elapsed time");
+var ok = (a.score === 0) && (b.score === b.hops) && b.score > a.score;
+print(ok ? "  PASS: score = accepted forward hops exactly, and idle scores zero"
+         : "  FAIL: score does not equal the hop count");

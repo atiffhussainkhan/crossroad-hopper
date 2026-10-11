@@ -148,7 +148,9 @@ Right: a car at five positions along its lane, so its travel on the plane is vis
       ground: st.ground, groundAlt: st.groundAlt, road: st.road, water: st.water,
       hazard: st.hazard, hazard2: st.hazard2, foliage: st.foliage,
       foliage2: st.foliage2, trunk: st.trunk,
-    });
+    // drawCar is (ctx, col, row, scene, hazard) -- the hazard carries the spec
+    // the wheels are drawn from. Build one the way obstacles.html does.
+    }, { kind: "car", spec: Hazards.KINDS.car, row: 0, x: x });
   });
 
   document.body.setAttribute("data-gallery-ready", "1");
