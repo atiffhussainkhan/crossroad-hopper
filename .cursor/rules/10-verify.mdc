@@ -1,0 +1,50 @@
+---
+description: How to verify a change before claiming it works
+alwaysApply: true
+---
+
+# Verify before claiming
+
+## The gate
+
+    python3 tools/playtest.py 10
+
+All of these must hold:
+
+- `RESULT: NO ERRORS`
+- `sprites resolved: 24/24`
+- `main.js: booted=true`, `frames=600`
+- `forward-only policy:` **non-zero** — a zero means a lane has become
+  unclearable, which is a bug even though nothing threw
+- `main.js parse check: PASS`
+
+## The gate does NOT prove appearance
+
+It runs the canvas in JavaScriptCore. It records draw calls and rejects
+non-finite coordinates. **It produces no pixels.** A game rendering a black
+screen passes it identically to a correct one.
+
+This is not hypothetical. A vignette was verified "structurally valid" and
+could not be seen. 734 occlusion inversions were inferred from geometry and
+never confirmed. The picker cropped every character top and bottom for an
+unknown period while reporting zero errors.
+
+So:
+
+    export PATH="$HOME/.local/node/bin:$PATH"
+    python3 -m http.server 8765 --bind 127.0.0.1 &
+    node tools/shoot.js http://localhost:8765/select.html /tmp --play
+
+Writes `/tmp/shot_*.png`, prints a canvas pixel histogram and any console
+error. **A visual change is verified with a picture, or reported as
+unverified.** Do not report a render as working because nothing threw.
+
+## Commit protocol
+
+    git status --porcelain            # clean, or know why not
+    python3 tools/playtest.py 10       # before
+    # ... work ...
+    python3 tools/playtest.py 10       # after
+    git commit -m "what changed and why it is observable"
+
+A change that cannot be observed by the gate is not a verified change.

@@ -1,0 +1,43 @@
+---
+description: Where game art comes from — and why you must never generate it
+alwaysApply: true
+---
+
+# Assets — use the library, never generate
+
+**All game art comes from the user's own library. Do not generate, redraw, or
+substitute placeholder art when it holds something suitable.** If nothing fits,
+say so — a confident "not in library" beats a pretty wrong answer.
+
+    L=/Users/mac/.minimax/asset-library
+    python3 $L/tools/image_search.py <terms>
+    python3 $L/tools/gamekit.py sheet scenery      # contact sheet of real pictures
+    python3 $L/tools/gamekit.py doctor .            # what can this renderer display?
+
+**114,852** indexed 2D images, **1,909** 3D models, **791** animation clips,
+**11** rigged characters. The genuinely usable game art is the **3D**.
+
+## Licensing is not yours to decide
+
+Every 2D record carries `license_status: unverified`. 29 of 30 top-level packs
+are CC0-1.0 or MIT and are safe to ship. Four user-supplied archives are
+excluded from the import path on purpose. **Do not redistribute anything marked
+unverified** — surface it as the owner's decision.
+
+## Traps already paid for
+
+- **Quaternius glTF is static** — animations exist only in FBX and blend.
+- `oga-3d-character-pack.zip` holds nested zips; a flat scan reports zero
+  models. Not an empty pack.
+- Titles lie. "Oak Tree" renders as a black cross glyph (dingbat font).
+- CLIP similarity is not identity: a farm scene suggests "tractor", which is
+  how "Farm" got classified as a vehicle upstream.
+- GitHub's `repo.size` excludes Releases — it read 395MB for 13.32GB.
+
+## Sprites in this repo
+
+24 roster sprites, WebP, hard alpha, **cropped so the character fills the
+frame**. `drawH: 46` means the character is 46px tall, not 46px of canvas.
+The source JPGs had a grey checkerboard flattened into them; rebuild with
+`python3 tools/build_character_pngs.py`. `char_18` (Chef) is truncated in its
+source art — its lower body ran off the original frame and no code recovers it.
