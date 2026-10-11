@@ -1,0 +1,20 @@
+---
+description: Reuse the existing library and preserve shipped 3D assets
+alwaysApply: true
+---
+
+# Assets
+
+All assets needed to run this game are already included in the repository.
+Keep the local models, textures, backgrounds, fallback sprites and licences.
+Do not generate replacement artwork or rerun importers during migration.
+
+For future asset discovery, use the existing Minimax library through:
+
+    python3 tools/gamekit-agent/gamekit.py search <terms> --limit 5
+    python3 tools/gamekit-agent/gamekit.py inspect ASSET_ID
+
+The optional library defaults to ~/.minimax/asset-library; --library PATH
+selects another location. Read tools/gamekit-agent/QUICKSTART.md if needed.
+Keep queries bounded. No bulk downloads or full archive scans. Empty indexed
+results do not prove absence. Unverified 2D entries are review-only.

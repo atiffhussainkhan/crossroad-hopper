@@ -1,0 +1,37 @@
+---
+description: What this project is, and the two rules that break everything if ignored
+alwaysApply: true
+---
+
+# Hopper — project context
+
+A lane-crossing arcade game in the Crossy Road genre. Ten stages. Hop forward,
+dodge traffic, reach the white line before the 90-second clock runs out. Four
+lives per stage.
+
+**Vanilla JavaScript. No framework, no bundler, no npm, no build step.** Twelve
+`<script src>` tags in `index.html`, in this exact order:
+
+    src/stages.js  src/tiles.js  src/hazards.js  src/sim-core.js
+    src/render/iso.js  src/scenery.js  src/render/scene.js  src/roster.js
+    src/render/sprite.js  src/render/deathfx.js
+    src/render/character.js  src/main.js
+
+The order is load-bearing. `sim-core.js` reads `Stages`' constants at definition
+time; `character.js` reads `Iso` at definition time. Adding a module means
+editing **both** `index.html` and `MODULES` in `tools/playtest.py`.
+
+## Two rules
+
+**1. The primary renderer is real Three.js/WebGL2.** `src/render/world3d.js`
+loads the local glTF/GLB models using the vendored runtime. The classic canvas
+renderer remains only as fallback. Serve over HTTP; do not open file://.
+Native WebGL modules stay outside the classic headless MODULES bundle.
+Read `MINIMAX-HANDOFF.md` and `docs/SPEC-AMENDMENT-002-library-3d.md` first.
+Before a new asset integration run:
+
+    python3 tools/gamekit-agent/gamekit.py doctor .
+
+**2. The simulation owns positions, the renderer owns pixels.** They communicate
+through state only. A renderer change must never alter a collision outcome; a
+simulation change must never require the renderer to know anything new.

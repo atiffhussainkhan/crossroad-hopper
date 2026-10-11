@@ -1,0 +1,15 @@
+---
+description: Run the project's own checks before and after a change
+alwaysApply: true
+---
+
+# Verification
+
+Find and run whatever gate this project actually has — a test script, a
+`check_*.py`, a build. If it has one, a change is not done until it passes.
+
+For anything visual, capture a screenshot and LOOK at it. Structural tests prove
+structure and never prove appearance.
+
+Commit only when the checks pass. Report which checks ran, what they returned,
+and what remains unverified.

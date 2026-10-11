@@ -4,7 +4,12 @@ This file is the entry point for an AI assistant or a new engineer. It states
 what the project is, how it is put together, how to run and verify it, and —
 most importantly — the invariants and traps that will bite you.
 
-Read this before editing anything.
+Read this before editing anything. For a fresh clone, start with `MINIMAX-HANDOFF.md`.
+
+The portable library helper is `tools/gamekit-agent/gamekit.py`; use bounded
+queries against the existing optional Minimax library. No library installation
+is required to run this game. The older prerender prototype and generated
+fallback-art manifest are historical tooling, not the primary 3D pipeline.
 
 ## User-requested agent roles
 
