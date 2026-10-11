@@ -6,6 +6,21 @@ import { clone } from '../../vendor/three/addons/utils/SkeletonUtils.js';
 const loader = new GLTFLoader();
 const cache = new Map();
 const views = [];
+
+/* Load progress.
+ *
+ * The picker downloads 24 library models before anything can be clicked. On a
+ * cold visit that is tens of megabytes, and with no counter the page is just a
+ * heading over empty cards for over a minute -- which reads as a dead site, not
+ * a slow one. Publish the count so the page can show real progress. */
+let progressDone = 0, progressTotal = 0;
+function reportProgress(done, total) {
+  progressDone = done; progressTotal = total;
+  const body = document.body;
+  body.dataset.galleryLoaded = String(done);
+  body.dataset.galleryTotal = String(total);
+  window.dispatchEvent(new CustomEvent('galleryprogress', { detail: { done, total } }));
+}
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canvas = document.createElement('canvas');
 canvas.className = 'model-gallery-canvas';
@@ -67,6 +82,7 @@ async function addView(slot, asset) {
     slot.textContent = 'Model preview unavailable';
     console.error('Model preview failed:', asset.model, error);
   }
+  reportProgress(++progressDone, progressTotal || progressDone);
 }
 
 function frame(time) {
@@ -124,6 +140,8 @@ async function boot() {
   if (!response.ok) throw new Error('Library manifest could not be loaded');
   const manifest = await response.json();
   if (document.body.dataset.gallery === 'characters') {
+    const wanted = manifest.characters.filter(a => document.querySelector('.card[data-id="' + a.id + '"]'));
+    reportProgress(0, wanted.length);
     for (const asset of manifest.characters) {
       const card = document.querySelector('.card[data-id="' + asset.id + '"]');
       if (!card) continue;
