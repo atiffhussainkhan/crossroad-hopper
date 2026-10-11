@@ -22,12 +22,11 @@ intends. Reused from tools/playtest.py's host stubs.
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
+from js_runtime import run_file
 
 sys.path.insert(0, str(ROOT / "tools"))
 from playtest import MODULES, sprite_dims  # noqa: E402
@@ -152,8 +151,7 @@ def main() -> int:
     src = ROOT / "tools" / "_probe.js"
     src.write_text("\n".join(parts))
     try:
-        proc = subprocess.run([JSC, str(src)], capture_output=True, text=True,
-                              timeout=280, cwd=str(ROOT))
+        proc = run_file(src, timeout=280)
     finally:
         if src.exists():
             src.unlink()

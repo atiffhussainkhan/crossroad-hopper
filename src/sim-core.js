@@ -230,6 +230,7 @@
       stageScore: 0,
       endlessScore: 0,
       endlessMs: 0,
+      endlessMode: false,
       coins: 0,
       stageCoins: 0,
       hazards: [],
@@ -298,6 +299,7 @@
       // That is what made stage 10 a wall rather than merely hard.
       if (g.stageIndex === index) g.stageAttempt = (g.stageAttempt || 0) + 1;
       else { g.stageIndex = index; g.stageAttempt = 0; }
+      g.endlessMode = false;
       g.phase = PHASES.READY;
       g.deadForMs = 0;
       g.elapsedInStageMs = 0;
@@ -326,6 +328,57 @@
       g.activePlayer = 0;
     }
 
+    // Endless has its own board and distance counter. Reusing the campaign
+    // finish row left a live pursuer behind a player who had reset to row 0.
+    // A life loss restarts this board while keeping the current Endless run;
+    // exhausting every life starts a fresh run when the player retries.
+    function startEndless(freshRun) {
+      g.endlessMode = true;
+      g.phase = PHASES.ENDLESS;
+      g.deadForMs = 0;
+      g.stageScore = 0;
+      g.elapsedInStageMs = 0;
+      if (freshRun) {
+        g.endlessScore = 0;
+        g.endlessMs = 0;
+        g.endlessAttempt = 0;
+      } else {
+        g.endlessAttempt = (g.endlessAttempt || 0) + 1;
+      }
+      g.pursuer.reset();
+      g.rng = createRng(seed + ":endless:" + g.endlessAttempt);
+      g.hazards = [];
+      g.hazardRow0 = null;
+      g.hazardRows = 0;
+      g.generatedRows = {};
+      g.leadRow = 0;
+      for (var i = 0; i < g.players.length; i++) {
+        var s = g.players[i].state();
+        s.row = 0;
+        s.hops = 0;
+        s.col = s.startCol;
+        s.alive = true;
+        s.finished = false;
+        if (freshRun) s.lives = Stages.STAGE_START_LIVES;
+      }
+      g.activePlayer = 0;
+    }
+
+    function finishDeathBeat() {
+      if (g.endlessMode) {
+        startEndless(false);
+        return;
+      }
+      var left = [];
+      for (var i = 0; i < g.players.length; i++) {
+        left.push(g.players[i].state().lives);
+      }
+      startStage(g.stageIndex);
+      for (var j = 0; j < g.players.length; j++) {
+        g.players[j].state().lives = left[j];
+      }
+    }
+
     // One input. In single player this is always player 0. In two player
     // the input drives the active player; tap once to cycle if the active
     // player is already finished.
@@ -337,39 +390,36 @@
       var idx = (playerIndex === undefined || playerIndex === null)
         ? 0 : playerIndex;
       if (idx < 0 || idx >= g.players.length) return false;
+      var moveDirection = direction || "forward";
+
+      // Skipping the animation follows the same restart as waiting for it;
+      // otherwise a quick tap retained a failed attempt's score and clock.
+      if (g.phase === PHASES.DEAD) {
+        finishDeathBeat();
+        if (g.phase === PHASES.READY) g.phase = PHASES.RUNNING;
+      }
 
       if (g.phase === PHASES.ENDLESS) {
         var ep = g.players[idx];
-        // A player who finished a stage arrives here with finished=true, and
-        // hop() refuses finished players -- so endless was a frozen screen.
-        // Clear the flag on entry: endless has no goal row.
-        if (ep.state().finished) {
-          ep.state().finished = false;
-          ep.state().row = 0;
-          ep.state().alive = true;
+        var moved = ep.hop(moveDirection);
+        if (moved) {
+          if (moveDirection === "forward") g.endlessScore += 1;
+          g.activePlayer = idx;
         }
-        var moved = ep.hop(direction || "forward");
-        if (moved) { g.endlessScore += 1; g.activePlayer = idx; }
         return moved;
-      }
-      // Any input during the death beat ends it early and moves the player,
-      // so a child who taps again is never stuck waiting.
-      if (g.phase === PHASES.DEAD) {
-        for (var dz = 0; dz < g.players.length; dz++) {
-          if (!g.players[dz].state().alive) g.players[dz].revive();
-        }
-        g.phase = PHASES.RUNNING;
-        g.deadForMs = 0;
       }
       if (g.phase !== PHASES.RUNNING) return false;
       g.activePlayer = idx;
-      return g.players[idx].hop(direction || "forward");
+      var hopped = g.players[idx].hop(moveDirection);
+      // P-13: one point per accepted forward hop. Award at input time so the
+      // frame rate and time spent judging traffic never contribute to score.
+      if (hopped && moveDirection === "forward") g.stageScore += 1;
+      return hopped;
     }
 
-    // A single death for one player: lose a life, then respawn at the stage
-    // start. This is the only place a life is consumed, so the pursuer branch
-    // and any test drive the same code path. R-01: the respawn is immediate,
-    // with no menu and no input-blocking animation.
+    // A single death for one player: lose a life and freeze the board before
+    // restarting it. This is the only place a life is consumed, so traffic,
+    // the pursuer and test input all follow the same recovery path.
     function applyDeath(playerIndex) {
       var victim = g.players[playerIndex];
       if (!victim) return false;
@@ -394,7 +444,7 @@
         // the player was hit on is still the board they are looking at.
         g.deadForMs += dt;
         if (g.deadForMs >= DEAD_BEAT_MS) {
-          /* Death restarts the STAGE, not just the player.
+          /* Death restarts the board, not just the player.
            *
            * A dead player was revived at row 0 but kept the same board and
            * the same clock, so every death was also a slow bleed of the time
@@ -405,15 +455,9 @@
            * Lives are carried across. startStage() refills them to four, and
            * calling it as-is here would make a player unkillable -- four lives,
            * die, four lives again, forever. Whatever was left when they died is
-           * what they take back in. */
-          var left = [];
-          for (var lv = 0; lv < g.players.length; lv++) {
-            left.push(g.players[lv].state().lives);
-          }
-          startStage(g.stageIndex);
-          for (var lr = 0; lr < g.players.length; lr++) {
-            g.players[lr].state().lives = left[lr];
-          }
+           * what they take back in. Endless restarts its own board, keeping
+           * the current run's score and difficulty clock. */
+          finishDeathBeat();
         }
         return g.phase;
       }
@@ -437,6 +481,7 @@
         for (var q2 = 0; q2 < g.players.length; q2++) {
           if (g.players[q2].state().row > el2) el2 = g.players[q2].state().row;
         }
+        g.leadRow = el2;
         if (global.Hazards) {
           // Rows keep being dealt ahead of the leader, exactly as in RUNNING,
           // or the player walks off the end of a board that stopped growing.
@@ -447,7 +492,8 @@
             g.generatedRows[er] = true;
             var eDiff = Stages.difficultyFor(g.stageIndex, g.endlessMs);
             var eMade = global.Hazards.hazardsForRow(
-              g.hazardSeed + ":" + g.stageIndex + ":endless", er,
+              g.hazardSeed + ":" + g.stageIndex + ":endless:" +
+                (g.endlessAttempt || 0), er,
               g.cols, eDiff, g.rng, g.stageIndex, g.playMin);
             for (var em = 0; em < eMade.length; em++) g.hazards.push(eMade[em]);
           }
@@ -469,6 +515,7 @@
             }
           }
         }
+        if (g.phase !== PHASES.ENDLESS) return g.phase;
         var eResult = g.pursuer.tick(dt, el2, 4 + Math.floor(g.endlessMs / 15000));
         if (eResult === "DEAD") {
           for (var ej = 0; ej < g.players.length; ej++) {
@@ -490,7 +537,6 @@
 
       if (g.phase !== PHASES.RUNNING) return g.phase;
       g.elapsedInStageMs += dt;
-      g.stageScore += g.players.length * dt * 0.01;
 
       // Pursuer applies to the leading player.
       var lead = 0;
@@ -625,11 +671,7 @@
         // E-02: coins persist across runs and are banked at stage end.
         g.coins += g.stageCoins;
         g.stageCoins = 0;
-        if (g.stageIndex + 1 >= Stages.stageCount()) {
-          g.phase = PHASES.ENDLESS;
-        } else {
-          g.phase = PHASES.STAGE_CLEAR;
-        }
+        g.phase = PHASES.STAGE_CLEAR;
         return g.phase;
       }
 
@@ -644,21 +686,24 @@
 
     function advance() {
       if (g.phase === PHASES.STAGE_CLEAR) {
-        startStage(g.stageIndex + 1);
+        if (g.stageIndex + 1 >= Stages.stageCount()) startEndless(true);
+        else startStage(g.stageIndex + 1);
         return g.phase;
       }
       if (g.phase === PHASES.STAGE_FAILED) {
         // Retry THIS stage, not the campaign. This is the deliberate
         // difference from Crossy Road Castle, which reset to the bottom
         // of the tower and destroyed the high-score loop.
-        startStage(g.stageIndex);
+        if (g.endlessMode) startEndless(true);
+        else startStage(g.stageIndex);
         return g.phase;
       }
       return g.phase;
     }
 
     function difficulty() {
-      return Stages.difficultyFor(g.stageIndex, g.elapsedInStageMs);
+      return Stages.difficultyFor(g.stageIndex,
+        g.endlessMode ? g.endlessMs : g.elapsedInStageMs);
     }
 
     /* Tile density by stage. Stages one and two are TEACHING stages: they

@@ -2,7 +2,7 @@
 """Phase 1 gate: the stage loop.
 
 Drives the real `src/sim-core.js` and `src/stages.js` headlessly through
-JXA and asserts the stage system's invariants across a seed sweep.
+JavaScriptCore or Node and asserts the stage system's invariants across a seed sweep.
 
 Asserted:
 
@@ -29,12 +29,10 @@ Exits non-zero on any failure.
 from __future__ import annotations
 
 import json
-import os
-import subprocess
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+from js_runtime import SIM_MODULES, run_script
 SIM = ROOT / "tools" / "simulate.js"
 
 # Campaign reachability sweep size. Each campaign simulates ten 90-second
@@ -46,29 +44,9 @@ SEED_COUNT = 1000
 
 
 def run_batch(seeds: list[str]) -> list[dict]:
-    """Run many simulations in one JXA invocation.
-
-    JXA on this macOS exposes `$.NSFileHandle.fileHandleWithStandardInput` as
-    a non-callable function, and `console.log` writes to stderr rather than
-    stdout. So seeds go through a temp file named by GAME_SEEDS_FILE, and
-    results are read back from stderr.
-    """
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".seeds", delete=False, dir="/tmp"
-    ) as f:
-        f.write("\n".join(seeds) + "\n")
-        seeds_path = f.name
-    try:
-        proc = subprocess.run(
-            ["osascript", "-l", "JavaScript", str(SIM)],
-            capture_output=True,
-            text=True,
-            check=False,
-            cwd=str(ROOT),
-            env={**os.environ, "GAME_SEEDS_FILE": seeds_path},
-        )
-    finally:
-        Path(seeds_path).unlink(missing_ok=True)
+    """Run the campaign driver in the same global scope as browser scripts."""
+    body = "var __SEEDS = %s;\n" % json.dumps(seeds) + SIM.read_text()
+    proc = run_script(body, modules=SIM_MODULES, timeout=900)
 
     if proc.returncode != 0:
         raise RuntimeError(f"simulate.js failed: {proc.stderr.strip()!r}")
@@ -90,44 +68,8 @@ def run_batch(seeds: list[str]) -> list[dict]:
 # Direct structural checks that don't need a 10,000-run batch. These run the
 # same real modules, so they cannot drift from what the player runs.
 def run_probe(body: str) -> dict:
-    """Run a JXA probe against the real modules.
-
-    JXA has no `load()` (that is a `jsc` builtin), so the probe evals the
-    module sources itself, the same way tools/simulate.js does. The probe
-    body is prefixed with a loader that resolves the game directory from
-    GAME_DIR or the current working directory.
-    """
-    loader = """
-ObjC.import('Foundation');
-var _gd = null;
-try {
-  var _env = $.NSProcessInfo.processInfo.environment;
-  var _v = _env.objectForKey("GAME_DIR");
-  if (_v !== null && _v !== undefined && _v !== "[id nil]") _gd = ObjC.unwrap(_v);
-} catch (e) { _gd = null; }
-if (!_gd) _gd = ObjC.unwrap($.NSFileManager.defaultManager.currentDirectoryPath);
-["src/stages.js", "src/sim-core.js"].forEach(function (rel) {
-  var t = $.NSString.stringWithContentsOfFileEncodingError(
-    _gd + "/" + rel, $.NSUTF8StringEncoding, null);
-  if (t === null) throw new Error("missing " + _gd + "/" + rel);
-  eval(ObjC.unwrap(t));
-});
-"""
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", delete=False, dir="/tmp"
-    ) as f:
-        f.write(loader + body)
-        js_path = f.name
-    try:
-        proc = subprocess.run(
-            ["osascript", "-l", "JavaScript", str(js_path)],
-            capture_output=True,
-            text=True,
-            check=False,
-            cwd=str(ROOT),
-        )
-    finally:
-        Path(js_path).unlink(missing_ok=True)
+    """Run structural probes against every real simulation dependency."""
+    proc = run_script(body, modules=SIM_MODULES)
     if proc.returncode != 0:
         raise RuntimeError(f"probe failed: {proc.stderr.strip()!r}")
     raw = proc.stdout + proc.stderr
@@ -296,20 +238,9 @@ console.log("@@P@@" + JSON.stringify(r));
     #     player. A hazard that is drawn but harmless is the single worst
     #     possible bug in this genre: the player learns that cars are scenery.
     s = run_probe("""
-ObjC.import('Foundation');
-["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js"].forEach(function (rel) {
-  var t = $.NSString.stringWithContentsOfFileEncodingError(
-    _gd + "/" + rel, $.NSUTF8StringEncoding, null);
-  eval(ObjC.unwrap(t));
-});
 var r = {};
 var g = SimCore.createGame({playerCount: 1, seed: "hz"});
-// Stages one and two are TEACHING stages and generate no lethal hazard at all
-// (src/hazards.js: buildHazards returns empty for stageIndex < 2). This probe
-// used to run on whatever createGame defaulted to -- stage one -- so it
-// correctly reported "no hazards were ever generated" about a stage that is
-// SUPPOSED to be empty. The probe asks whether the hazard system works, so it
-// must run on the first stage that actually spawns one.
+// Stage three exercises rail/water traffic as well as ordinary road lanes.
 g.startStage(2);
 g.hop("forward");
 
@@ -364,12 +295,6 @@ console.log("@@P@@" + JSON.stringify(r));
     #    pursuer was scaled past the player's maximum hop rate, which made
     #    every campaign stage unwinnable and the campaign looped forever.
     s = run_probe("""
-ObjC.import('Foundation');
-["src/stages.js", "src/sim-core.js"].forEach(function (rel) {
-  var t = $.NSString.stringWithContentsOfFileEncodingError(
-    _gd + "/" + rel, $.NSUTF8StringEncoding, null);
-  eval(ObjC.unwrap(t));
-});
 var r = {};
 
 // Player hop ceiling, rows per second.
@@ -421,12 +346,6 @@ console.log("@@P@@" + JSON.stringify(r));
     # ST-12: both players act in the same tick. The previous build queued
     # turns, so six taps moved player 0 and player 1 never moved at all.
     s = run_probe("""
-ObjC.import('Foundation');
-["src/stages.js", "src/sim-core.js"].forEach(function (rel) {
-  var t = $.NSString.stringWithContentsOfFileEncodingError(
-    _gd + "/" + rel, $.NSUTF8StringEncoding, null);
-  eval(ObjC.unwrap(t));
-});
 var g = SimCore.createGame({playerCount: 2, seed: "sim"});
 g.hop("forward", 0); g.hop("forward", 0); g.hop("forward", 0);
 g.hop("forward", 1); g.hop("forward", 1);
@@ -491,13 +410,8 @@ def main() -> int:
     print(f"structural probes     : {'OK' if not probe_result else 'FAIL'}")
     rate = 100.0 * reached_endless / max(1, len(runs))
     print(f"campaign completion   : {reached_endless}/{len(runs)} ({rate:.0f}%)")
-    # OPEN: P-12 campaign reachability. With hazards live, a competent
-    # autoplay clears a stage roughly 43 percent of the time by STALLING ON
-    # THE 90-SECOND CLOCK while waiting for a gap, not because a lane is
-    # impassable. The fix is balance (hazard density against the clock), and
-    # it belongs to the generation milestone. Recorded here so it cannot be
-    # forgotten; it is deliberately not a hard failure while it is being
-    # tuned, because a gate that always fails trains people to ignore it.
+    # Keep the original campaign reachability threshold explicit. A passing
+    # smoke test or engine migration must never hide a balance regression.
     if rate < 90.0:
         failures.append(
             "P-12 campaign reachability %.0f%%: %d of %d final failures were a "

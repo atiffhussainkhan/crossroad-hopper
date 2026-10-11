@@ -1,0 +1,321 @@
+{
+  "drive_folder": "1sueV_4CGMpZC8y30mWfgKK9UaT3mkHBX",
+  "files": [
+    {
+      "path": "assets/Flat Colors/Blends/George.blend",
+      "drive_id": "1LdRZEYjNuVxcuA6npilraOwBgVZl3v61",
+      "bytes": 6676396
+    },
+    {
+      "path": "assets/Flat Colors/Blends/Leela.blend",
+      "drive_id": "1wUWO5jIumQuGq8dJzTHHMZKk_T8GBv3R",
+      "bytes": 3791684
+    },
+    {
+      "path": "assets/Flat Colors/Blends/Mike.blend",
+      "drive_id": "1UmXGgcgV9_PcaKR2w6hImo3ALANY9V5y",
+      "bytes": 5700808
+    },
+    {
+      "path": "assets/Flat Colors/Blends/Stan.blend",
+      "drive_id": "1DlSyAcUB2PHsIDfkxvZpcRyxAGBxbA5k",
+      "bytes": 5106708
+    },
+    {
+      "path": "assets/Flat Colors/FBX/George.fbx",
+      "drive_id": "1MuCmF7TGnJ8NZQFp3XpdkWgGQ-GPsCf1",
+      "bytes": 5191468
+    },
+    {
+      "path": "assets/Flat Colors/FBX/Leela.fbx",
+      "drive_id": "145ghjiQbYKsTExgLUPcotGEsPbcZtF9E",
+      "bytes": 1813836
+    },
+    {
+      "path": "assets/Flat Colors/FBX/Mike.fbx",
+      "drive_id": "1cAMHgjO7FE53T7osQ3NEaRO8onbs1t-r",
+      "bytes": 4268492
+    },
+    {
+      "path": "assets/Flat Colors/FBX/Stan.fbx",
+      "drive_id": "1ZC_HZ0-T4pqwlNdd8JyiJdBgOBHMKrBh",
+      "bytes": 4261356
+    },
+    {
+      "path": "assets/Flat Colors/glTF/George.gltf",
+      "drive_id": "1CEATvzzC1w198kD9DLTamgMD8LsRwV1I",
+      "bytes": 2206173
+    },
+    {
+      "path": "assets/Flat Colors/glTF/Leela.gltf",
+      "drive_id": "1BOAP-hwB8VlR6S9veirq5407h4dp0Vfq",
+      "bytes": 827961
+    },
+    {
+      "path": "assets/Flat Colors/glTF/Mike.gltf",
+      "drive_id": "1QOp6GVyfby2xiwLWxXsRpArRYvCst_ES",
+      "bytes": 1695510
+    },
+    {
+      "path": "assets/Flat Colors/glTF/Stan.gltf",
+      "drive_id": "1C-LshlvXt-egbENhWpbxR0BTIJMTRxk_",
+      "bytes": 1707926
+    },
+    {
+      "path": "assets/Flat Colors/OBJ/George.mtl",
+      "drive_id": "1gSagYp5vs-r4DJVsiotHtRcEzo-gSlFt",
+      "bytes": 1124
+    },
+    {
+      "path": "assets/Flat Colors/OBJ/George.obj",
+      "drive_id": "1mSBA9CVs_yErvyDtONGae0s-3BVSh8KO",
+      "bytes": 657100
+    },
+    {
+      "path": "assets/Flat Colors/OBJ/Leela.mtl",
+      "drive_id": "1GDZR6cERl5ragREQYWJKWNPe-OzB0aKg",
+      "bytes": 1123
+    },
+    {
+      "path": "assets/Flat Colors/OBJ/Leela.obj",
+      "drive_id": "1ybAN7tWgzh6TulmuKqDv9YUfSIVeg0kN",
+      "bytes": 169788
+    },
+    {
+      "path": "assets/Flat Colors/OBJ/Mike.mtl",
+      "drive_id": "1FfhEHzMwT3hX7teo3814ABZA4bsF16_X",
+      "bytes": 1122
+    },
+    {
+      "path": "assets/Flat Colors/OBJ/Mike.obj",
+      "drive_id": "1aDLU9VsxuvkQDGLossA7Y8ZfYZnPhPg_",
+      "bytes": 467740
+    },
+    {
+      "path": "assets/Flat Colors/OBJ/Stan.mtl",
+      "drive_id": "1aiLaxtrxxLeW25awBa3uUm-GgkfRNVQ9",
+      "bytes": 1122
+    },
+    {
+      "path": "assets/Flat Colors/OBJ/Stan.obj",
+      "drive_id": "11WjO9gsqgIjSLgQbLUXP5dHF1z-ZxvqK",
+      "bytes": 446451
+    },
+    {
+      "path": "assets/Textured/Blends/George.blend",
+      "drive_id": "1BLTYk5Kj6vAivcrGRvf-_E7GxPd5e8Jc",
+      "bytes": 6540744
+    },
+    {
+      "path": "assets/Textured/Blends/Leela.blend",
+      "drive_id": "1JOUMn4-dBjypwb_gEZ2u2Fla4fEsnT8p",
+      "bytes": 3758720
+    },
+    {
+      "path": "assets/Textured/Blends/Mike.blend",
+      "drive_id": "1pePtxw7TGmwMns7_MlEqTt9_l65T5pz8",
+      "bytes": 5644620
+    },
+    {
+      "path": "assets/Textured/Blends/Stan.blend",
+      "drive_id": "1iQewdbv9qbfyVgLF18wDb7Em9Zk1SgIw",
+      "bytes": 5105960
+    },
+    {
+      "path": "assets/Textured/FBX/George.fbx",
+      "drive_id": "1LBUPT1h3M2EHQYdFwT9xLYAIC_v0T_gR",
+      "bytes": 5139308
+    },
+    {
+      "path": "assets/Textured/FBX/Leela.fbx",
+      "drive_id": "1o9g0PR3Zu-xsjgQ7XO8UXc_BzirEYSPL",
+      "bytes": 1801980
+    },
+    {
+      "path": "assets/Textured/FBX/Mike.fbx",
+      "drive_id": "1tDwpCC_42V42PepztrqgZJSHaxXXD_BA",
+      "bytes": 4247356
+    },
+    {
+      "path": "assets/Textured/FBX/Stan.fbx",
+      "drive_id": "16vN07-jDjLQIRwi0kBpziHSXvx-TkOzi",
+      "bytes": 4248892
+    },
+    {
+      "path": "assets/Textured/glTF/George.gltf",
+      "drive_id": "1-LVJXIGatBYD9ldy_BgCvr-rcpWss_wW",
+      "bytes": 5152038
+    },
+    {
+      "path": "assets/Textured/glTF/Leela.gltf",
+      "drive_id": "1Q1YGX60Ze2WI5oCSel8tYUy8DduEoaCC",
+      "bytes": 3382594
+    },
+    {
+      "path": "assets/Textured/glTF/Mike.gltf",
+      "drive_id": "1XekqFS2x8IRz3W_vYuAvbz0mfDMvD74a",
+      "bytes": 4423046
+    },
+    {
+      "path": "assets/Textured/glTF/Stan.gltf",
+      "drive_id": "1Wkj9SVzI3SMD-leUFWeREo0PfudxmG8Z",
+      "bytes": 3787080
+    },
+    {
+      "path": "assets/Textured/OBJ/George.mtl",
+      "drive_id": "1MxyeWbPuhRV4ysj7HR4IvwvMEjGwC2Dr",
+      "bytes": 242
+    },
+    {
+      "path": "assets/Textured/OBJ/George.obj",
+      "drive_id": "1JJ1WPNKHXsvkHyj7u2cZMg2kTbWpJaBJ",
+      "bytes": 594170
+    },
+    {
+      "path": "assets/Textured/OBJ/Leela.mtl",
+      "drive_id": "149a2gN0xIGfZDRrY6xvUkP2ybm4J1m6K",
+      "bytes": 240
+    },
+    {
+      "path": "assets/Textured/OBJ/Leela.obj",
+      "drive_id": "1ORwBrlDPCqgLHg4kw5BMrBn_zFGoi0Is",
+      "bytes": 168210
+    },
+    {
+      "path": "assets/Textured/OBJ/Mike.mtl",
+      "drive_id": "1BUghoXRuFkis9STYjNOsS9HLV6ory7J7",
+      "bytes": 238
+    },
+    {
+      "path": "assets/Textured/OBJ/Mike.obj",
+      "drive_id": "1I8KHU9tUKwvL1ftLezy6C6HQoeb2SQD1",
+      "bytes": 456824
+    },
+    {
+      "path": "assets/Textured/OBJ/Stan.mtl",
+      "drive_id": "1G2pOgATQnDHgs3blV9nSFMfP0NLkPToZ",
+      "bytes": 238
+    },
+    {
+      "path": "assets/Textured/OBJ/Stan.obj",
+      "drive_id": "10pVrWQXtPRTzsrVNFMlWBgj6TeOYge0u",
+      "bytes": 453606
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/George_1_Texture.png",
+      "drive_id": "1B0_6YOUgLZXfswZj-SsRbrDd_HoLn33v",
+      "bytes": 2327191
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/George_2_Texture.png",
+      "drive_id": "1VitIx3rOYvzEWyMOIQ3BIoU7mf0tP7oL",
+      "bytes": 2287853
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/George_3_Texture.png",
+      "drive_id": "1ltKDIVxU1-kRYsUKhUBpYirxGy4443xr",
+      "bytes": 2293339
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/George_4_Texture.png",
+      "drive_id": "1DtESvXnvZG91fgv3d273KQIzsgKsLplE",
+      "bytes": 2223795
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Leela_1_Texture.png",
+      "drive_id": "1KovpnyM3wFpzVib7UB1dISmpQadCcKSZ",
+      "bytes": 2105595
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Leela_2_Texture.png",
+      "drive_id": "1uLHIoD_ESt5QXjAPjt1xRQaQ1ylUuDA8",
+      "bytes": 2119513
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Leela_3_Texture.png",
+      "drive_id": "1ZCxCX1vLL9S1aWKgjyhz8ZpuxtpBdQJc",
+      "bytes": 2112579
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Leela_4_Texture.png",
+      "drive_id": "1ivG0CdxbCQiD1rlm2HgYABRFOQYSssIJ",
+      "bytes": 2104256
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Mike_1_Texture.png",
+      "drive_id": "1qkYwvFBDRGZe0SFZAgkCemARY5F0dyHZ",
+      "bytes": 2079846
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Mike_2_Texture.png",
+      "drive_id": "19IPDDg9ScWZpb8p8AW37E7CJqcP1iJPb",
+      "bytes": 2127049
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Mike_3_Texture.png",
+      "drive_id": "19FwQwQdhQTJ-9kWwdxwGQJGQLWR6HzWu",
+      "bytes": 2180403
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Mike_4_Texture.png",
+      "drive_id": "1lh9DFToIegMgPtSF8hkGz-6rzr_0IhT3",
+      "bytes": 2080582
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Stan_1_Texture.png",
+      "drive_id": "17ZxnySCROUXgFdRQE5A6_cw2gXWJ5EPd",
+      "bytes": 1705146
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Stan_2_Texture.png",
+      "drive_id": "1iD1FDJuWGb3UJGIEvVNRWdlq7KFSmLRZ",
+      "bytes": 1772082
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Stan_3_Texture.png",
+      "drive_id": "1L7qOiijLVRqNtFtLt0ponEVqI_y6FYUP",
+      "bytes": 1726910
+    },
+    {
+      "path": "assets/Textured/Textures/Color Variations/Stan_4_Texture.png",
+      "drive_id": "18Xew93PHEHcBKAnYNI9PBNFJpVeJEOPf",
+      "bytes": 1713456
+    },
+    {
+      "path": "assets/Textured/Textures/George_Texture.png",
+      "drive_id": "1gywStINUXf5Ep1y1h9e84Kxa2oFjh3Hd",
+      "bytes": 2295756
+    },
+    {
+      "path": "assets/Textured/Textures/Leela_Texture.png",
+      "drive_id": "1Kv3s73hzT0EtyUhrfglxg3tHKzP_73yX",
+      "bytes": 1929427
+    },
+    {
+      "path": "assets/Textured/Textures/Mike_Texture.png",
+      "drive_id": "15krmPPFiiRELOrB3161z1s5J2RuVsELj",
+      "bytes": 2065288
+    },
+    {
+      "path": "assets/Textured/Textures/Stan_Texture.png",
+      "drive_id": "1fXfBs-AM-ELNAcr05g9FZpQhfewqKmBY",
+      "bytes": 1560762
+    },
+    {
+      "path": "assets/ColorsPreview.gif",
+      "drive_id": "1whMWTL8749GbZdfAY50yfnrxPJ_pz_MK",
+      "bytes": 5578614
+    },
+    {
+      "path": "assets/License.txt",
+      "drive_id": "1za89GDUfFtTyq8f2uL0_U0Nw_anSzGir",
+      "bytes": 364
+    },
+    {
+      "path": "assets/Preview.jpg",
+      "drive_id": "12tqr5-l6dfkP30IIkuatrmegpuVBLw4A",
+      "bytes": 298327
+    }
+  ],
+  "retrieved": "2026-10-06"
+}

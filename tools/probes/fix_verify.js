@@ -19,10 +19,10 @@ for (var i = 0; i < 600; i++) {                    // 10 seconds at 60Hz
   if (Hazards.isActive(h)) openMs += 1000/60; else closedMs += 1000/60;
 }
 print("  over 10s: open "+Math.round(openMs)+"ms, closed "+Math.round(closedMs)+"ms");
-print("  expected roughly open 4000ms / closed 6000ms (on 1200 of every 3000)");
+print("  expected open ~4600ms / closed ~5400ms (three full periods plus the first second)");
 var ratio = openMs / (openMs + closedMs);
-print("  open fraction "+ratio.toFixed(2)+" (expect ~0.40)  "+
-      (ratio > 0.05 && ratio < 0.95 ? "PASSES - it opens AND closes" : "STILL BROKEN"));
+print("  open fraction "+ratio.toFixed(2)+" (long-run duty cycle 0.40)");
+if (ratio < 0.44 || ratio > 0.48) throw new Error("cycle clock duty fraction is wrong");
 
 print("");
 print("=== FIX 2: laneHasGap judges the game's real board ===");
@@ -44,31 +44,31 @@ for (var s=0;s<10;s++){
 }
 print("  rows judged crossable at sprint speed: "+crossable+"/"+total+" = "+
       Math.round(crossable*100/total)+"%");
+if (!total || crossable !== total) throw new Error("generated lane has no sprint-speed gap");
 
 print("");
 print("=== FIX 3: ENDLESS is a live board ===");
 var ge=SimCore.createGame({playerCount:1,seed:"endless-fix"});
-ge.startStage(9); ge.hop("forward",0);
-var guard=0;
-while (ge.state().phase !== "ENDLESS" && guard < 40000) {
-  ge.tick(16.667); guard++;
-  var ph=ge.state().phase;
-  if (ph==="READY"||ph==="STAGE_CLEAR"||ph==="STAGE_FAILED") { ge.hop("forward",0); }
-  if (ph==="DEAD") { /* let the beat run out */ }
-}
-print("  reached phase after "+guard+" ticks: "+ge.state().phase);
-if (ge.state().phase!=="ENDLESS"){ ge.state().phase = "ENDLESS"; print("  (forced into ENDLESS directly for the test)"); }
-if (ge.state().phase==="ENDLESS"){
-  var before=ge.state().hazards.length;
-  var xs=ge.state().hazards.map(function(x){return x.x;});
-  for (var b=0;b<3600;b++) ge.tick(16.667);
-  var s4=ge.state();
-  var mv=0;
-  for (var q=0;q<Math.min(xs.length,s4.hazards.length);q++) if(s4.hazards[q].x!==xs[q]) mv++;
-  print("  hazards "+before+" -> "+s4.hazards.length+" over 60s; moved: "+mv+
-        (mv>0?"  <- LIVE (FIXED)":"  <- frozen (STILL BROKEN)"));
-  print("  player row="+Math.round(s4.players[0].state().row)+
-        "  lives="+s4.players[0].state().lives);
-} else {
-  print("  could not reach ENDLESS in the probe budget");
-}
+// Exercise advance(), the game's actual campaign-to-Endless transition.
+// Assigning only phase="ENDLESS" bypasses mode setup and can accidentally
+// measure a campaign restart after the first death.
+ge.startStage(9);
+ge.state().phase = SimCore.PHASES.STAGE_CLEAR;
+ge.advance();
+if (ge.state().phase !== SimCore.PHASES.ENDLESS || !ge.state().endlessMode)
+  throw new Error("campaign did not enter Endless");
+ge.tick(16.667);
+var before = ge.state().hazards.length;
+var xs = ge.state().hazards.map(function(x){ return x.x; });
+// Hold on the safe starting row for one second. This measures movement before
+// a pursuer/life restart can replace the board being observed.
+for (var b=0; b<60; b++) ge.tick(16.667);
+var s4 = ge.state(), moved = 0;
+for (var q=0; q<Math.min(xs.length,s4.hazards.length); q++)
+  if (s4.hazards[q].x !== xs[q]) moved++;
+print("  hazards "+before+" -> "+s4.hazards.length+" over 1s; moved: "+moved);
+print("  phase="+s4.phase+" mode="+s4.endlessMode+
+      " player row="+s4.players[0].state().row+" lives="+s4.players[0].state().lives);
+if (!before || !moved || s4.phase !== SimCore.PHASES.ENDLESS)
+  throw new Error("Endless did not keep its live traffic running");
+print("FIX VERIFICATION: PASS");

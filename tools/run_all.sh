@@ -28,6 +28,9 @@
 
 set -e
 cd "$(dirname "$0")/.."
+PYTHON="${PYTHON:-python3}"
+GATE_OUTPUT="$(mktemp)"
+trap 'rm -f "$GATE_OUTPUT"' EXIT
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -36,13 +39,14 @@ NC='\033[0m'
 gate() {
   local name="$1"
   local script="$2"
+  shift 2
   printf "running %-32s ... " "$name"
-  if python3 "$script" > /tmp/gate.out 2>&1; then
+  if "$PYTHON" "$script" "$@" > "$GATE_OUTPUT" 2>&1; then
     printf "${GREEN}PASS${NC}\n"
-    tail -1 /tmp/gate.out | sed 's/^/  /'
+    tail -1 "$GATE_OUTPUT" | sed 's/^/  /'
   else
     printf "${RED}FAIL${NC}\n"
-    cat /tmp/gate.out | sed 's/^/  /'
+    cat "$GATE_OUTPUT" | sed 's/^/  /'
     exit 1
   fi
 }
@@ -50,11 +54,14 @@ gate() {
 gate "check_requirements"   tools/check_requirements.py
 gate "check_testability"    tools/check_testability.py
 gate "check_art_assets"     tools/check_art_assets.py
+gate "check_models (3D library)" tools/check_models.py
 gate "check_js_renderer"     tools/check_js_renderer.py
 gate "check_js_runtime"       tools/check_js_runtime.py
 gate "check_hazard_reach"     tools/check_hazard_reach.py
 gate "check_endgame"          tools/check_endgame.py
 gate "check_phases"           tools/check_phases.py
+gate "scoring and Endless"    tools/check_scoring.py
+gate "playtest (10 runs)"      tools/playtest.py 10 --seed 20261010
 gate "check_vertical_slice" tools/check_vertical_slice.py
 
 echo

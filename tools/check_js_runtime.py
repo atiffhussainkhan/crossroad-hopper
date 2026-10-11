@@ -21,12 +21,10 @@ Run from the project root:  python3 tools/check_js_runtime.py
 from __future__ import annotations
 
 import re
-import subprocess
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
+from js_runtime import run_script
 
 CHAIN = ["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js",
          "src/render/iso.js", "src/scenery.js", "src/render/scene.js",
@@ -65,7 +63,7 @@ BUILTINS = {
     # XMLHttpRequest arrived with src/render/sprite.js, which fetches the
     # sprite manifest. It is a host object like `Image` and `fetch`, not a
     # variable anything declares.
-    "XMLHttpRequest", "XMLSerializer",
+    "XMLHttpRequest", "XMLSerializer", "localStorage", "decodeURIComponent",
 }
 
 RESERVED = {
@@ -92,6 +90,8 @@ def strip_noise(src: str) -> str:
     src = re.sub(r"\"(?:[^\"\\]|\\.)*\"", ' "" ', src)
     src = re.sub(r"'(?:[^'\\]|\\.)*'", " '' ", src)
     src = re.sub(r"`(?:[^`\\]|\\.)*`", " `` ", src, flags=re.S)
+    src = re.sub(r"(^|[=(,:!&|?{};]|\breturn\s+)\s*/(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\n\\])+/[dgimsuvy]*",
+                 r"\1 0 ", src, flags=re.M)
     return src
 
 
@@ -201,11 +201,7 @@ def assert_undeclared() -> list[str]:
 
 
 def run_jsc(body: str) -> str:
-    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
-        f.write(body)
-        p = Path(f.name)
-    proc = subprocess.run([JSC, str(p)], capture_output=True, text=True, cwd=str(ROOT))
-    p.unlink(missing_ok=True)
+    proc = run_script(body)
     return (proc.stdout + proc.stderr).strip()
 
 
@@ -325,7 +321,8 @@ Stages.STAGES.forEach(function (s) {
   if (!s.scenery || !s.scenery.length)
     out.push("stage " + s.id + " declares no scenery");
   s.scenery.forEach(function (k) {
-    if (!Scenery.has(k)) out.push("stage " + s.id + " scenery " + k +
+    var renderable = k === "tree" ? Scenery.has("treeBack") && Scenery.has("treeFront") : Scenery.has(k);
+    if (!renderable) out.push("stage " + s.id + " scenery " + k +
                                   " has no object in the registry");
   });
   // Scenery must actually be placeable: some non-hazard row, and the
@@ -501,7 +498,7 @@ for (var w = 0; w < 6; w++) {
 out.push("stage1-kinds=" + Object.keys(kinds).sort().join("+"));
 var n = Object.keys(rows).length;
 out.push("stage1-hazards=" + n);
-var apron = Object.keys(rows).filter(function (r) { return +r < 3; }).length;
+var apron = Object.keys(rows).filter(function (r) { return +r < Hazards.SAFE_START_ROWS; }).length;
 out.push("launch-apron=" + apron);
 var fin = Object.keys(rows).filter(function (r) { return +r >= goal - 2; }).length;
 out.push("finish-apron=" + fin);
@@ -533,7 +530,7 @@ print(out.join(" | "));
             )
         if kv.get("launch-apron") != "0":
             problems.append(
-                "a hazard spawns in the launch apron (rows 0-2); the player's "
+                "a hazard spawns in the declared safe launch rows; the player's "
                 "first hop would be unavoidable"
             )
         if kv.get("finish-apron") != "0":
@@ -707,10 +704,13 @@ Roster.ROSTER.forEach(function (ch) {
   var R = Iso.projectS(4 + (1 + hw) / 2, 10.5, bh + hh)[0];
   var T = Iso.projectS(4.5, 10.5, bh + hh)[1];
   var B = Iso.projectS(4.5, 10.5, bh + 0.09)[1];
-  var eyes = calls.filter(function (c) {
-    return !c.arc && c.fill === "#ffffff" && c.rx < (R - L) * 0.4;
+  // An eye has a white surround immediately followed by its dark pupil.
+  // White ears (Chef) and tiny eye highlights are not additional eyes.
+  var eyes = calls.filter(function (c, i) {
+    var pupil = calls[i + 1];
+    return !c.arc && c.fill === "#ffffff" && pupil && pupil.fill === "#1b1b1b";
   });
-  if (eyes.length < 2) {
+  if (eyes.length !== 2) {
     out.push(ch.id + " eyes=" + eyes.length);
     return;
   }

@@ -2,7 +2,7 @@
 """tools/playtest.py -- play the real game headlessly, N times, and report.
 
 This is not a smoke test of a reimplementation. It concatenates the game's own
-src/*.js, loads it into JavaScriptCore (jsc), and drives the shipped code:
+src/*.js, loads it into JavaScriptCore or Node, and drives the shipped code:
 
   * SIMULATION -- SimCore.createGame() -> tick()/hop() to stage completion, with
     random characters, random seeds and randomised input timing, so the
@@ -23,15 +23,15 @@ reads Stages' constants at definition time.
 
 from __future__ import annotations
 
+import argparse
 import json
-import os
 import random
-import subprocess
+import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
+from js_runtime import run_script
 
 # index.html's script order. main.js is excluded on purpose: it owns the DOM,
 # the requestAnimationFrame loop and event listeners, none of which exist in a
@@ -123,9 +123,9 @@ function Ctx() {
   this.calls = 0;
 }
 var NUMERIC_METHODS = ["translate", "scale", "transform", "setTransform",
-                       "clearRect", "fillRect", "strokeRect", "arc",
+                       "clearRect", "fillRect", "strokeRect", "arc", "rotate",
                        "ellipse", "lineTo", "moveTo", "quadraticCurveTo",
-                       "bezierCurveTo", "rect", "drawImage"];
+                       "bezierCurveTo", "rect", "drawImage", "fillText", "strokeText"];
 Ctx.prototype._n = function (fn, args) {
   for (var i = 0; i < args.length; i++) {
     var v = args[i];
@@ -196,8 +196,28 @@ function flushTimers(maxRounds) {
  * most often. Syntax-checking it only proves it parses; booting it is what
  * proves the frame actually renders. Every element it looks up is handed back,
  * with the writable textContent/innerHTML the HUD assigns to. */
+function eventTarget(target) {
+  target.__events = {};
+  target.addEventListener = function (type, fn) {
+    (this.__events[type] || (this.__events[type] = [])).push(fn);
+  };
+  target.removeEventListener = function (type, fn) {
+    var list = this.__events[type] || [], i = list.indexOf(fn);
+    if (i >= 0) list.splice(i, 1);
+  };
+  target.dispatchEvent = function (event) {
+    event.target = event.target || this;
+    event.preventDefault = event.preventDefault || function () { this.defaultPrevented = true; };
+    var list = (this.__events[event.type] || []).slice();
+    for (var i = 0; i < list.length; i++) list[i](event);
+    return !event.defaultPrevented;
+  };
+  return target;
+}
+
 function El(id) {
   this.id = id;
+  this.tagName = id === "mode" || id.indexOf("move-") === 0 ? "BUTTON" : "DIV";
   this.textContent = "";
   this.innerHTML = "";
   this.className = "";
@@ -223,7 +243,8 @@ function El(id) {
   this.insertBefore = function (h) { return this.appendChild(h); };
   this.remove = function () {};
   this.contains = function () { return false; };
-  this.dispatchEvent = function () {};
+  eventTarget(this);
+  this.setPointerCapture = function (id) { this.__capturedPointer = id; };
 }
 El.prototype.getBoundingClientRect = function () {
   return { left: 0, top: 0, right: 440, bottom: 600, width: 440, height: 600 };
@@ -289,10 +310,10 @@ __g.Image = ImageStub;
 var __canvas = makeCanvas();
 var __elements = {};
 ["board", "stage-name", "timer", "difficulty", "lives", "score", "banner",
- "mode", "progress", "hint"].forEach(function (id) {
+ "mode", "progress", "hint", "move-left", "move-forward", "move-right", "move-back"].forEach(function (id) {
   __elements[id] = (id === "board") ? __canvas : new El(id);
 });
-__g.document = {
+__g.document = eventTarget({
   getElementById: function (id) { return __elements[id] || null; },
   createElement: function () { return new El("dyn"); },
   querySelector: function () { return null; },
@@ -302,10 +323,9 @@ __g.document = {
   hidden: false,
   visibilityState: "visible",
   body: new El("body")
-};
+});
 __g.navigator = { userAgent: "jsc" };
-__g.addEventListener = function () {};
-__g.removeEventListener = function () {};
+eventTarget(__g);
 __g.devicePixelRatio = 2;
 __g.innerWidth = 1280;
 __g.innerHeight = 900;
@@ -353,6 +373,8 @@ rosterIds.forEach(function (id) {
   });
 });
 
+if (spriteReport.ok !== rosterIds.length) __ERRORS.push("roster sprites resolved only " + spriteReport.ok + "/" + rosterIds.length);
+
 /* The animated sheets must survive too -- Knight/Princess/Dragon. */
 ["Knight", "Princess", "Dragon"].forEach(function (n) {
   guard("SpriteSheets animated " + n, function () {
@@ -383,6 +405,7 @@ function playRun(run, who, seedName, policy) {
               hops: 0, hopRejected: 0, deaths: 0, finished: false,
               finalScore: 0, phase: null, ms: 0 };
   var g = SimCore.createGame({ playerCount: 1, seed: seedName });
+  var lastLives = g.state().players[0].state().lives;
   var DT = 1000 / 60;
   var nextHop = 200 + Math.floor(rnd() * 600);
   var elapsed = 0;
@@ -411,13 +434,15 @@ function playRun(run, who, seedName, policy) {
       } else if (pl) {
         __ERRORS.push("player row not a finite number: " + pl.row);
       }
-      if (s.phase === SimCore.PHASES.DEAD) rec.deaths++;
+      // Count lives spent, rather than counting every frame of the death beat.
+      if (pl && pl.lives < lastLives) rec.deaths += lastLives - pl.lives;
+      if (pl) lastLives = pl.lives;
       /* There is no FINISHED phase. Reaching the goal line is STAGE_CLEAR;
        * keying off a non-existent constant compares against undefined, matches
        * nothing, and reports a clean run as a loss -- which is exactly what
        * this harness did before the enum was read. */
       if (s.phase === SimCore.PHASES.STAGE_CLEAR) { rec.finished = true; break; }
-      if (s.phase === SimCore.PHASES.GAME_OVER) { rec.gameOver = true; break; }
+      if (s.phase === SimCore.PHASES.GAME_OVER || s.phase === SimCore.PHASES.STAGE_FAILED) { rec.gameOver = true; break; }
     }
     var st = g.currentStage();
     if (st) rec.stages = Math.max(rec.stages, (s && s.stageIndex || 0) + 1);
@@ -515,7 +540,10 @@ for (var ri = 0; ri < rosterIds.length; ri++) {
  * This is the only section that would catch a regression in the file this
  * project edits most, and it is the reason to prefer booting the code over
  * merely parsing it. A syntax check passes a file that throws on frame 1. */
-var mainReport = { booted: false, frames: 0, ctxCalls: 0, drewSprite: false };
+var mainReport = { booted: false, frames: 0, ctxCalls: 0, drewSprite: false, inputChecks: 0 };
+var __browserGame = null;
+var __createGame = SimCore.createGame;
+SimCore.createGame = function (opts) { __browserGame = __createGame(opts); return __browserGame; };
 guard("main.js boot", function () {
   var src = __MAIN_JS;
   // Same indirection index.html uses: evaluate the file as a script.
@@ -535,11 +563,105 @@ for (var fr = 0; fr < FRAMES; fr++) {
   mainReport.frames++;
   // Feed the page input the way a player would: a hop every ~400ms.
   if (fr % 24 === 0) {
-    var tap = new El("board");
-    try { __g.dispatchEvent ? __g.dispatchEvent({ type: "keydown", key: " " }) : null; }
+    try { __g.dispatchEvent({ type: "keydown", key: " ", target: document.body }); }
     catch (e) { __ERRORS.push("dispatchEvent threw: " + e.message); }
   }
 }
+// Real main.js handlers must reach the simulation, including the buttons,
+// Endless, and two simultaneous per-player animations. No private IIFE state
+// is exposed: observe createGame and the renderer calls instead.
+guard("main.js input regressions", function () {
+  function check(ok, message) {
+    mainReport.inputChecks++;
+    if (!ok) __ERRORS.push("browser input: " + message);
+  }
+  function click(id) { __elements[id].dispatchEvent({ type: "click" }); }
+  function key(k, target) { __g.dispatchEvent({ type: "keydown", key: k, target: target || document.body }); }
+  click("mode"); // Start a fresh two-player game.
+  var g = __browserGame, p0 = g.state().players[0].state(), p1 = g.state().players[1].state();
+  var startCol = p0.col;
+  click("move-right");
+  check(p0.col === startCol + 1, "right button did not move player 0");
+  key("a");
+  check(p0.col === startCol, "A key did not move the player left");
+  var before = p0.row;
+  key(" ", __elements["move-forward"]);
+  check(p0.row === before, "Space on a focused button also triggered a global hop");
+  click("move-forward");
+  check(p0.row === before + 1, "forward button did not hop once");
+  key("ArrowDown");
+  check(p0.row === before, "down arrow did not hop back");
+
+  // Fresh state isolates two animations on different axes.
+  click("mode"); click("mode");
+  g = __browserGame; p0 = g.state().players[0].state(); p1 = g.state().players[1].state();
+  if (__rafCb) __rafCb(__clock); // Let the new mode render before input.
+  var c0 = p0.col, c1 = p1.col;
+  function pointer(type, x, y) {
+    __canvas.dispatchEvent({ type: type, pointerId: 1, button: 0, clientX: x, clientY: y });
+  }
+  pointer("pointerdown", 100, 200); pointer("pointerup", 100, 200);
+  pointer("pointerdown", 390, 200); pointer("pointermove", 330, 200); pointer("pointerup", 330, 200);
+  check(p0.row === 1 && p1.row === 0 && p1.col === c1 - 1,
+        "tap and swipe did not move the intended players independently: " + p0.col + "," + p0.row + "; " + p1.col + "," + p1.row + "; starts " + c0 + "," + c1);
+  check(__canvas.__capturedPointer === 1, "pointer input did not capture the drag");
+  var draws = [], drawCharacter = CharacterRenderer.drawCharacter;
+  CharacterRenderer.drawCharacter = function (ctx, col, row) {
+    draws.push({ col: col, row: row });
+    return drawCharacter.apply(this, arguments);
+  };
+  try { if (__rafCb) __rafCb(__clock); }
+  finally { CharacterRenderer.drawCharacter = drawCharacter; }
+  check(draws.length === 2 && draws[0].row > 0 && draws[0].row < 1 &&
+        Math.abs(draws[0].col - c0) < 0.01 && draws[1].row === 0 &&
+        draws[1].col < c1 && draws[1].col > c1 - 1,
+        "players did not render independent forward and lateral hop poses: " + JSON.stringify(draws));
+
+  // Reach the campaign's real transition into Endless, then use its input.
+  click("mode"); g = __browserGame;
+  g.startStage(9); g.state().phase = SimCore.PHASES.STAGE_CLEAR;
+  click("move-forward");
+  check(g.state().phase === SimCore.PHASES.ENDLESS && g.state().endlessMode,
+        "last stage did not enter Endless");
+  var endlessRow = g.state().players[0].state().row;
+  key("ArrowUp");
+  check(g.state().players[0].state().row === endlessRow + 1,
+        "Endless keyboard input was blocked");
+  if (__rafCb) __rafCb(__clock);
+  check(__elements["stage-name"].textContent === "Endless" &&
+        __elements.timer.textContent === "—", "Endless HUD still shows a campaign timer");
+});
+// Test the handoff to the live ESM renderer separately from the 2D fallback.
+// WebGL itself is checked in a browser; this pins the real input/pose bridge.
+guard("main.js 3D bridge", function () {
+  function check(ok, message) {
+    mainReport.inputChecks++;
+    if (!ok) __ERRORS.push("3D bridge: " + message);
+  }
+  __elements.mode.dispatchEvent({ type: "click" }); // fresh two-player state
+  var g = __browserGame, start = g.state().players[0].state().row;
+  var received = null;
+  __g.World3D = { ready: false, status: "loading", render: function (s, stage, poses, now) {
+    received = { state: s, stage: stage, poses: poses, now: now };
+  } };
+  __elements["move-forward"].dispatchEvent({ type: "click" });
+  check(g.state().players[0].state().row === start, "input moved while models were loading");
+  __g.World3D.ready = true; __g.World3D.status = "ready";
+  function pointer(type, x, y) {
+    __canvas.dispatchEvent({ type: type, pointerId: 2, button: 0, clientX: x, clientY: y });
+  }
+  pointer("pointerdown", 100, 200); pointer("pointerup", 100, 200);
+  pointer("pointerdown", 390, 200); pointer("pointermove", 330, 200); pointer("pointerup", 330, 200);
+  if (__rafCb) __rafCb(__clock);
+  check(received && received.state === g.state() && received.stage === g.currentStage() &&
+        isFinite(received.now), "live renderer did not receive the real game state and time");
+  check(received && received.poses.length === 2 && received.poses[0].row > 0 &&
+        received.poses[0].row < 1 && received.poses[1].row === 0 &&
+        received.poses[1].col < g.state().players[1].state().startCol,
+        "live renderer did not receive independent player hop poses");
+  delete __g.World3D;
+});
+SimCore.createGame = __createGame;
 mainReport.ctxCalls = __canvas.__ctx.calls;
 
 /* If main.js never even drew, a broken frame would look identical to a clean
@@ -564,6 +686,7 @@ print("sprites resolved: " + spriteReport.ok + "/" + rosterIds.length +
       (spriteReport.missing.length ? "   MISSING: " + spriteReport.missing.join(",") : ""));
 print("main.js: booted=" + mainReport.booted + "  frames=" + mainReport.frames +
       "  canvas calls from live loop=" + mainReport.ctxCalls);
+print("browser input checks: " + mainReport.inputChecks);
 print("sim ticks: " + __STATS.simTicks + "   hops: " + __STATS.hops +
       "   render frames: " + __STATS.frames + "   ctx calls: " + ctx.calls);
 print("");
@@ -617,40 +740,29 @@ if (__ERRORS.length === 0) {
 def syntax_check_main() -> tuple:
     """main.js needs a DOM, but it must still PARSE -- a syntax error there
     takes down every script tag after it and the game never boots."""
-    tmp = ROOT / "tools" / "_main_syntax_check.js"
-    tmp.write_text((ROOT / "src/main.js").read_text())
+    script = "try { new Function(%s); print('PARSE OK'); } catch (e) { print(String(e)); }" % json.dumps((ROOT / "src/main.js").read_text())
     try:
-        proc = subprocess.run([JSC, str(tmp)], capture_output=True, text=True,
-                              timeout=60, cwd=str(ROOT))
+        proc = run_script(script, timeout=60)
     except Exception as exc:                     # noqa: BLE001
         return False, str(exc)
-    finally:
-        if tmp.exists():
-            tmp.unlink()
-    # jsc reports a syntax error on stderr; a ReferenceError for `document`
-    # at runtime means it PARSED, which is all this gate is for.
-    stderr = proc.stderr.lower()
-    syntax_markers = ("syntaxerror", "unexpected", "expected", "missing")
-    if any(m in stderr for m in syntax_markers):
-        return False, proc.stderr.strip()[:400]
-    return True, "parses"
+    ok = proc.returncode == 0 and "PARSE OK" in proc.stdout
+    return ok, "parses" if ok else (proc.stdout + proc.stderr).strip()[:400]
 
 
 def main() -> int:
-    runs = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    seed = random.randrange(1, 2 ** 31)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("runs", type=int, nargs="?", default=10)
+    parser.add_argument("--seed", type=int, help="repeatable random-policy harness seed")
+    args = parser.parse_args()
+    runs = args.runs
+    if runs < 1:
+        parser.error("runs must be positive")
+    seed = args.seed if args.seed is not None else random.randrange(1, 2 ** 31)
 
     dims = sprite_dims()
     print("loaded %d sprite dimensions from disk" % len(dims))
 
-    harness = ROOT / "tools" / "_playtest_harness.js"
-    harness.write_text(build_harness(dims, runs, seed))
-    try:
-        proc = subprocess.run([JSC, str(harness)], capture_output=True, text=True,
-                              timeout=280, cwd=str(ROOT))
-    finally:
-        if harness.exists():
-            harness.unlink()
+    proc = run_script(build_harness(dims, runs, seed), timeout=280)
 
     if proc.stderr.strip():
         print("--- engine stderr ---")
@@ -665,6 +777,12 @@ def main() -> int:
     if not ok:
         return 1
     if proc.returncode != 0 or "RESULT: NO ERRORS" not in proc.stdout:
+        return 1
+    # A clean fuzz run does not prove a stage is playable; require at least
+    # one actual completion from the fixed forward-policy seed sample.
+    completed = re.search(r"forward-only policy: (\d+)/", proc.stdout)
+    if not completed or int(completed.group(1)) == 0:
+        print("FAIL: the forward-only policy did not clear any stage")
         return 1
     return 0
 

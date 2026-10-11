@@ -1,0 +1,889 @@
+{
+  "version": 1,
+  "sourceRepository": "https://github.com/atiffhussainkhan/Image",
+  "units": "world tiles; character height is uniform; hazard length follows Hazards.SPECS",
+  "characters": [
+    {
+      "id": 1,
+      "rosterId": "char_01",
+      "name": "Casual Male",
+      "model": "assets/models/characters/Casual_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Boy Cap",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 2,
+      "rosterId": "char_02",
+      "name": "Casual 3 Male",
+      "model": "assets/models/characters/Casual3_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Blue Hoodie",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 3,
+      "rosterId": "char_03",
+      "name": "Cat",
+      "model": "assets/models/kenney/cube-pets/animal-cat.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Cat",
+      "animation": {
+        "idle": "idle",
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 4,
+      "rosterId": "char_04",
+      "name": "Leela Robot",
+      "model": "assets/models/characters/Leela.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Robot",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 5,
+      "rosterId": "char_05",
+      "name": "Shiba Inu",
+      "model": "assets/models/characters/ShibaInu.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Dog",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Gallop_Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 6,
+      "rosterId": "char_06",
+      "name": "Ninja",
+      "model": "assets/models/characters/Ninja_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Ninja",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 7,
+      "rosterId": "char_07",
+      "name": "Bunny",
+      "model": "assets/models/kenney/cube-pets/animal-bunny.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Bunny",
+      "animation": {
+        "idle": "idle",
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 8,
+      "rosterId": "char_08",
+      "name": "Wizard",
+      "model": "assets/models/characters/Wizard.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Wizard",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 9,
+      "rosterId": "char_09",
+      "name": "Goblin",
+      "model": "assets/models/characters/Goblin_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Alien",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 10,
+      "rosterId": "char_10",
+      "name": "Pirate",
+      "model": "assets/models/characters/Pirate_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Pirate",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 11,
+      "rosterId": "char_11",
+      "name": "Penguin",
+      "model": "assets/models/kenney/cube-pets/animal-penguin.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Penguin",
+      "animation": {
+        "idle": "idle",
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 12,
+      "rosterId": "char_12",
+      "name": "Knight",
+      "model": "assets/models/characters/Knight_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Knight",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 13,
+      "rosterId": "char_13",
+      "name": "Fox",
+      "model": "assets/models/characters/Fox.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Fox",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Gallop_Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 14,
+      "rosterId": "char_14",
+      "name": "Blue Soldier",
+      "model": "assets/models/characters/BlueSoldier_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Astronaut",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 15,
+      "rosterId": "char_15",
+      "name": "Pig",
+      "model": "assets/models/kenney/cube-pets/animal-pig.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Pig",
+      "animation": {
+        "idle": "idle",
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 16,
+      "rosterId": "char_16",
+      "name": "Soldier",
+      "model": "assets/models/characters/Soldier_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Superhero",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 17,
+      "rosterId": "char_17",
+      "name": "Polar Bear",
+      "model": "assets/models/kenney/cube-pets/animal-polar.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Bear",
+      "animation": {
+        "idle": "idle",
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 18,
+      "rosterId": "char_18",
+      "name": "Chef",
+      "model": "assets/models/characters/Chef_Hat.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Chef",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 19,
+      "rosterId": "char_19",
+      "name": "Skeleton",
+      "model": "assets/models/characters/Skeleton_Minion.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Skeleton",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump_Full_Short",
+        "death": "Death_A"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 20,
+      "rosterId": "char_20",
+      "name": "Koala",
+      "model": "assets/models/kenney/cube-pets/animal-koala.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Koala",
+      "animation": {
+        "idle": "idle",
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 21,
+      "rosterId": "char_21",
+      "name": "Worker Male",
+      "model": "assets/models/characters/Worker_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Builder",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 22,
+      "rosterId": "char_22",
+      "name": "Crab",
+      "model": "assets/models/kenney/cube-pets/animal-crab.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Frog",
+      "animation": {
+        "idle": "idle",
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 23,
+      "rosterId": "char_23",
+      "name": "Worker Female",
+      "model": "assets/models/characters/Worker_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Firefighter",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 24,
+      "rosterId": "char_24",
+      "name": "White Horse",
+      "model": "assets/models/characters/Horse_White.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Unicorn",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Gallop_Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    }
+  ],
+  "hazards": {
+    "car": {
+      "model": "assets/models/kenney/car/sedan.glb",
+      "length": 0.86,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "taxi": {
+      "model": "assets/models/kenney/car/taxi.glb",
+      "length": 0.9,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "racecar": {
+      "model": "assets/models/kenney/car/race.glb",
+      "length": 0.78,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "police": {
+      "model": "assets/models/kenney/car/police.glb",
+      "length": 0.95,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "limousine": {
+      "model": "assets/models/kenney/car/suv-luxury.glb",
+      "length": 2.1,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Luxury SUV; no limousine in the local pack"
+    },
+    "truck": {
+      "model": "assets/models/kenney/car/truck.glb",
+      "length": 2.6,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "bus": {
+      "model": "assets/models/kenney/car/delivery.glb",
+      "length": 3.1,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Delivery van; no bus in the local pack"
+    },
+    "tractor": {
+      "model": "assets/models/kenney/car/tractor.glb",
+      "length": 1.3,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "forklift": {
+      "model": "assets/models/holokat/Forklift.glb",
+      "length": 1.1,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "roller": {
+      "model": "assets/models/kenney/car/truck-flat.glb",
+      "length": 1.7,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Flatbed work truck; no road roller in the local pack"
+    },
+    "tumbleweed": {
+      "model": "assets/models/kenney/nature/plant_bushLargeTriangle.glb",
+      "length": 0.8,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Dry bush model used for rolling vegetation"
+    },
+    "ambulance": {
+      "model": "assets/models/kenney/car/ambulance.glb",
+      "length": 1.55,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "cementmixer": {
+      "model": "assets/models/kenney/retro-urban/truck-grey-cargo.glb",
+      "length": 1.85,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Cargo construction truck; no cement mixer in the local pack"
+    },
+    "motorbike": {
+      "model": "assets/models/kenney/car/kart-oopi.glb",
+      "length": 0.9,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Kart; no motorbike in the local pack"
+    },
+    "golfcart": {
+      "model": "assets/models/kenney/car/kart-ooli.glb",
+      "length": 0.95,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Small kart used as a cart analogue"
+    },
+    "train": {
+      "model": "assets/models/kenney/train/train-locomotive-c.glb",
+      "length": 3.4,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "tram": {
+      "model": "assets/models/kenney/train/train-tram-round.glb",
+      "length": 2.2,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "monorail": {
+      "model": "assets/models/kenney/train/train-electric-bullet-c.glb",
+      "length": 2.8,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Electric bullet train used for monorail traffic"
+    },
+    "freighttrain": {
+      "model": "assets/models/kenney/train/train-carriage-container-blue.glb",
+      "length": 3.6,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "subway": {
+      "model": "assets/models/kenney/train/train-electric-subway-a.glb",
+      "length": 2.6,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "log": {
+      "model": "assets/models/kenney/nature/log.glb",
+      "length": 0.9,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "turtle": {
+      "model": "assets/models/kenney/cube-pets/animal-crab.glb",
+      "length": 0.62,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Crab; no turtle in the local pack"
+    },
+    "alligator": {
+      "model": "assets/models/kenney/watercraft/boat-row-large.glb",
+      "length": 2.2,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Rowboat; no alligator in the local pack"
+    },
+    "crocodile": {
+      "model": "assets/models/kenney/watercraft/boat-tow-a.glb",
+      "length": 2.6,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Towboat; no crocodile in the local pack"
+    },
+    "canoe": {
+      "model": "assets/models/kenney/watercraft/boat-row-small.glb",
+      "length": 1.3,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Small rowboat used as a canoe analogue"
+    },
+    "duck": {
+      "model": "assets/models/tiny-treats/bubbly-bathroom/ducky.gltf",
+      "length": 0.55,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Rubber duck from the existing Tiny Treats pack"
+    },
+    "swan": {
+      "model": "assets/models/kenney/cube-pets/animal-parrot.glb",
+      "length": 0.8,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Parrot bird; no swan in the local pack"
+    },
+    "icefloe": {
+      "model": "assets/models/kenney/platformer/block-snow-low.glb",
+      "length": 1.45,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Snow block used as a floating ice platform"
+    },
+    "sled": {
+      "model": "assets/models/kenney/holiday/sled.glb",
+      "length": 1.1,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "snake": {
+      "model": "assets/models/kenney/cube-pets/animal-caterpillar.glb",
+      "length": 0.9,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Caterpillar; no snake in the local pack"
+    },
+    "boulder": {
+      "model": "assets/models/kenney/nature/rock_largeA.glb",
+      "length": 1.2,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "geyser": {
+      "model": "assets/models/kenney/space/crater.glb",
+      "length": 1.0,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "terrain",
+      "analogue": "Crater vent source; active water plume is simulation-driven geometry",
+      "effect": "geyser"
+    },
+    "steamvent": {
+      "model": "assets/models/kenney/space/chimney.glb",
+      "length": 1.0,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "terrain",
+      "analogue": "Chimney vent source; active steam is simulation-driven geometry",
+      "effect": "steamvent"
+    },
+    "sinkhole": {
+      "model": "assets/models/kenney/space/craterLarge.glb",
+      "length": 0.92,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "terrain",
+      "analogue": "Crater rim; open pit must cover the full playable lane",
+      "effect": "sinkhole"
+    },
+    "hawk": {
+      "model": "assets/models/kenney/cube-pets/animal-parrot.glb",
+      "length": 1.05,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Parrot; no hawk in the local pack"
+    }
+  },
+  "scenery": {
+    "hedge": {
+      "model": "assets/models/kenney/nature/plant_bushLarge.glb",
+      "height": 0.75,
+      "yaw": 0,
+      "analogue": null
+    },
+    "tree": {
+      "model": "assets/models/kenney/nature/tree_oak.glb",
+      "height": 2.2,
+      "yaw": 0,
+      "analogue": null
+    },
+    "mailbox": {
+      "model": "assets/models/tiny-treats/homely-house/mailbox.gltf",
+      "height": 0.65,
+      "yaw": 0,
+      "analogue": null
+    },
+    "bush": {
+      "model": "assets/models/kenney/nature/plant_bush.glb",
+      "height": 0.6,
+      "yaw": 0,
+      "analogue": null
+    },
+    "flowerbed": {
+      "model": "assets/models/kenney/nature/flower_redA.glb",
+      "height": 0.4,
+      "yaw": 0,
+      "analogue": "Flower cluster"
+    },
+    "fence": {
+      "model": "assets/models/kenney/city-suburban/fence.glb",
+      "height": 0.65,
+      "yaw": 0,
+      "analogue": null
+    },
+    "reed": {
+      "model": "assets/models/kenney/nature/plant_flatTall.glb",
+      "height": 0.6,
+      "yaw": 0,
+      "analogue": "Tall waterside plant"
+    },
+    "lily": {
+      "model": "assets/models/kenney/nature/lily_large.glb",
+      "height": 0.12,
+      "yaw": 0,
+      "analogue": null
+    },
+    "rock": {
+      "model": "assets/models/kenney/nature/rock_smallTopA.glb",
+      "height": 0.55,
+      "yaw": 0,
+      "analogue": null
+    },
+    "cactus": {
+      "model": "assets/models/kenney/nature/cactus_tall.glb",
+      "height": 1.3,
+      "yaw": 0,
+      "analogue": null
+    },
+    "bone": {
+      "model": "assets/models/kenney/space/bones.glb",
+      "height": 0.2,
+      "yaw": 0,
+      "analogue": null
+    },
+    "boulder": {
+      "model": "assets/models/kenney/nature/rock_largeA.glb",
+      "height": 0.9,
+      "yaw": 0,
+      "analogue": null
+    },
+    "haybale": {
+      "model": "assets/models/kenney/graveyard/hay-bale.glb",
+      "height": 0.65,
+      "yaw": 0,
+      "analogue": null
+    },
+    "windmill": {
+      "model": "assets/models/kenney/fantasy-town/windmill.glb",
+      "height": 2.4,
+      "yaw": 0,
+      "analogue": null
+    },
+    "neon": {
+      "model": "assets/models/kenney/racing/lightColored.glb",
+      "height": 1.5,
+      "yaw": 0,
+      "analogue": "Colored signal light; no neon sign in the local pack"
+    },
+    "building": {
+      "model": "assets/models/kenney/city-suburban/building-type-a.glb",
+      "height": 2.8,
+      "yaw": 0,
+      "analogue": null
+    },
+    "streetlamp": {
+      "model": "assets/models/kenney/city-roads/light-curved.glb",
+      "height": 1.8,
+      "yaw": 0,
+      "analogue": null
+    },
+    "hydrant": {
+      "model": "assets/models/kaykit-city/firehydrant.gltf",
+      "height": 0.55,
+      "yaw": 0,
+      "analogue": null
+    },
+    "postbox": {
+      "model": "assets/models/tiny-treats/homely-house/mailbox.gltf",
+      "height": 0.65,
+      "yaw": 0,
+      "analogue": "Mailbox used for the street postbox"
+    },
+    "pine": {
+      "model": "assets/models/kenney/platformer/tree-pine-snow.glb",
+      "height": 2.2,
+      "yaw": 0,
+      "analogue": null
+    },
+    "iceberg": {
+      "model": "assets/models/kenney/platformer/block-snow-large-slope.glb",
+      "height": 1.1,
+      "yaw": 0,
+      "analogue": "Snow-covered slope used as ice mound"
+    },
+    "vine": {
+      "model": "assets/models/kenney/nature/plant_flatTall.glb",
+      "height": 0.9,
+      "yaw": 0,
+      "analogue": "Tall foliage; no vine in the local pack"
+    },
+    "fern": {
+      "model": "assets/models/kenney/nature/grass_leafsLarge.glb",
+      "height": 0.5,
+      "yaw": 0,
+      "analogue": "Leaf cluster used as a fern analogue"
+    },
+    "scaffold": {
+      "model": "assets/models/kenney/retro-urban/scaffolding-structure.glb",
+      "height": 1.8,
+      "yaw": 0,
+      "analogue": null
+    },
+    "cone": {
+      "model": "assets/models/kenney/city-roads/construction-cone.glb",
+      "height": 0.45,
+      "yaw": 0,
+      "analogue": null
+    },
+    "crate": {
+      "model": "assets/models/kenney/platformer/crate.glb",
+      "height": 0.65,
+      "yaw": 0,
+      "analogue": null
+    },
+    "pylon": {
+      "model": "assets/models/kenney/racing/pylon.glb",
+      "height": 1.8,
+      "yaw": 0,
+      "analogue": "Track pylon used as an industrial roadside tower"
+    },
+    "puddle": {
+      "model": "assets/models/kenney/nature/ground_riverStraight.glb",
+      "height": 0.035,
+      "yaw": 0,
+      "analogue": "Low river tile used as a water patch"
+    },
+    "debris": {
+      "model": "assets/models/kenney/graveyard/debris.glb",
+      "height": 0.4,
+      "yaw": 0,
+      "analogue": null
+    },
+    "lavaVent": {
+      "model": "assets/models/kenney/space/crater.glb",
+      "height": 0.6,
+      "yaw": 0,
+      "analogue": "Crater vent; lava lighting is applied by the renderer"
+    },
+    "obsidian": {
+      "model": "assets/models/kenney/space/rock_crystals.glb",
+      "height": 1.0,
+      "yaw": 0,
+      "analogue": "Crystal rock; dark stage lighting supplies the volcanic appearance"
+    },
+    "rail": {
+      "model": "assets/models/kenney/train/track.glb",
+      "height": 0.08,
+      "yaw": 0,
+      "analogue": null
+    },
+    "treeBack": {
+      "model": "assets/models/kenney/nature/tree_oak.glb",
+      "height": 2.2,
+      "yaw": 0,
+      "analogue": null
+    },
+    "treeFront": {
+      "model": "assets/models/kenney/nature/tree_oak.glb",
+      "height": 2.2,
+      "yaw": 0,
+      "analogue": null
+    }
+  },
+  "pursuer": {
+    "model": "assets/models/kenney/cube-pets/animal-parrot.glb",
+    "height": 0.65,
+    "yaw": 3.141592653589793,
+    "nativeForward": "+z",
+    "analogue": "Parrot model used as the bird pursuer; no hawk available"
+  }
+}

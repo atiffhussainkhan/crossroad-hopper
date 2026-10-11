@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pick Your Character</title>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js"}}</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -28,7 +29,7 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 14px;
     max-width: 1100px;
     margin: 0 auto;
@@ -41,6 +42,10 @@
     cursor: pointer;
     transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
     position: relative;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+    width: 100%;
   }
   .card:hover {
     transform: scale(1.06);
@@ -50,6 +55,10 @@
   .card.selected {
     border-color: #00ff88;
     box-shadow: 0 0 20px #00ff8866;
+  }
+  .card:focus-visible, #play-btn:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 4px;
   }
   .card.selected::after {
     content: '✓';
@@ -63,13 +72,18 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 13px;
   }
-  .card img {
+  .model-slot {
     width: 100%;
     aspect-ratio: 1;
-    object-fit: cover;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #a7bdc6;
   }
+  .model-gallery-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
   .card .num {
+    display: block;
     background: #f8d210;
     color: #0f0f1e;
     font-weight: bold;
@@ -78,6 +92,7 @@
     padding: 5px;
   }
   .card .name {
+    display: block;
     background: #16213e;
     color: #ccc;
     font-size: 0.78em;
@@ -122,18 +137,30 @@
     line-height: 1.7;
   }
   .legend strong { color: #f8d210; }
+  @media (max-width: 960px) {
+    .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    body { padding: 16px; }
+    h1 { font-size: 2em; }
+  }
+  @media (max-width: 440px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card, #play-btn { transition: none; }
+    .card:hover, #play-btn:hover { transform: none; }
+  }
 </style>
 </head>
-<body>
+<body data-gallery="characters">
 <h1>🎮 Choose Your Hero</h1>
-<p class="subtitle">Click your character — it will appear in the game!</p>
-<div class="grid" id="grid"></div>
-<p id="sel-info">⏳ Click a character to select it</p>
-<button id="play-btn" onclick="startGame()">▶ Play!</button>
-<div class="legend">
-  <strong>Character Guide:</strong>
-  1=Boy Cap, 2=Blue Hoodie, 3=Cat, 4=Robot, 5=Dog, 6=Ninja, 7=Bunny, 8=Wizard, 9=Alien, 10=Pirate, 11=Penguin, 12=Knight, 13=Fox, 14=Astronaut, 15=Pig, 16=Superhero, 17=Bear, 18=Chef, 19=Skeleton, 20=Koala, 21=Builder, 22=Frog, 23=Firefighter, 24=Unicorn
-</div>
+<p class="subtitle">Choose your character, then press Play. Use Tab and Enter on a keyboard.</p>
+<div class="grid" id="grid" role="group" aria-label="Choose your character"></div>
+<p id="sel-info" role="status" aria-live="polite">⏳ Choose a character to select it</p>
+<button id="play-btn" type="button" onclick="startGame()">▶ Play!</button>
+<div class="legend"><strong>3D library characters</strong><br>These are live models from your existing library, with clear backgrounds. <a href="assets.html" style="color:#f8d210">Inspect all selected objects</a>.</div>
 
 <script>
 var CHARACTERS = [
@@ -167,25 +194,29 @@ var selected = null;
 
 var grid = document.getElementById('grid');
 CHARACTERS.forEach(function(ch) {
-  var card = document.createElement('div');
+  var card = document.createElement('button');
+  card.type = 'button';
   card.className = 'card';
   card.dataset.id = ch.id;
+  card.setAttribute('aria-label', '#' + ch.id + ' ' + ch.name);
+  card.setAttribute('aria-pressed', 'false');
   card.innerHTML =
-    /* No ?t= cache-buster: the roster art is .webp, a filename this browser
-       has never cached, and appending a timestamp to all 24 meant refetching
-       every sprite on every visit to the picker. */
-    '<img src="assets/characters/' + ch.file + '" alt="' + ch.name + '">' +
-    '<div class="num">#' + String(ch.id).padStart(2,'0') + '</div>' +
-    '<div class="name">' + ch.name + '</div>';
+    '<span class="model-slot">Loading 3D model…</span>' +
+    '<span class="num">#' + ('0' + ch.id).slice(-2) + '</span>' +
+    '<span class="name">' + ch.name + '</span>';
   card.onclick = function() { select(ch.id); };
   grid.appendChild(card);
 });
 
 function select(id) {
+  if (id < 1 || id > CHARACTERS.length || id !== Math.floor(id)) return;
   selected = id;
-  localStorage.setItem('chosenCharacter', id);
+  // The URL carries the choice into the game even if browser storage is blocked.
+  try { localStorage.setItem('chosenCharacter', String(id)); } catch (e) {}
   document.querySelectorAll('.card').forEach(function(c) {
-    c.classList.toggle('selected', parseInt(c.dataset.id) === id);
+    var isSelected = parseInt(c.dataset.id, 10) === id;
+    c.classList.toggle('selected', isSelected);
+    c.setAttribute('aria-pressed', String(isSelected));
   });
   var ch = CHARACTERS[id - 1];
   document.getElementById('sel-info').textContent = '✅ Selected: #' + id + ' — ' + ch.name;
@@ -195,8 +226,10 @@ function select(id) {
 }
 
 function startGame() {
+  if (selected === null) return;
   window.location.href = 'index.html?char=' + selected;
 }
 </script>
+<script type="module" src="src/render/model-gallery.js"></script>
 </body>
 </html>

@@ -69,19 +69,31 @@
     return ROSTER[0];
   }
 
-  /* Return the roster entry for the character selected in localStorage.
-   * Falls back to char_01 if nothing is selected yet. */
-  function getSelectedCharacter() {
-    var chosen = null;
-    try { chosen = localStorage.getItem("chosenCharacter"); } catch (e) {}
-    if (chosen) {
+  function characterFromChoice(chosen) {
+    if (!chosen) return null;
+    if (/^\d+$/.test(chosen)) {
       var idx = parseInt(chosen, 10);
       if (idx >= 1 && idx <= ROSTER.length) return ROSTER[idx - 1];
-      // Also try string lookup (in case URL param stored the string id)
-      var byId = getCharacter(chosen);
-      if (byId) return byId;
     }
-    return ROSTER[0];
+    for (var i = 0; i < ROSTER.length; i++) {
+      if (ROSTER[i].id === chosen) return ROSTER[i];
+    }
+    return null;
+  }
+
+  /* The picker always supplies ?char= so a choice works with blocked storage.
+   * A valid URL choice takes precedence over an older saved character. */
+  function getSelectedCharacter() {
+    var fromUrl = null;
+    try {
+      var match = /(?:^|[?&])char=([^&]*)/.exec(global.location.search || "");
+      if (match) fromUrl = characterFromChoice(decodeURIComponent(match[1]));
+    } catch (e) {}
+    if (fromUrl) return fromUrl;
+
+    var chosen = null;
+    try { chosen = localStorage.getItem("chosenCharacter"); } catch (e) {}
+    return characterFromChoice(chosen) || ROSTER[0];
   }
 
   function count() { return ROSTER.length; }

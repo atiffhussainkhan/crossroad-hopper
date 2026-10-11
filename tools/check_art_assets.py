@@ -13,7 +13,7 @@ Asserts:
      Asserting only the preview left the shipping renderer unverified.
   3. The preview SCENES table in render_art.py carries the same asset lists
      as the game's src/stages.js, so the mock cannot drift from the game.
-  4. The roster in src/roster.js and in render_art.py list the same ids.
+  4. The shipped 24-character roster matches its sprite manifest and files.
   5. Every roster member declares a silhouette feature, so no two characters
      are distinguished by colour alone.
 
@@ -23,6 +23,7 @@ Run from the project root:  python3 tools/check_art_assets.py
 from __future__ import annotations
 
 import ast
+import json
 import re
 import sys
 from pathlib import Path
@@ -162,7 +163,8 @@ def main() -> int:
     # 2b. ...and the BROWSER can draw them too, which is the copy that ships.
     browser = parse_browser_registry(SCENERY_JS.read_text())
     for k in scenery:
-        if k not in browser:
+        renderable = {"treeBack", "treeFront"} <= browser if k == "tree" else k in browser
+        if not renderable:
             failures.append(
                 f"scenery '{k}' is declared by a stage but is missing from the "
                 f"src/scenery.js registry (the game would render it as nothing)"
@@ -178,13 +180,25 @@ def main() -> int:
         if stages[sid] != preview[sid]:
             failures.append(f"stage {sid}: asset lists differ between the game and the mock")
 
-    # 4 + 5. Roster agreement and structural differentiation.
-    js_ids = re.findall(r'id:\s*"([a-z]+)"', ROSTER_JS.read_text())
-    py_ids = re.findall(r'id="([a-z]+)"', render_src)
-    if sorted(js_ids) != sorted(py_ids):
-        failures.append(f"roster ids disagree: {sorted(js_ids)} vs {sorted(py_ids)}")
-    ears = re.findall(r'ear:\s*"([a-z]+)"', ROSTER_JS.read_text()) or \
-           re.findall(r'earKind="([a-z]+)"', render_src)
+    # The six procedural characters in render_art.py are historical preview
+    # inputs. Shipped roster integrity is against the real 24-sprite manifest.
+    roster_src = ROSTER_JS.read_text()
+    js_ids = re.findall(r'id:\s*"([a-z0-9_]+)"', roster_src)
+    sprite_ids = re.findall(r'sprite:\s*"([a-z0-9_]+)"', roster_src)
+    manifest = json.loads((ROOT / "src/sprites/manifest.json").read_text())
+    entries = manifest.get("characters24", [])
+    manifest_ids = [entry["id"] for entry in entries]
+    if len(js_ids) != 24 or len(set(js_ids)) != 24:
+        failures.append(f"expected 24 unique roster members, got {len(js_ids)}")
+    if sorted(js_ids) != sorted(manifest_ids) or sprite_ids != js_ids:
+        failures.append(f"roster/manifest sprite ids disagree: {js_ids} vs {manifest_ids}")
+    for entry in entries:
+        asset = ROOT / "assets/characters" / entry["file"]
+        if not asset.is_file() or asset.stat().st_size == 0:
+            failures.append(f"roster sprite is missing or empty: {entry['file']}")
+    ears = re.findall(r'earKind:\s*"([a-z]+)"', roster_src)
+    if len(ears) != len(js_ids):
+        failures.append("every roster member must declare a fallback silhouette feature")
     if not ears:
         failures.append("roster declares no silhouette feature")
     for e in ears:

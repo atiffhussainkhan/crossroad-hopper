@@ -11,7 +11,7 @@ so it covers any single column in ~0.57s, faster than the player's 600ms hop
 cadence, and nothing warned them it was coming. The lane was unclearable.
 
 Phase 2 item 3 specifies a railway telegraph, and this gate is the check the plan
-promised alongside it. It runs the REAL modules through JXA so it cannot drift
+promised alongside it. It runs the REAL modules through JavaScriptCore or Node so it cannot drift
 from what the player plays.
 
 Run:  python3 tools/check_hazard_reach.py
@@ -21,12 +21,9 @@ Exits non-zero on any failure.
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from js_runtime import SIM_MODULES, run_script
 
 # Timings the telegraph must be able to cover. These mirror the game, not a
 # wish list: the player hops at most once per HOP_CADENCE_MS and is exposed to
@@ -92,48 +89,13 @@ PROBE = r"""
 
 
 def run_probe() -> dict:
-    """Run a JXA probe against the real modules.
-
-    Follows the loader in tools/check_vertical_slice.py exactly: JXA has no
-    `global` inside a function scope, so the modules are eval'd at top level and
-    the JSON is emitted behind a @@P@@ marker so parsing never has to sniff for
-    brackets that also appear in the loader source.
-    """
-    import tempfile
-    loader = """
-ObjC.import('Foundation');
-var _gd = null;
-try {
-  var _env = $.NSProcessInfo.processInfo.environment;
-  var _v = _env.objectForKey("GAME_DIR");
-  if (_v !== null && _v !== undefined && _v !== "[id nil]") _gd = ObjC.unwrap(_v);
-} catch (e) { _gd = null; }
-if (!_gd) _gd = ObjC.unwrap($.NSFileManager.defaultManager.currentDirectoryPath);
-["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js"].forEach(function (rel) {
-  var t = $.NSString.stringWithContentsOfFileEncodingError(
-    _gd + "/" + rel, $.NSUTF8StringEncoding, null);
-  if (t === null) throw new Error("missing " + _gd + "/" + rel);
-  eval(ObjC.unwrap(t));
-});
-"""
+    """Run the real simulation modules in shared global script scope."""
     js = PROBE % {"rail": json.dumps(list(RAIL_KINDS))}
     # turn the probe's `return` into a console emit at top level
     js = js.strip()
-    js = js.replace("(function () {", "(function () {", 1)
     js = js.replace("  return JSON.stringify(out);\n})()",
                     '  console.log("@@P@@" + JSON.stringify(out));\n})()')
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", delete=False, dir="/tmp"
-    ) as f:
-        f.write(loader + js)
-        js_path = f.name
-    try:
-        proc = subprocess.run(
-            ["osascript", "-l", "JavaScript", js_path],
-            capture_output=True, text=True, check=False, cwd=str(ROOT),
-        )
-    finally:
-        Path(js_path).unlink(missing_ok=True)
+    proc = run_script(js, modules=SIM_MODULES)
     if proc.returncode != 0:
         raise RuntimeError(f"probe failed: {proc.stderr.strip()!r}")
     raw = proc.stdout + proc.stderr

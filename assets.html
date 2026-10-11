@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hopper — selected 3D library</title>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js"}}</script>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 28px; background: #101820; color: #edf5ed; font: 15px/1.5 system-ui, sans-serif; }
+main { max-width: 1100px; margin: auto; }
+h1 { font-size: clamp(26px,4vw,40px); margin-bottom: 8px; }
+h2 { margin-top: 36px; }
+p { color: #b6c5ce; }
+a { color: #f8d210; }
+nav { display: flex; gap: 24px; }
+.asset-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(155px,1fr)); gap: 14px; }
+.asset-card { padding: 12px; border: 1px solid #34444e; border-radius: 12px; background: #1a2932; }
+.asset-card h3 { margin: 10px 0 4px; }
+.asset-card p { margin: 0 0 6px; font-size: 12px; }
+.model-slot { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #a7bdc6; }
+.model-gallery-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+@media(max-width:440px) { body { padding: 14px; } .asset-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+</style>
+</head>
+<body data-gallery="assets">
+<main>
+<nav><a href="index.html">Play Hopper</a><a href="select.html">Choose a character</a></nav>
+<h1>Your selected 3D assets</h1>
+<p id="library-status" role="status">Loading the library selection…</p>
+<p>Characters, traffic, and scenery use existing models from your library. Their scale in the game is fitted to the lane and collision footprint. Original model files and selection details are included with the source.</p>
+<div id="library"></div>
+</main>
+<script type="module" src="src/render/model-gallery.js"></script>
+</body>
+</html>

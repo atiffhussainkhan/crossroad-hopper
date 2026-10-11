@@ -13,7 +13,7 @@ Plus the standing promise that every stage has a warned ditch and a bird.
 
 None of those are visible in a screenshot and none of them are a matter of
 taste: they are numbers with thresholds, which is what this gate is for. It
-runs the REAL modules through JXA, so it cannot drift from what the player
+runs the REAL modules through JavaScriptCore or Node, so it cannot drift from what the player
 plays, and it reads `speedFactorAt` directly rather than inferring the curve
 from a run.
 
@@ -24,11 +24,8 @@ Exits non-zero on any failure.
 from __future__ import annotations
 
 import json
-import subprocess
-import tempfile
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from js_runtime import SIM_MODULES, run_script
 
 # The player's hop cadence, from src/main.js. A warning shorter than this
 # cannot be acted on, so it is the floor for the ditch sign.
@@ -293,38 +290,15 @@ PROBE = r"""
 
 
 def main() -> int:
-    loader = """
-ObjC.import('Foundation');
-var _gd = null;
-try {
-  var _env = $.NSProcessInfo.processInfo.environment;
-  var _v = _env.objectForKey("GAME_DIR");
-  if (_v !== null && _v !== undefined && _v !== "[id nil]") _gd = ObjC.unwrap(_v);
-} catch (e) { _gd = null; }
-if (!_gd) _gd = ObjC.unwrap($.NSFileManager.defaultManager.currentDirectoryPath);
-["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js"].forEach(function (rel) {
-  var t = $.NSString.stringWithContentsOfFileEncodingError(
-    _gd + "/" + rel, $.NSUTF8StringEncoding, null);
-  if (t === null) throw new Error("missing " + _gd + "/" + rel);
-  eval(ObjC.unwrap(t));
-});
-"""
+
     body = PROBE.strip().replace(
         "  return JSON.stringify(out);\n})()",
         '  console.log("@@P@@" + JSON.stringify(out));\n})()')
-    # The probe runs inside JXA, which cannot see this module's constants, so
+    # The probe runs in the JavaScript engine, which cannot see this module's constants, so
     # the floor is substituted in rather than referenced.
     body = body.replace("__MIN_KINDS__", str(MIN_KINDS_PER_STAGE))
     body = body.replace("__HOP__", str(HOP_CADENCE_MS))
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False, dir="/tmp") as f:
-        f.write(loader + body)
-        path = f.name
-    try:
-        proc = subprocess.run(["osascript", "-l", "JavaScript", path],
-                              capture_output=True, text=True, cwd=str(ROOT))
-    finally:
-        Path(path).unlink(missing_ok=True)
-
+    proc = run_script(body, modules=SIM_MODULES)
     raw = proc.stdout + proc.stderr
     if proc.returncode != 0 or "@@P@@" not in raw:
         print(f"  FAIL — probe failed: {proc.stderr.strip()[:400]!r}")

@@ -1040,7 +1040,7 @@
     // Exported so tools/check_endgame.py can locate the closing stretch.
     // Module-private it made the gate's row bound NaN, and every endgame
     // assertion passed vacuously because no rows were ever scanned.
-    SAFE_START_ROWS: 3, SAFE_GOAL_ROWS: SAFE_GOAL_ROWS,
+    SAFE_START_ROWS: SAFE_START_ROWS, SAFE_GOAL_ROWS: SAFE_GOAL_ROWS,
     isActive: isActive,
     pickKind: pickKind, legalForLane: legalForLane,
     LANE_KINDS: LANE_KINDS, OPEN_KINDS: OPEN_KINDS,

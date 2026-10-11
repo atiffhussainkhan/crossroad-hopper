@@ -1,0 +1,1056 @@
+{
+  "sourceRepository": "https://github.com/atiffhussainkhan/Image",
+  "licences": [
+    "CC0-1.0",
+    "MIT"
+  ],
+  "selection": "Existing local library models copied without artwork generation or pixel conversion",
+  "files": [
+    {
+      "path": "assets/models/characters/Casual_Male.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Casual_Male.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "db66b2424af60d7799760795ca63c8a5be1c8af64e9f134217f0a3ff9e405379",
+      "bytes": 2048792
+    },
+    {
+      "path": "assets/models/characters/Casual3_Male.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Casual3_Male.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "f84ec360f53796287cfdb6082ad82fd76464dc34845759ca7f1f2ee9e7604057",
+      "bytes": 1936073
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-cat.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-cat.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "1e73aaf7d497dd7d2946badf92d189d2333f163e66dced91feb446bc9bdee850",
+      "bytes": 165164
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/Textures/colormap.png",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "2f6d0032e51c2d49b13b8e689d59eb39aa3ee6c32f2a1851213e11fc7593177d",
+      "bytes": 10915
+    },
+    {
+      "path": "assets/models/characters/Leela.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-animated-mech/assets/Flat Colors/glTF/Leela.gltf",
+      "pack": "quaternius-animated-mech",
+      "upstream": "https://quaternius.com/packs/animatedmech.html",
+      "licence": "CC0-1.0",
+      "sha256": "98e08e4fa3e5fcfec4b639a4922e78fa25c46d985993419955f9a13b725ae652",
+      "bytes": 827961
+    },
+    {
+      "path": "assets/models/characters/ShibaInu.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-animals/assets/glTF/ShibaInu.gltf",
+      "pack": "quaternius-ultimate-animated-animals",
+      "upstream": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+      "licence": "CC0-1.0",
+      "sha256": "3236979b94a840eb72d9ce091b1361da327a96f5ce068e666680297480f30f6b",
+      "bytes": 2894445
+    },
+    {
+      "path": "assets/models/characters/Ninja_Male.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Ninja_Male.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "66b3ae718531ed8f4aeab2939069adb04a2f608c22497c998fab81ca04bc61d4",
+      "bytes": 1808187
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-bunny.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-bunny.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "94b654915d9de70071bcf0bfa13de379a3ba4fdfeb231f0fec49335232cbc821",
+      "bytes": 131568
+    },
+    {
+      "path": "assets/models/characters/Wizard.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Wizard.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "baa9cd2d9f1ab3452d6e47d6efc5d4c6c8381fe16a44fc710df46bf16bc7fce8",
+      "bytes": 2079352
+    },
+    {
+      "path": "assets/models/characters/Goblin_Male.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Goblin_Male.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "cab2cbe315e34f1f223fac6754c1e0c3f635060b7ebd516b95e5efbc9ba2c9ea",
+      "bytes": 1754008
+    },
+    {
+      "path": "assets/models/characters/Pirate_Male.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Pirate_Male.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "b372461f1ca937385729c015fc7062671095b7b49b9e4f38f8a054d72c2a80e6",
+      "bytes": 1801347
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-penguin.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-penguin.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "ff3d7ccae941ab06773a348b03446f97650043594ab1121a26514c3e2ea6cb29",
+      "bytes": 130396
+    },
+    {
+      "path": "assets/models/characters/Knight_Male.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Knight_Male.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "7d71328d850869b2afca41cbe5436f8be19cefb6cd996afaff3e8a7b870188af",
+      "bytes": 1852024
+    },
+    {
+      "path": "assets/models/characters/Fox.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-animals/assets/glTF/Fox.gltf",
+      "pack": "quaternius-ultimate-animated-animals",
+      "upstream": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+      "licence": "CC0-1.0",
+      "sha256": "2f36e3c9c75ecddda85c5f9944e98ee1e88e7c679a546534aff1cea8ecde64c7",
+      "bytes": 3163174
+    },
+    {
+      "path": "assets/models/characters/BlueSoldier_Female.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/BlueSoldier_Female.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "8d34cffce30c2f917004ba771821afcd5049f71db819514919b4c632fa81ff46",
+      "bytes": 2106807
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-pig.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-pig.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "0e09d3c745a7daa1f53ecd320739b94d57a6ea1dfc498da01dd468f3f4c866a1",
+      "bytes": 127032
+    },
+    {
+      "path": "assets/models/characters/Soldier_Male.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Soldier_Male.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "d1482e21910ed8b68541558efe9b79cc12666cfe26607d19ed2ebe64e27bc9d0",
+      "bytes": 1829457
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-polar.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-polar.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "8e94b6a8f44b38198f698f2262c3ed7aed34bd1cb3a016f7613fb5eea0897564",
+      "bytes": 98964
+    },
+    {
+      "path": "assets/models/characters/Chef_Hat.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Chef_Hat.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "920c21e1d02dcf9a87832a285e08a3a7dcb4b869793cd4c51bb445ca39f1ea25",
+      "bytes": 1837083
+    },
+    {
+      "path": "assets/models/characters/Skeleton_Minion.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/kaykit-skeletons.zip::kaykit-skeletons/addons/kaykit_character_pack_skeletons/Characters/gltf/Skeleton_Minion.glb",
+      "pack": "KayKit Skeletons",
+      "upstream": "https://kaylousberg.itch.io/kaykit-skeleton-pack",
+      "licence": "CC0-1.0",
+      "sha256": "6ffc003f895bed0b074791e0e490846210a2e2f8fc7da300aba53cc185f95968",
+      "bytes": 4814296
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-koala.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-koala.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "ba13a1975bd746c59e2dce8309736c26597c8a9839602f736e4ec8570ba84fa0",
+      "bytes": 131008
+    },
+    {
+      "path": "assets/models/characters/Worker_Male.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Worker_Male.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "324e2c95c31d11b9b48171d78fe3a0715cb9e58cea77ebc7a5b0de4936bc7b9e",
+      "bytes": 1771584
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-crab.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-crab.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "80fa5fd7c3652938d9e3c3024bb97dc9391a0e174fcc8b9459b63c613ed050f6",
+      "bytes": 150768
+    },
+    {
+      "path": "assets/models/characters/Worker_Female.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/glTF/Worker_Female.gltf",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+      "licence": "CC0-1.0",
+      "sha256": "a1cb51a7bde7758884e8e83f7e8569cb6fede8f95bf4cfaf55102f468921c0d9",
+      "bytes": 2020830
+    },
+    {
+      "path": "assets/models/characters/Horse_White.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-animals/assets/glTF/Horse_White.gltf",
+      "pack": "quaternius-ultimate-animated-animals",
+      "upstream": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+      "licence": "CC0-1.0",
+      "sha256": "f137ee67bd565244f7441f35b5594a597588cda8b60ab109e2041cf13c58e1dd",
+      "bytes": 3607730
+    },
+    {
+      "path": "assets/models/kenney/car/sedan.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/sedan.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "b532ea7d2c59f7f6b22b138cf1955218a2c1898f1cea932af4d3fd563c3959b7",
+      "bytes": 172216
+    },
+    {
+      "path": "assets/models/kenney/car/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/Textures/colormap.png",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "f3622a03a20c6696065cae9cbe391351be873508af190c2ebd1d420c055787a5",
+      "bytes": 12371
+    },
+    {
+      "path": "assets/models/kenney/car/taxi.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/taxi.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "3803539718ffd3b84b515dbce8ed6b489f1ff5be58edb1903d2c5db5c584bdc7",
+      "bytes": 175608
+    },
+    {
+      "path": "assets/models/kenney/car/race.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/race.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "e1408c4c6e135f5a39c5f34cbfbcac9ae21c5c491e793fdee74bccac8334d942",
+      "bytes": 167272
+    },
+    {
+      "path": "assets/models/kenney/car/police.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/police.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "a617b880594f56239b7ac4cf6fd4d74ebdae3ba6c5d842e77c76a5906eff352a",
+      "bytes": 195336
+    },
+    {
+      "path": "assets/models/kenney/car/suv-luxury.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/suv-luxury.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "9e2a79dc050189d4555a88d2e9da0f30ff946ba74f1d43b5b3bda3c193d1f7d7",
+      "bytes": 175908
+    },
+    {
+      "path": "assets/models/kenney/car/truck.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/truck.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "5e1bc66c343501dd7d5734b57e672dd949bf95d7abdce680c6508cef99d374f8",
+      "bytes": 176360
+    },
+    {
+      "path": "assets/models/kenney/car/delivery.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/delivery.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "426a3e3a2c242c05c889b1445ba02ef95b2c8b7cd6f597e1275ef736a826014b",
+      "bytes": 240264
+    },
+    {
+      "path": "assets/models/kenney/car/tractor.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/tractor.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "48b30b3e4bb0adb48378c473dc27ee5ae4d9296ec758c85816f17121a3ce8371",
+      "bytes": 175960
+    },
+    {
+      "path": "assets/models/holokat/Forklift.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/holokat-game-assets.zip::holokat-game-assets/site/collections/farm/infrastructure/optimized-glb/Forklift.glb",
+      "pack": "Holokat farm infrastructure",
+      "upstream": "https://github.com/holokat/game-assets",
+      "licence": "MIT",
+      "sha256": "45809c45d16d34b5d2a593725aad99363371977ceed112a97486a03bb6b0ae5c",
+      "bytes": 38988
+    },
+    {
+      "path": "assets/models/kenney/car/truck-flat.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/truck-flat.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "4279862f2442e96c6603c514edf50bfb932707545695d8c4747611cd3796cf3b",
+      "bytes": 207424
+    },
+    {
+      "path": "assets/models/kenney/nature/plant_bushLargeTriangle.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/plant_bushLargeTriangle.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "098af3618e20e5a2cb5f6e24a7c67c0a80663f989137d86430bc9e2b1b2d52e4",
+      "bytes": 4564
+    },
+    {
+      "path": "assets/models/kenney/car/ambulance.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/ambulance.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "9e429e2b6202c0d78d0c38b2adbaae6b77716bb2a0f6fbb2811556e1fb31edba",
+      "bytes": 233612
+    },
+    {
+      "path": "assets/models/kenney/retro-urban/truck-grey-cargo.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/retro-urban/truck-grey-cargo.glb",
+      "pack": "Kenney retro-urban",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "4afb8f74d113c9805af020c1f28fa1d91ca824ecb1e03466e727a99f36cd6ec4",
+      "bytes": 2992
+    },
+    {
+      "path": "assets/models/kenney/retro-urban/Textures/truck.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/retro-urban/Textures/truck.png",
+      "pack": "Kenney retro-urban",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "8723c1749ed288288e3f2e6657a73fae7bc181406ee3734904d3e1ff5483f18e",
+      "bytes": 12536
+    },
+    {
+      "path": "assets/models/kenney/car/kart-oopi.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/kart-oopi.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "09c1a7522345761dec9d0d1efbf6093aa1611a5ccbd825e1e3260b1607a2d8ab",
+      "bytes": 236196
+    },
+    {
+      "path": "assets/models/kenney/car/kart-ooli.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/car/kart-ooli.glb",
+      "pack": "Kenney car",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "8b496397361b92f481e83dd5d0b74649571bae53e900ffbd785bb2d384182cc2",
+      "bytes": 233380
+    },
+    {
+      "path": "assets/models/kenney/train/train-locomotive-c.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/train/train-locomotive-c.glb",
+      "pack": "Kenney train",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "f446d90590a85e94f4e00559e6fd6d34ef8646c7acd32ff21bd1d7e1774e1399",
+      "bytes": 157420
+    },
+    {
+      "path": "assets/models/kenney/train/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/train/Textures/colormap.png",
+      "pack": "Kenney train",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "e264660f3fc9ecbd642bdb7fb7b7dc10755a061560a66651baf48274c729af09",
+      "bytes": 12684
+    },
+    {
+      "path": "assets/models/kenney/train/train-tram-round.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/train/train-tram-round.glb",
+      "pack": "Kenney train",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "fcbc9739d0f76e116519775cfd984f6c68ff23bd9bcc7eeda2cc026db7625648",
+      "bytes": 176932
+    },
+    {
+      "path": "assets/models/kenney/train/train-electric-bullet-c.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/train/train-electric-bullet-c.glb",
+      "pack": "Kenney train",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "3aab1660dd38abd8c8f846f6d1874f79ede21a9f9f12e25068315dc7a31c3c91",
+      "bytes": 103920
+    },
+    {
+      "path": "assets/models/kenney/train/train-carriage-container-blue.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/train/train-carriage-container-blue.glb",
+      "pack": "Kenney train",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "3e76c5367080f8b82efc4ab8ecf50af15c01e5b41e96576515ede0a76a6257e2",
+      "bytes": 116192
+    },
+    {
+      "path": "assets/models/kenney/train/train-electric-subway-a.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/train/train-electric-subway-a.glb",
+      "pack": "Kenney train",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "394f305ad8f27ec3af59080bdbc362961946541dca8925301979e75696787f7e",
+      "bytes": 139896
+    },
+    {
+      "path": "assets/models/kenney/nature/log.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/log.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "8c8fe8f6adfc03a3c0cd6cb24961ff74be96c2da284d70322f05797d049972d6",
+      "bytes": 14288
+    },
+    {
+      "path": "assets/models/kenney/watercraft/boat-row-large.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/watercraft/boat-row-large.glb",
+      "pack": "Kenney watercraft",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "25eed6585c7398654522d338ec575509615443887362ca8e598559b4eca142a3",
+      "bytes": 15988
+    },
+    {
+      "path": "assets/models/kenney/watercraft/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/watercraft/Textures/colormap.png",
+      "pack": "Kenney watercraft",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "311138350e74e35c5497a1bd8076a01740b7c302bed11027639fa553459a68de",
+      "bytes": 8814
+    },
+    {
+      "path": "assets/models/kenney/watercraft/boat-tow-a.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/watercraft/boat-tow-a.glb",
+      "pack": "Kenney watercraft",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "4c464cc894b5ba60f48437087e6ac94118553c8b3e7fe9a4f1e134b5b7f7dfe6",
+      "bytes": 50924
+    },
+    {
+      "path": "assets/models/kenney/watercraft/boat-row-small.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/watercraft/boat-row-small.glb",
+      "pack": "Kenney watercraft",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "82e85f716f059b3e5cd90088a6e5b7c7722518ff93e1592afe3fff076b617830",
+      "bytes": 17636
+    },
+    {
+      "path": "assets/models/tiny-treats/bubbly-bathroom/ducky.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/jam-ready-assets.zip::jam-ready-assets/tiny-treats/3D/interior-furniture/Bubbly Bathroom/Assets/gltf/ducky.gltf",
+      "pack": "Tiny Treats Bubbly Bathroom",
+      "upstream": "https://tinytreats.itch.io/bubbly-bathroom",
+      "licence": "CC0-1.0",
+      "sha256": "8931b838027cd26bdd1e475e627533fb1eef7d2d930074c40cb14190da372854",
+      "bytes": 3543
+    },
+    {
+      "path": "assets/models/tiny-treats/bubbly-bathroom/ducky.bin",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/jam-ready-assets.zip::jam-ready-assets/tiny-treats/3D/interior-furniture/Bubbly Bathroom/Assets/gltf/ducky.bin",
+      "pack": "Tiny Treats Bubbly Bathroom",
+      "upstream": "https://tinytreats.itch.io/bubbly-bathroom",
+      "licence": "CC0-1.0",
+      "sha256": "466414bed950d2f16935fda88147c0688f3f0fd6971376a867fa9a7f9e69e5b8",
+      "bytes": 18120
+    },
+    {
+      "path": "assets/models/tiny-treats/bubbly-bathroom/tiny_treats_texture_1.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/jam-ready-assets.zip::jam-ready-assets/tiny-treats/3D/interior-furniture/Bubbly Bathroom/Assets/gltf/tiny_treats_texture_1.png",
+      "pack": "Tiny Treats Bubbly Bathroom",
+      "upstream": "https://tinytreats.itch.io/bubbly-bathroom",
+      "licence": "CC0-1.0",
+      "sha256": "31e5c7c81bfba644a59797b1907519592c7728d4af98a705449975dd929482e5",
+      "bytes": 20974
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-parrot.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-parrot.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "a028fcccd8559652ea100fabaceb82ef53633e3474025eca593a753b008f52ab",
+      "bytes": 154124
+    },
+    {
+      "path": "assets/models/kenney/platformer/block-snow-low.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/platformer/block-snow-low.glb",
+      "pack": "Kenney platformer",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "3f83445126b93ac66b898b91ebc81069ecccec181dafc9943b6422922c1cea24",
+      "bytes": 10184
+    },
+    {
+      "path": "assets/models/kenney/platformer/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/platformer/Textures/colormap.png",
+      "pack": "Kenney platformer",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "439dfcac935cfd75dc16f28333a4c8284fffcc4b24f857c61cfb4c8a964a15bd",
+      "bytes": 11140
+    },
+    {
+      "path": "assets/models/kenney/holiday/sled.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/holiday/sled.glb",
+      "pack": "Kenney holiday",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "4e33b581b495375c289b36fe60e4d53a3f8e2e7bd957a1b05185f17f101930d4",
+      "bytes": 23088
+    },
+    {
+      "path": "assets/models/kenney/holiday/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/holiday/Textures/colormap.png",
+      "pack": "Kenney holiday",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "015fcc1664be7576f468a98bc4f5f329ef8b3c9caef0d85b2a4dc0ca69516863",
+      "bytes": 12777
+    },
+    {
+      "path": "assets/models/kenney/cube-pets/animal-caterpillar.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/cube-pets/animal-caterpillar.glb",
+      "pack": "Kenney cube-pets",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "470d2481ba246ff957da0164707326e805c54dde553468a104e83ad9c7281723",
+      "bytes": 130968
+    },
+    {
+      "path": "assets/models/kenney/nature/rock_largeA.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/rock_largeA.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "6dd15390fd96501dcd1454765a17ba61dbbd8d47705dfe5149c8dd92b353ce25",
+      "bytes": 7552
+    },
+    {
+      "path": "assets/models/kenney/space/crater.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/space/crater.glb",
+      "pack": "Kenney space",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "8b872ebe7358e1d5f08c600ed43f61d4d0dbbd03274a718424c599778915b175",
+      "bytes": 5684
+    },
+    {
+      "path": "assets/models/kenney/space/chimney.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/space/chimney.glb",
+      "pack": "Kenney space",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "92db1a53b46eea2f2f045fe1dcc1493b4674309f76909e4ecf1078576070b14b",
+      "bytes": 8920
+    },
+    {
+      "path": "assets/models/kenney/space/craterLarge.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/space/craterLarge.glb",
+      "pack": "Kenney space",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "703f86c085371d5e53e39029a0c74e51cefccd02697ea5e00eb2b4235ed9011b",
+      "bytes": 5688
+    },
+    {
+      "path": "assets/models/kenney/nature/plant_bushLarge.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/plant_bushLarge.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "10e1d9fbf29d96d1d1a56fb2ce25ae66537505101759229afe01ae22c6c45e02",
+      "bytes": 6436
+    },
+    {
+      "path": "assets/models/kenney/nature/tree_oak.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/tree_oak.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "d7fd8773674928c50c11b66d12c636d49bdcc15a8b1c7fbb98e6f63a3439a3f3",
+      "bytes": 14644
+    },
+    {
+      "path": "assets/models/tiny-treats/homely-house/mailbox.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/jam-ready-assets.zip::jam-ready-assets/tiny-treats/3D/interior-furniture/Homely House/Assets/gltf/mailbox.gltf",
+      "pack": "Tiny Treats Homely House",
+      "upstream": "https://tinytreats.itch.io/homely-house",
+      "licence": "CC0-1.0",
+      "sha256": "a6c0bedf85f0da9c61978b8d887f7db7108d8284843f79137d633b9258b8189d",
+      "bytes": 7667
+    },
+    {
+      "path": "assets/models/tiny-treats/homely-house/mailbox.bin",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/jam-ready-assets.zip::jam-ready-assets/tiny-treats/3D/interior-furniture/Homely House/Assets/gltf/mailbox.bin",
+      "pack": "Tiny Treats Homely House",
+      "upstream": "https://tinytreats.itch.io/homely-house",
+      "licence": "CC0-1.0",
+      "sha256": "845b306947540c780028d8938b2e9a739f45e15c2165f2d9d8a01a38e2f46abc",
+      "bytes": 25416
+    },
+    {
+      "path": "assets/models/tiny-treats/homely-house/tiny_treats_texture_1.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/jam-ready-assets.zip::jam-ready-assets/tiny-treats/3D/interior-furniture/Homely House/Assets/gltf/tiny_treats_texture_1.png",
+      "pack": "Tiny Treats Homely House",
+      "upstream": "https://tinytreats.itch.io/homely-house",
+      "licence": "CC0-1.0",
+      "sha256": "0dc04a048fd85b129183864788cf85bd63ead6fdccb788a21be98d92f2c4e408",
+      "bytes": 20167
+    },
+    {
+      "path": "assets/models/kenney/nature/plant_bush.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/plant_bush.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "ae7b1beb39e242b13f5f29e3ec23ef21034b814f82297b8aa00a9bf4e1b09590",
+      "bytes": 4396
+    },
+    {
+      "path": "assets/models/kenney/nature/flower_redA.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/flower_redA.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "171930b7789ddbf735af3745576b5393750beb9133b9ff4a444bb6bb2986c020",
+      "bytes": 7104
+    },
+    {
+      "path": "assets/models/kenney/city-suburban/fence.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/city-suburban/fence.glb",
+      "pack": "Kenney city-suburban",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "073bd2000ac51879516d49f835d5156dac4d5038085380b1232858fc3f562d02",
+      "bytes": 9672
+    },
+    {
+      "path": "assets/models/kenney/city-suburban/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/city-suburban/Textures/colormap.png",
+      "pack": "Kenney city-suburban",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "9b5de86078c25ef02351a80d35ff3c978693a1044565b73eedd9ae9b5b80665d",
+      "bytes": 11784
+    },
+    {
+      "path": "assets/models/kenney/nature/plant_flatTall.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/plant_flatTall.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "b192523736f32754788de4dc7a5dcf30a58322b260ec8969120c91432a10b633",
+      "bytes": 3480
+    },
+    {
+      "path": "assets/models/kenney/nature/lily_large.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/lily_large.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "c8f7080df0ae3166e9d33f523b66360c2ac7556dff36cc9c8ee78b6a676c7db2",
+      "bytes": 8044
+    },
+    {
+      "path": "assets/models/kenney/nature/rock_smallTopA.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/rock_smallTopA.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "758063d1f535da58c6a0d40416b011b268e5f9f888bbb7eddef0a31ba37e30b5",
+      "bytes": 5220
+    },
+    {
+      "path": "assets/models/kenney/nature/cactus_tall.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/cactus_tall.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "d43a1aca5952e1f8a104d64a0edfec09c39f15102ca6bdc531460dd5a2c53d25",
+      "bytes": 9668
+    },
+    {
+      "path": "assets/models/kenney/space/bones.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/space/bones.glb",
+      "pack": "Kenney space",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "d42d859e91beb903a09c4eecf4ccb169ae77b84e475a6b773d6ecf30644371be",
+      "bytes": 14212
+    },
+    {
+      "path": "assets/models/kenney/graveyard/hay-bale.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/graveyard/hay-bale.glb",
+      "pack": "Kenney graveyard",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "675d70aab70a1ad6792d347183cdf0cf1de5c342863c0e03128cd31ed2a5963a",
+      "bytes": 17828
+    },
+    {
+      "path": "assets/models/kenney/graveyard/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/graveyard/Textures/colormap.png",
+      "pack": "Kenney graveyard",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "a94b4dc4f77a4b8aec96bde94f63912a1ce12aa98eec2c1e9a37c89e20a5f091",
+      "bytes": 10965
+    },
+    {
+      "path": "assets/models/kenney/fantasy-town/windmill.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/fantasy-town/windmill.glb",
+      "pack": "Kenney fantasy-town",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "72562df164f5fd36670521462da8f4161cf2c4c1c889799443f0fb44532ad5db",
+      "bytes": 71160
+    },
+    {
+      "path": "assets/models/kenney/fantasy-town/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/fantasy-town/Textures/colormap.png",
+      "pack": "Kenney fantasy-town",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "4aac939dc33195e35caf8c382ee3cb170054da763577f22d3c22692ec6afccdf",
+      "bytes": 11143
+    },
+    {
+      "path": "assets/models/kenney/racing/lightColored.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/racing/lightColored.glb",
+      "pack": "Kenney racing",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "544829012f865f65cfd7d09eb71ac722fe51aec11be7c2ce85464a22bbe24c5f",
+      "bytes": 18656
+    },
+    {
+      "path": "assets/models/kenney/city-suburban/building-type-a.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/city-suburban/building-type-a.glb",
+      "pack": "Kenney city-suburban",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "49f32e20b9dcd24b1c8f6d6488807b8c8cb684cbb595bfb0bb36ad903e470faa",
+      "bytes": 98604
+    },
+    {
+      "path": "assets/models/kenney/city-roads/light-curved.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/city-roads/light-curved.glb",
+      "pack": "Kenney city-roads",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "e9ff06ead9d9b14eddd7bf40fa20e31b898fde2d59ade940eebe60685d335f6d",
+      "bytes": 9496
+    },
+    {
+      "path": "assets/models/kenney/city-roads/Textures/colormap.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/city-roads/Textures/colormap.png",
+      "pack": "Kenney city-roads",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "ebbdaadf298f684ee534d0e63e2bdb223f7501da9fc13eb7bcdc94489162aca5",
+      "bytes": 8658
+    },
+    {
+      "path": "assets/models/kaykit-city/firehydrant.gltf",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v2/kaykit-city-builder.zip::kaykit-city-builder/addons/kaykit_city_builder_bits/Assets/gltf/firehydrant.gltf",
+      "pack": "KayKit City Builder Bits",
+      "upstream": "https://kaylousberg.itch.io/city-builder-bits",
+      "licence": "CC0-1.0",
+      "sha256": "0a3f9fb95e8b4805602ad26050ee552408553682b41f3e54981a69dfa92a7f3b",
+      "bytes": 3067
+    },
+    {
+      "path": "assets/models/kaykit-city/firehydrant.bin",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v2/kaykit-city-builder.zip::kaykit-city-builder/addons/kaykit_city_builder_bits/Assets/gltf/firehydrant.bin",
+      "pack": "KayKit City Builder Bits",
+      "upstream": "https://kaylousberg.itch.io/city-builder-bits",
+      "licence": "CC0-1.0",
+      "sha256": "02cab93bf6af8c16da083c6ac92dcc5997bed24dabc1e746ee780e623b07b3de",
+      "bytes": 8056
+    },
+    {
+      "path": "assets/models/kaykit-city/citybits_texture.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v2/kaykit-city-builder.zip::kaykit-city-builder/addons/kaykit_city_builder_bits/Assets/gltf/citybits_texture.png",
+      "pack": "KayKit City Builder Bits",
+      "upstream": "https://kaylousberg.itch.io/city-builder-bits",
+      "licence": "CC0-1.0",
+      "sha256": "6d2d9a5a13bce32209cd8c04572ab170504d68f34b1519165c9b0c41871e235b",
+      "bytes": 19885
+    },
+    {
+      "path": "assets/models/kenney/platformer/tree-pine-snow.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/platformer/tree-pine-snow.glb",
+      "pack": "Kenney platformer",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "bf754b351c7d73ab85cb2dc31d50215efe6348115094bed57af0b2e0c547a759",
+      "bytes": 22412
+    },
+    {
+      "path": "assets/models/kenney/platformer/block-snow-large-slope.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/platformer/block-snow-large-slope.glb",
+      "pack": "Kenney platformer",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "9bd6f2f658b1c85ee54d4062cc95f54eafacae07d62becae04c40133315d27f4",
+      "bytes": 10864
+    },
+    {
+      "path": "assets/models/kenney/nature/grass_leafsLarge.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/grass_leafsLarge.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "a68b9b3d9639afaeb4ace840d5a8e3f21ffc4e8afc1eab15566500fbb2bee3e3",
+      "bytes": 13988
+    },
+    {
+      "path": "assets/models/kenney/retro-urban/scaffolding-structure.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/retro-urban/scaffolding-structure.glb",
+      "pack": "Kenney retro-urban",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "07ab47ab16499808ccf73d91e19783d55d0269e361fc1e8252d721b2c89ea5ab",
+      "bytes": 11168
+    },
+    {
+      "path": "assets/models/kenney/retro-urban/Textures/metal.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/retro-urban/Textures/metal.png",
+      "pack": "Kenney retro-urban",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "3893724d52a5788341345e16319fb8f5f7182d588b5d5b2babf577176ca3d701",
+      "bytes": 4930
+    },
+    {
+      "path": "assets/models/kenney/retro-urban/Textures/bars.png",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/retro-urban/Textures/bars.png",
+      "pack": "Kenney retro-urban",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "960c907c1f0bffa1de5fd4c3e690eac41e3e5907815be09aab17feae4bfebfea",
+      "bytes": 2309
+    },
+    {
+      "path": "assets/models/kenney/city-roads/construction-cone.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/city-roads/construction-cone.glb",
+      "pack": "Kenney city-roads",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "287f086b9f89e00470716168b3c5bffd99c16797c9b449715287e65fb39dd37c",
+      "bytes": 7068
+    },
+    {
+      "path": "assets/models/kenney/platformer/crate.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/platformer/crate.glb",
+      "pack": "Kenney platformer",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "5eb6b633b71d7459c7ef9b0bf6e138a719175e107d4d52faca8fc7d0a059a45a",
+      "bytes": 14336
+    },
+    {
+      "path": "assets/models/kenney/racing/pylon.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/racing/pylon.glb",
+      "pack": "Kenney racing",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "d554671f5ab372cef0e1083b83dc270c03f32bfa0dbc3978c40206faf5608b89",
+      "bytes": 8088
+    },
+    {
+      "path": "assets/models/kenney/nature/ground_riverStraight.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/nature/ground_riverStraight.glb",
+      "pack": "Kenney nature",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "d1061c7ab8d883fb26177e7cc36b2564b0a437620465c24f1a29629423cda096",
+      "bytes": 6044
+    },
+    {
+      "path": "assets/models/kenney/graveyard/debris.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/graveyard/debris.glb",
+      "pack": "Kenney graveyard",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "bf584bb5a4c1a7d4b7aed9ced00473a8678e9d402db1cfafc17e84e46aa2d42a",
+      "bytes": 25132
+    },
+    {
+      "path": "assets/models/kenney/space/rock_crystals.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/space/rock_crystals.glb",
+      "pack": "Kenney space",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "fbe5ce9cf6a036594b0eb4fc475633753bcd05780bf60bd82aa9c63fcbfd4e76",
+      "bytes": 25156
+    },
+    {
+      "path": "assets/models/kenney/train/track.glb",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/3d/train/track.glb",
+      "pack": "Kenney train",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "a288815a2d74cea1e06c66e8cd9d7006fbe14c62d991cd25096306ec7681ed2b",
+      "bytes": 8464
+    },
+    {
+      "path": "assets/models/licenses/kenney/LICENSE.txt",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/LICENSE.txt",
+      "pack": "Kenney library",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "aac944f18106b3a3e29c6fdeec02523d4cab4c735abc01f5a8fa88a79ae173ef",
+      "bytes": 713
+    },
+    {
+      "path": "assets/models/licenses/kenney/README.md",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/shorepine-kenney.zip::shorepine-kenney/README.md",
+      "pack": "Kenney library",
+      "upstream": "https://kenney.nl/assets",
+      "licence": "CC0-1.0",
+      "sha256": "6f64512246a1c6c485a7fe00300cae205dd8f69080ab9f440af656a8876fc084",
+      "bytes": 1316
+    },
+    {
+      "path": "assets/models/licenses/kaykit-skeletons/LICENSE.txt",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/kaykit-skeletons.zip::kaykit-skeletons/LICENSE.txt",
+      "pack": "KayKit Skeletons",
+      "upstream": "https://kaylousberg.itch.io/kaykit-skeleton-pack",
+      "licence": "CC0-1.0",
+      "sha256": "5d822abca4e08c5a91d329e5372b3dc605cba8d994f752cb0f7dfdb7a0a79954",
+      "bytes": 914
+    },
+    {
+      "path": "assets/models/licenses/quaternius-ultimate-animated-character/License.txt",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/assets/License.txt",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://quaternius.com/license.html",
+      "licence": "CC0-1.0",
+      "sha256": "83d8959f9fc56353ed571fbe2dc52e4bcd64508e2399501cd45ac2ce3df0bf8c",
+      "bytes": 364
+    },
+    {
+      "path": "assets/models/licenses/quaternius-ultimate-animated-character/SOURCE.json",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-character/SOURCE.json",
+      "pack": "quaternius-ultimate-animated-character",
+      "upstream": "https://github.com/atiffhussainkhan/Image/releases/tag/catalog-completion-2026-10-06",
+      "licence": "CC0-1.0",
+      "sha256": "9a93a190a6d6d9c632a65e1a8c97367f31d403c110c8ba61e8825ceb8acf23bc",
+      "bytes": 27831
+    },
+    {
+      "path": "assets/models/licenses/quaternius-ultimate-animated-animals/License.txt",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-animals/assets/License.txt",
+      "pack": "quaternius-ultimate-animated-animals",
+      "upstream": "https://quaternius.com/license.html",
+      "licence": "CC0-1.0",
+      "sha256": "83d8959f9fc56353ed571fbe2dc52e4bcd64508e2399501cd45ac2ce3df0bf8c",
+      "bytes": 364
+    },
+    {
+      "path": "assets/models/licenses/quaternius-ultimate-animated-animals/SOURCE.json",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-ultimate-animated-animals/SOURCE.json",
+      "pack": "quaternius-ultimate-animated-animals",
+      "upstream": "https://github.com/atiffhussainkhan/Image/releases/tag/catalog-completion-2026-10-06",
+      "licence": "CC0-1.0",
+      "sha256": "d93ae1c50422a7fed4fcbc79570c10458b83d52ccf8238ad7d3da87833ec6f7e",
+      "bytes": 8260
+    },
+    {
+      "path": "assets/models/licenses/quaternius-animated-mech/License.txt",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-animated-mech/assets/License.txt",
+      "pack": "quaternius-animated-mech",
+      "upstream": "https://quaternius.com/license.html",
+      "licence": "CC0-1.0",
+      "sha256": "83d8959f9fc56353ed571fbe2dc52e4bcd64508e2399501cd45ac2ce3df0bf8c",
+      "bytes": 364
+    },
+    {
+      "path": "assets/models/licenses/quaternius-animated-mech/SOURCE.json",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/missing-packs/quaternius-animated-mech/SOURCE.json",
+      "pack": "quaternius-animated-mech",
+      "upstream": "https://github.com/atiffhussainkhan/Image/releases/tag/catalog-completion-2026-10-06",
+      "licence": "CC0-1.0",
+      "sha256": "bcea494ee3d8da641ee527485a1e25cc605d721f7cd714bab05d33686b3f35e0",
+      "bytes": 9393
+    },
+    {
+      "path": "assets/models/licenses/holokat/LICENSE",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v1/holokat-game-assets.zip::holokat-game-assets/LICENSE",
+      "pack": "Holokat farm infrastructure",
+      "upstream": "https://github.com/holokat/game-assets",
+      "licence": "MIT",
+      "sha256": "2615609ca0e7ddaa391f68631c73ddb250862a84901381ab0fb6117d3d2b64eb",
+      "bytes": 1064
+    },
+    {
+      "path": "assets/models/licenses/tiny-treats/License.txt",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-v1/jam-ready-assets.zip::jam-ready-assets/tiny-treats/3D/interior-furniture/License.txt",
+      "pack": "Tiny Treats",
+      "upstream": "https://tinytreats.itch.io/",
+      "licence": "CC0-1.0",
+      "sha256": "308e30a1075c737b104b5edc1823f3ba6dba65d6c40b9124c0db09ce891d3cac",
+      "bytes": 904
+    },
+    {
+      "path": "assets/models/licenses/kaykit-city-builder/LICENSE.txt",
+      "source": "/Users/mac/Documents/Codex/2026-10-05/n/work/full-audit/downloads/mega-assets-expansion-v2/kaykit-city-builder.zip::kaykit-city-builder/LICENSE.txt",
+      "pack": "KayKit City Builder Bits",
+      "upstream": "https://kaylousberg.itch.io/city-builder-bits",
+      "licence": "CC0-1.0",
+      "sha256": "b076d86beec660e1550e00796ca24a8b70d7b2187d79954b2e29722b666dce93",
+      "bytes": 828
+    }
+  ],
+  "modelCount": 85,
+  "totalBytes": 43425110
+}

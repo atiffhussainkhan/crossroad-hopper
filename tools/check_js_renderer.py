@@ -11,20 +11,19 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HTML = ROOT / "index.html"
-JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
+from js_runtime import run_file
 
 # Load order matters: the palette, then the core, then the renderer, then
 # the game. The renderer reads the palette at load time.
 CHAIN = ["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js",
          "src/render/iso.js", "src/scenery.js", "src/render/scene.js",
-         "src/roster.js", "src/render/character.js"]
+         "src/roster.js", "src/render/sprite.js", "src/render/deathfx.js", "src/render/character.js"]
 
 
 def main() -> int:
@@ -42,7 +41,7 @@ def main() -> int:
             f.write("var _src = %s;\ntry { new Function(_src); print('OK'); }\n"
                     "catch (e) { print('SYNTAX: ' + e); }\n" % json.dumps(src))
             p = Path(f.name)
-        proc = subprocess.run([JSC, str(p)], capture_output=True, text=True)
+        proc = run_file(p)
         p.unlink(missing_ok=True)
         if "OK" not in proc.stdout:
             failures.append(f"{rel} does not parse: {proc.stdout.strip()[:120]}")
@@ -53,20 +52,19 @@ def main() -> int:
                "else if (typeof Scene==='undefined') print('MISSING Scene');\n"
                "else if (typeof Roster==='undefined') print('MISSING Roster');\n"
                "else if (typeof CharacterRenderer==='undefined') print('MISSING CharacterRenderer');\n"
-               "else if (Roster.count() !== 6) print('BAD ROSTER COUNT ' + Roster.count());\n"
+               "else if (Roster.count() !== 24) print('BAD ROSTER COUNT ' + Roster.count());\n"
                "else print('CHAIN OK');\n")
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
         f.write(script)
         p = Path(f.name)
-    proc = subprocess.run([JSC, str(p)], capture_output=True, text=True,
-                          cwd=str(ROOT))
+    proc = run_file(p)
     p.unlink(missing_ok=True)
     if "CHAIN OK" not in proc.stdout:
         failures.append(f"renderer chain did not load: "
                         f"{(proc.stdout + proc.stderr).strip()[:160]}")
 
     print(f"modules chained    : {len(CHAIN) + 1}")
-    print(f"roster members     : {6 if 'CHAIN OK' in proc.stdout else '?'}")
+    print(f"roster members     : {24 if 'CHAIN OK' in proc.stdout else '?'}")
 
     if failures:
         print("\nFAIL")

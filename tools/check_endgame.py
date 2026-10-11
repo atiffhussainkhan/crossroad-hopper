@@ -17,11 +17,8 @@ Exits non-zero on any failure.
 from __future__ import annotations
 
 import json
-import subprocess
-import tempfile
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from js_runtime import SIM_MODULES, run_script
 
 PROBE = r"""
 (function () {
@@ -146,33 +143,11 @@ PROBE = r"""
 
 def main() -> int:
     print("endgame mechanics")
-    loader = """
-ObjC.import('Foundation');
-var _gd = null;
-try {
-  var _env = $.NSProcessInfo.processInfo.environment;
-  var _v = _env.objectForKey("GAME_DIR");
-  if (_v !== null && _v !== undefined && _v !== "[id nil]") _gd = ObjC.unwrap(_v);
-} catch (e) { _gd = null; }
-if (!_gd) _gd = ObjC.unwrap($.NSFileManager.defaultManager.currentDirectoryPath);
-["src/stages.js", "src/tiles.js", "src/hazards.js", "src/sim-core.js"].forEach(function (rel) {
-  var t = $.NSString.stringWithContentsOfFileEncodingError(
-    _gd + "/" + rel, $.NSUTF8StringEncoding, null);
-  if (t === null) throw new Error("missing " + _gd + "/" + rel);
-  eval(ObjC.unwrap(t));
-});
-"""
+
     body = PROBE.strip().replace(
         "  return JSON.stringify(out);\n})()",
         '  console.log("@@P@@" + JSON.stringify(out));\n})()')
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False, dir="/tmp") as f:
-        f.write(loader + body)
-        path = f.name
-    try:
-        proc = subprocess.run(["osascript", "-l", "JavaScript", path],
-                              capture_output=True, text=True, cwd=str(ROOT))
-    finally:
-        Path(path).unlink(missing_ok=True)
+    proc = run_script(body, modules=SIM_MODULES)
     raw = proc.stdout + proc.stderr
     if proc.returncode != 0 or "@@P@@" not in raw:
         print(f"  FAIL — probe failed: {proc.stderr.strip()[:300]!r}")

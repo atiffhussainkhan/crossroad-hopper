@@ -1,139 +1,54 @@
-# Hopper Game
+# Hopper
 
-> **Start here:** **[`AGENTS.md`](AGENTS.md)** — architecture, invariants, the
-> verification gate, and the traps that will cost you an hour. Written for an AI
-> assistant or a new engineer picking this up cold.
->
-> **The authoritative product spec is [`docs/SPEC-AMENDMENT-001-shipped-product.md`](docs/SPEC-AMENDMENT-001-shipped-product.md).**
-> `docs/REQUIREMENTS-FINAL.md` is the original design record and is largely
-> superseded: it describes an endless, zero-lives grinder with a grind verb, a
-> gauge, an economy and audio. The game that actually ships is a **ten-stage
-> timed campaign** with four lives and a finish line. The amendment records the
-> withdrawn requirements and the defects found and fixed.
+A ten-stage lane-crossing browser game, rendered with actual 3D models from the existing [Image library](https://github.com/atiffhussainkhan/Image). No AI images are generated. Models keep their original geometry, materials and textures; their backgrounds are clear because they render directly in the scene with lighting, depth and contact shadows.
 
-## Playing it
+## Run locally
 
-Open `index.html` in any modern browser. No build step.
+Use an HTTP server so the browser can load local modules and glTF models:
 
-- **Pick a character** at `select.html` — 24 to choose from
-- **Hop forward** to cross the lane; **arrow keys / WASD / A-D** to move sideways
-- **Reach the white line** before the 90-second clock expires
-- You have **four lives** per stage; ten stages, then an endless mode
-
-## Verifying it
-
-There is no browser automation in this environment, so the game is verified by
-driving the real source in JavaScriptCore:
-
-```
-python3 tools/playtest.py 10
+```sh
+python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
-Expect `RESULT: NO ERRORS`, `24/24` sprites, `main.js booted, frames=600`, and a
-**non-zero** forward-only clear rate (a zero there means a lane has become
-unclearable).
+Open <http://127.0.0.1:4173>. There is no build step or npm installation. The pinned Three.js runtime and all assets are included locally; no CDN is used. A modern browser with WebGL2 is required for 3D. The legacy canvas renderer remains a fallback when WebGL cannot initialise.
 
-## Original design record
+Run the command from the cloned repository root. The game is self-contained: the external Image library and original source-machine paths are not needed to play it. Direct `file://` opening is unsupported because modules and model resources need HTTP loading.
 
-## What is here
+## Play
 
-| File | What it is |
-|---|---|
-| `docs/DEVELOPMENT-PLAN.md` | **Read third, then build from this.** Seven phases from spec remediation to release, with 10 build gates, acceptance thresholds, a risk register, and a definition of done |
-| `docs/STAGE-DESIGN.md` | **The campaign.** Ten stages, the difficulty ladder, lives, two-player mode, and every requirement the stage design changes |
-| `docs/REQUIREMENTS-FINAL.md` | **The single final requirements document.** 35,653 words: the consolidated specification, the superseded base spec, and all ten dossiers, with a generated contents list and requirement index |
-| `docs/SENIOR-REVIEW.md` | An independent senior-engineer review finding 12 blocking defects. Phase 0 of the plan exists to close them |
-| `docs/mega-requirements.md` | Part 1, standalone: 77 consolidated requirements, 6 resolved conflicts, 19 corrections |
-| `docs/genre-requirements.md` | Part 2, superseded in part: the base spec the research began from |
-| `docs/dossiers/01`–`10` | Part 3: ten research dossiers, 117 harvested requirements |
-| `docs/review-01`–`03` | The three underlying reviews, by lens: completeness, consistency, delivery risk |
-| `tools/build_final_doc.py` | Regenerates the final document and self-checks its stated counts |
-| `index.html` | The playable. Open it in any browser |
-| `src/stages.js` | The ten stages as a data table: palette, baseline, lane mix, hazards |
-| `src/sim-core.js` | Pure-JS core: rng, player, pursuer, and the stage state machine |
-| `src/main.js` | DOM only: rendering, input, fixed-timestep loop, phases |
-| `src/style.css` | Shell styles, including reduced-motion fallback |
-| `tools/simulate.js` | JXA wrapper that drives the real modules from a temp file of seeds |
-| `tools/check_vertical_slice.py` | Stage-loop gate: 1000 campaigns plus structural probes |
-| `tools/run_all.sh` | One command, every gate. `bash tools/run_all.sh` |
+- Choose one of 24 real library characters in `select.html`.
+- Tap the board or press Space to hop forward. Directional buttons, swipes, arrow keys and WASD move you.
+- Reach the white line within 90 seconds, with four lives per stage.
+- Traffic increases every 15 seconds. The final 15 seconds accelerate existing traffic.
+- A collision pauses for a 2.1-second death beat; input skips it and restarts.
+- Two-player mode shares the clock. Touch the corresponding half of the board; keyboard and buttons control the active player.
+- Points count accepted forward hops. Waiting and lateral/backward movement earn nothing. Clearing stage ten opens Endless mode with live traffic, no clock and no finish line.
 
-## Reading order
+## Inspect the selected assets
 
-1. `STAGE-DESIGN.md` — what the game actually is
-2. `SENIOR-REVIEW.md` — what was wrong with the original specification
-3. `REQUIREMENTS-FINAL.md` — the specification itself
-4. `DEVELOPMENT-PLAN.md` — how to get to a shipped build
+Open `assets.html` for live 3D previews of every character, hazard and scenery selection. `docs/ASSET-SELECTION.md` records the choices and the closest available alternatives when the library has no exact subject. The picker names the models actually selected.
 
-## Status
+`assets/models/manifest.json` controls scale, orientation and model mapping. `assets/models/provenance.json` records original paths and SHA-256 hashes. Licences are in `assets/models/licenses/`; Three.js retains its MIT licence in `vendor/three/LICENSE`.
 
-| Phase | Status |
-|---|---|
-| 0 — Spec remediation (12 defects) | **Complete** |
-| 1 — Stage campaign + vertical slice | **Complete** |
-| 2 — Hazards: three lane classes, six tile types | Pending |
-| 3 — Generation and solvability | Pending |
-| 4 — Economy, roster, stat cards | Pending |
-| 5 — Scenery rendering, particles, audio, accessibility pass | Pending |
-| 6 — Release | Pending |
+For visual inspection of a theme, use `index.html?char=1&stage=1` through `stage=10`. Ordinary links start the campaign on stage one.
 
-**Phase 1, what works now.** Open `index.html`:
+## Verify
 
-- Ten stages, each a different scene and palette, all driven by one data table
-- A 90-second clock and a 40-row goal line; reach the line before time out
-- Difficulty climbing every 15 seconds, on top of a per-stage baseline
-- Four lives per player; dying costs a life and respawns you instantly
-- Running out of lives retries **that stage**, never the campaign
-- A one/two-player toggle; both players hop at once on a shared clock
-- Clearing stage 10 unlocks Endless mode, which scores on distance forever
+```sh
+bash tools/run_all.sh
+python3 tools/playtest.py 10 --seed 12345
+```
 
-**The one test the gate cannot run** is the death-to-restart interval. Play
-until you die, and the HUD shows it. The plan's threshold is median under
-300 ms, worst case under 1000 ms; the deterministic parts are gated, the
-number itself is yours to read.
+The suite checks the actual simulation: lane fairness, rail telegraphs, 1,000 seeded campaigns, 24 fallback sprites, browser-layer inputs, forward scoring, Endless transitions, and model/dependency integrity. It uses JavaScriptCore when available, or Node.js in an equivalent global script context. Force Node with `JS_ENGINE=node`; set `NODE` to its path when absent from `PATH`.
 
-## Research programme
+Use Python 3.10+ for the tools. Install Pillow in the test environment with `python3 -m pip install Pillow` to check the actual fallback sprite dimensions. These test tools are not browser runtime dependencies.
 
-Ten agents each took two games and produced a dossier containing verified
-mechanics, distinctive requirements, causes, browser-buildability ratings,
-conflicts, and a ranked harvest list. Every claim that could not be traced to a
-credible source was marked UNVERIFIED rather than asserted, and that discipline
-mattered: verification overturned nineteen claims, including the base spec's
-central commercial argument.
+Lighting, clipping and 3D presentation also require real browser inspection; the headless canvas stub does not rasterise a WebGL scene.
 
-Notable results are written up in the corrections table at the top of
-`docs/mega-requirements.md`. Three are worth knowing before reading further:
+## Development
 
-- **Shooty Skies is not Hipster Whale and not isometric.** It is Mighty Games, a
-  sister studio whose founders Hipster Whale's Matt Hall and Andy Sum co-direct.
-  The shared-engine thesis does not hold.
-- **Piffle has no paddles.** It is a ball-breaker with angle-only aiming. Its
-  harvestable mechanic is finite ammunition replenished by defeating a hazard.
-- **The Crossy Town failure story is untraceable.** The base spec's whole case
-  against cloning rested on it, and its only source is a dead URL with no
-  archive capture.
+Read `AGENTS.md` before editing. The simulation owns positions and collisions; both renderers only read them. `docs/SPEC-AMENDMENT-001-shipped-product.md` defines the campaign, and `docs/SPEC-AMENDMENT-002-library-3d.md` records the current presentation and scoring changes. Earlier research and plans remain in `docs/` as historical records.
 
-## The game the requirements describe
+For another machine or coding agent, start with [MINIMAX-HANDOFF.md](MINIMAX-HANDOFF.md). Keep the shipped artwork and vendored runtime intact; no artwork regeneration or library re-import is required for this handoff.
 
-A discrete isometric hopper where a distance-gated pursuer that cannot be fought
-pressures the player forward, a depleting gauge replenished by a specific tile
-supplies the difficulty ramp without any numeric curve, and per-tile type tags
-rewrite the rules of a row rather than its spacing.
-
-Three properties set it apart from the genre, each traceable to a harvested
-mechanism rather than to invention: the difficulty curve is spatial rather than
-temporal; stalling is bounded by an unblockable pursuer rather than a stopwatch;
-and the ammunition economy is closed, tying offence to survival.
-
-## Buildable scope
-
-Everything specified is buildable on a static HTML, CSS and JavaScript stack
-with no build step, no server and no third-party SDK. Two requirements are not:
-a community collection bar and a submitted rival score, both of which need a
-backend. Neither changes the core loop, and both are marked X-class deferrals in
-the mega document.
-
-## Status
-
-Research complete. Not started: the build. The first buildable increment is
-defined at the end of `docs/genre-requirements.md` and consists of the Tier A
-movement, board, pressure and restart requirements, and nothing else.
+Optional discovery tooling is in `tools/gamekit-agent/`; its [quickstart](tools/gamekit-agent/QUICKSTART.md) explains how to configure an existing external library. The game itself does not need that library or helper.

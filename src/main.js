@@ -27,8 +27,8 @@
   var elPlayers = document.getElementById("mode");
   var elProgress = document.getElementById("progress");
   var elHint = document.getElementById("hint");
-  var DEFAULT_HINT = "Click or press SPACE to hop forward. Arrow keys or WASD to " +
-                     "move. Dodge the traffic and cross the white line.";
+  var DEFAULT_HINT = "Tap or SPACE to hop. Swipe, use the buttons, or press " +
+                     "arrow keys / WASD to move. Reach the white line.";
 
   var TICK_DT_MS = 16.667;
   var ROW_PX = 26;            // vertical pixels per row
@@ -45,6 +45,13 @@
   var CHAR_SCALE = 1.0;
 
   var game = SimCore.createGame({ playerCount: 1, seed: "browser" });
+  // A shareable stage preview for inspecting all ten themes without replaying
+  // the campaign. Ordinary links start on stage one.
+  var previewStage = /[?&]stage=(\d+)(?:&|$)/.exec((window.location && window.location.search) || "");
+  if (previewStage) {
+    var stageIndex = Number(previewStage[1]) - 1;
+    if (stageIndex >= 0 && stageIndex < Stages.stageCount()) game.startStage(stageIndex);
+  }
 
   /* Hop animation. The simulation moves the player instantly from one cell to
    * the next; the VIEW interpolates along an arc so the hop reads as motion
@@ -54,7 +61,7 @@
    * Each character has its own arc height and hop duration in
    * Roster.MOTION, so the six feel different in motion without differing in
    * outcome. */
-  var hopAnim = null;   // { fc, fr, tc, tr, t0, dur, arc, sway }
+  var hopAnims = [];   // one { fc, fr, tc, tr, t0, dur, arc, sway } per player
 
   function startHop(playerIndex, dir, fromCol, fromRow) {
     var holder = game.state().players[playerIndex];
@@ -76,7 +83,7 @@
     var fc = fromCol, fr = fromRow;
     var tc = ps.col, tr = ps.row;
     if (fc === tc && fr === tr) return;      // not a hop
-    hopAnim = {
+    hopAnims[playerIndex] = {
       fc: fc, fr: fr, tc: tc, tr: tr,
       t0: performance.now(),
       dur: m ? m.hopMs : 600,
@@ -86,11 +93,12 @@
     };
   }
 
-  function hopProgress() {
-    if (!hopAnim) return null;
-    var p = (performance.now() - hopAnim.t0) / hopAnim.dur;
-    if (p >= 1) { var done = hopAnim; hopAnim = null; return { p: 1, done: done }; }
-    return { p: Math.max(0, p), done: hopAnim };
+  function hopProgress(index) {
+    var anim = hopAnims[index];
+    if (!anim) return null;
+    var p = (performance.now() - anim.t0) / anim.dur;
+    if (p >= 1) { hopAnims[index] = null; return { p: 1, done: anim }; }
+    return { p: Math.max(0, p), done: anim };
   }
   var BOARD_COLS = 14;   // must match SimCore's g.cols
   var DPR_CAP = 3;   // above 3x the pixels are invisible and cost frame time
@@ -151,7 +159,7 @@
     var hasSprite = !!(who0 && who0.sprite &&
       typeof SpriteSheets !== "undefined" && SpriteSheets.has(who0.sprite));
     if (pose.dead) { if (!hasSprite) pose.squash = 0.30; return pose; }
-    var prog = hopProgress();
+    var prog = hopProgress(index);
     if (!prog) return pose;
     var a = prog.done, p = prog.p;
     // Smoothstep: zero velocity at both ends, so the hop eases in and out.
@@ -189,7 +197,20 @@
     } else {
       deadBeatStart = 0;
     }
+    if (lastPhase === SimCore.PHASES.DEAD && s.phase !== SimCore.PHASES.DEAD) {
+      hopAnims = [];
+    }
     lastPhase = s.phase;
+
+    var activeIdx = Math.min(s.activePlayer, s.players.length - 1);
+    var anchor = s.players[activeIdx].state();
+    if (window.World3D && window.World3D.ready) {
+      var poses = [];
+      for (var pi = 0; pi < s.players.length; pi++) poses.push(playerPose(pi));
+      window.World3D.render(s, stage, poses, performance.now());
+      canvas.style.opacity = "0";
+    } else {
+      canvas.style.opacity = window.World3D && window.World3D.status === "loading" ? "0" : "1";
 
     // CSS pixels. VIEW_SCALE was a leftover from an earlier draft and was
     // never declared: reading it threw on frame 1, which killed the
@@ -228,8 +249,6 @@
     // Isometric scene from the shared renderer. Everything below is drawn in
     // the same projection, with the same face factors, so the game and the
     // Python preview cannot diverge visually.
-    var activeIdx = Math.min(s.activePlayer, s.players.length - 1);
-    var anchor = s.players[activeIdx].state();
     var camPose = playerPose(activeIdx);
     var topRow = Math.max(0, Math.floor(camPose.row) - 3);
     // The camera focuses on the player's own cell; the view slides so the
@@ -317,7 +336,7 @@
        * mid-hop shows the jump, and anyone standing still breathes. */
       var anim = "Idle";
       if (!ps.alive) anim = "Die";
-      else if (lift > 0 || hopAnim) anim = "Jump";
+      else if (lift > 0 || hopAnims[i]) anim = "Jump";
       /* performance.now() rather than the frame timestamp: render() takes no
        * arguments, so the frame's `nowMs` is not in scope here. This is the
        * same single captured origin hopProgress() uses, per NF-05. */
@@ -430,16 +449,21 @@
       ctx.restore();
     }
 
+    }
+
     var remaining = Math.max(0, Stages.STAGE_DURATION_MS - s.elapsedInStageMs);
-    elTimer.textContent = (remaining / 1000).toFixed(1);
+    elTimer.textContent = s.endlessMode ? "—" : (remaining / 1000).toFixed(1);
     elDiff.textContent = String(game.difficulty());
-    elStage.textContent = stage.id + ". " + stage.name;
-    elScore.textContent = String(Math.floor(s.totalScore + s.stageScore));
+    elStage.textContent = s.endlessMode ? "Endless" : stage.id + ". " + stage.name;
+    // Stage clear already banks stageScore; include it only before banking.
+    var unbanked = s.phase === SimCore.PHASES.STAGE_CLEAR ? 0 : s.stageScore;
+    elScore.textContent = String(Math.floor(s.totalScore + unbanked + s.endlessScore));
 
     // How far to the finish. A player -- especially a child -- needs to see
     // how far there is to go; the clock on its own says nothing about it.
     if (elProgress) {
-      elProgress.textContent = Math.min(anchor.row, s.goalRow) + "/" + s.goalRow;
+      elProgress.textContent = s.endlessMode ? String(anchor.row) + " rows"
+        : Math.min(anchor.row, s.goalRow) + "/" + s.goalRow;
     }
     // Say WHY the bird is there, and what to do. A threat with no explanation
     // is indistinguishable from a bug.
@@ -447,7 +471,9 @@
       var puH = game.state().pursuer.state();
       if (puH.mode === "ACTIVE") elHint.textContent = "The bird is chasing you — keep hopping forward!";
       else if (puH.mode === "SPAWNING") elHint.textContent = "A bird is coming — keep moving!";
-      else elHint.textContent = DEFAULT_HINT;
+      else elHint.textContent = s.endlessMode
+        ? "Endless — no clock or finish line. Keep hopping and dodge the traffic!"
+        : DEFAULT_HINT;
     }
 
     var livesStr = "";
@@ -457,16 +483,26 @@
     }
     elLives.textContent = livesStr;
 
-    if (s.phase === SimCore.PHASES.DEAD) {
-      showBanner("YOU ARE DEAD", "Restarting...");
+    if (window.World3D && window.World3D.status === "loading") {
+      var modelProgress = window.World3D.modelCount ?
+        window.World3D.modelsLoaded + "/" + window.World3D.modelCount + " library models ready" :
+        "Preparing your library models…";
+      showBanner("Loading 3D assets", modelProgress);
+    } else if (s.phase === SimCore.PHASES.DEAD) {
+      showBanner("YOU ARE DEAD", "Tap to skip and restart");
     } else if (s.phase === SimCore.PHASES.READY) {
       showBanner("Stage " + stage.id + " — " + stage.name, "Tap to start");
     } else if (s.phase === SimCore.PHASES.STAGE_CLEAR) {
-      showBanner("Stage clear", "Tap for stage " + (stage.id + 1));
+      if (s.stageIndex === Stages.STAGES.length - 1) {
+        showBanner("Campaign clear", "Tap for Endless mode");
+      } else {
+        showBanner("Stage clear", "Tap for stage " + (stage.id + 1));
+      }
     } else if (s.phase === SimCore.PHASES.STAGE_FAILED) {
-      showBanner("Out of lives", "Tap to retry stage " + stage.id);
-    } else if (s.phase === SimCore.PHASES.ENDLESS) {
-      showBanner("Campaign complete", "Endless mode — tap to chase a high score");
+      showBanner(s.endlessMode ? "Out of lives" : (remaining <= 0 ? "Time's up" : "Out of lives"),
+        s.endlessMode ? "Tap to retry Endless" : "Tap to retry stage " + stage.id);
+    } else {
+      hideBanner();
     }
   }
 
@@ -541,13 +577,13 @@
   // The single place a player is ever moved by a human.
   function act(direction, playerIndex) {
     var s = game.state();
+    if (window.World3D && window.World3D.status === "loading") return;
 
     // One input restarts or resumes, from any terminal phase.
     if (s.phase === SimCore.PHASES.STAGE_CLEAR ||
-        s.phase === SimCore.PHASES.STAGE_FAILED ||
-        s.phase === SimCore.PHASES.ENDLESS) {
+        s.phase === SimCore.PHASES.STAGE_FAILED) {
       game.advance();
-      hopAnim = null;
+      hopAnims = [];
       hideBanner();
       return;
     }
@@ -574,9 +610,11 @@
 
   canvas.addEventListener("pointerdown", function (e) {
     if (e.button !== undefined && e.button !== 0) return;
+    if (downId !== null) return;
     downX = e.clientX; downY = e.clientY;
     downId = e.pointerId; dragged = false;
     maxDx = 0; maxDy = 0; bestDx = 0; bestDy = 0;
+    if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
   });
 
   canvas.addEventListener("pointermove", function (e) {
@@ -627,11 +665,22 @@
   };
   window.addEventListener("keydown", function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // Space/Enter on a button must activate that button exactly once.
+    if (e.target && e.target.tagName === "BUTTON" &&
+        (e.key === " " || e.key === "Enter")) return;
     var dir = KEYS[e.key];
     if (!dir) return;
     e.preventDefault();
     var idx = game.state().playerCount < 2 ? 0 : game.state().activePlayer;
     act(dir, idx);
+  });
+
+  ["left", "forward", "right", "back"].forEach(function (direction) {
+    var button = document.getElementById("move-" + direction);
+    if (!button) return;
+    button.addEventListener("click", function () {
+      act(direction, game.state().activePlayer);
+    });
   });
 
   // ---------- Mode toggle: 1 or 2 players --------------------------------
@@ -640,6 +689,7 @@
     elPlayers.addEventListener("click", function () {
       var next = game.state().playerCount === 1 ? 2 : 1;
       game = SimCore.createGame({ playerCount: next, seed: "browser-" + next });
+      hopAnims = [];
       elPlayers.textContent = next + " player" + (next > 1 ? "s" : "");
       hideBanner();
     });
@@ -650,6 +700,8 @@
   elPlayers.textContent = "1 player";
   document.addEventListener("visibilitychange", function () {
     lastFrameMs = performance.now();
+    accumulator = 0;
+    hopAnims = [];
     // NF-06: drop any in-flight pointer so a gesture begun before the tab
     // was hidden cannot resolve after it returns. downId is what actually
     // gates endPointer; the coordinates are cleared so a stale release cannot

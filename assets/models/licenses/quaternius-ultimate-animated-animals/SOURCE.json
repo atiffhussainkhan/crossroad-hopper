@@ -1,0 +1,321 @@
+{
+  "drive_folder": "1uJ3N5HfB7jKTseJUNQr3N4YaN0UuEtHk",
+  "files": [
+    {
+      "path": "assets/Blends/Alpaca.blend",
+      "drive_id": "1Ze3dbyu_kv30kwt1XoxRWBM78NphsigD",
+      "bytes": 2561952
+    },
+    {
+      "path": "assets/Blends/Bull.blend",
+      "drive_id": "14GAVfZIbpweka8tUlDDI2M8-tR9c39YC",
+      "bytes": 2531860
+    },
+    {
+      "path": "assets/Blends/Cow.blend",
+      "drive_id": "1ebESVKfuQ4Dmj8bHEe6Bg7GU1cxtiznv",
+      "bytes": 2532300
+    },
+    {
+      "path": "assets/Blends/Deer.blend",
+      "drive_id": "1XOyqlUcRPKO6J3eLTJypQt6LAuvCw4M_",
+      "bytes": 2603644
+    },
+    {
+      "path": "assets/Blends/Donkey.blend",
+      "drive_id": "1_zF8xp1UjtYi2Cir0m850zLVDukkYWZL",
+      "bytes": 2858844
+    },
+    {
+      "path": "assets/Blends/Fox.blend",
+      "drive_id": "1mURf8Sd70PZJlFJzodmvb756kM26w0A5",
+      "bytes": 2585572
+    },
+    {
+      "path": "assets/Blends/Horse_White.blend",
+      "drive_id": "1kWhdC2IOldmCrEndD5YzSRTqV2EWvJit",
+      "bytes": 2850040
+    },
+    {
+      "path": "assets/Blends/Horse.blend",
+      "drive_id": "1XEstRdaMvbc7Xb5tK_mk6KP6fkFz_WXh",
+      "bytes": 2850084
+    },
+    {
+      "path": "assets/Blends/Husky.blend",
+      "drive_id": "1TZJdLLCJ2fhd8wOEDI9BsJY9B7SIXCd4",
+      "bytes": 2509344
+    },
+    {
+      "path": "assets/Blends/ShibaInu.blend",
+      "drive_id": "1HbN45J5I19ZZsuMwEqW0caho-EWp0VfX",
+      "bytes": 2366516
+    },
+    {
+      "path": "assets/Blends/Stag.blend",
+      "drive_id": "1JFpz-m6ZnSxCD50ImedmOHGFh_5aKQQd",
+      "bytes": 2315696
+    },
+    {
+      "path": "assets/Blends/Wolf.blend",
+      "drive_id": "1daskW0IjLfPK8tLe7qTRTrjNwzyrQnjl",
+      "bytes": 2571200
+    },
+    {
+      "path": "assets/FBX/Alpaca.fbx",
+      "drive_id": "1tqruepKe4Qzr6Zrc-9Z93qe3w8AbHyW8",
+      "bytes": 3412412
+    },
+    {
+      "path": "assets/FBX/Bull.fbx",
+      "drive_id": "1g7bLOpgPJhRnKt8LzeO3KbO26lrkpLE0",
+      "bytes": 3000860
+    },
+    {
+      "path": "assets/FBX/Cow.fbx",
+      "drive_id": "1i9F0dP6RISYmIv9s5WGe17zrpj2xFkNJ",
+      "bytes": 3001836
+    },
+    {
+      "path": "assets/FBX/Deer.fbx",
+      "drive_id": "1whdcRdRvBlIjE_ALhQqMnmby9LMyVmYx",
+      "bytes": 3410172
+    },
+    {
+      "path": "assets/FBX/Donkey.fbx",
+      "drive_id": "1L_2osL93jX9ap22Xelcu8KxQzFF-TjfV",
+      "bytes": 3765724
+    },
+    {
+      "path": "assets/FBX/Fox.fbx",
+      "drive_id": "18LKS424TzJB7WO8ZjhwCimov7RNnhSih",
+      "bytes": 3498828
+    },
+    {
+      "path": "assets/FBX/Horse_White.fbx",
+      "drive_id": "1OWH6KO2QbF5lnegUbDs7CW1mzOMCbEH4",
+      "bytes": 3767324
+    },
+    {
+      "path": "assets/FBX/Horse.fbx",
+      "drive_id": "14S-I3jZTcwivD9W3mMuJw7OBbEEMba3v",
+      "bytes": 3768844
+    },
+    {
+      "path": "assets/FBX/Husky.fbx",
+      "drive_id": "1MKtugsP37Dpad4tXDXRKSDgeCA0OWsYV",
+      "bytes": 3357628
+    },
+    {
+      "path": "assets/FBX/ShibaInu.fbx",
+      "drive_id": "1DJTOs7QrZMBqIEt1O0cDISoqCiPWhnVE",
+      "bytes": 3152172
+    },
+    {
+      "path": "assets/FBX/Stag.fbx",
+      "drive_id": "1XYuDzdqMz2dxKvUHBj7hjeNX2fitUOXd",
+      "bytes": 2915660
+    },
+    {
+      "path": "assets/FBX/Wolf.fbx",
+      "drive_id": "128WmNfZthQqZ1OZpinWCAJ8IgvjNcoSm",
+      "bytes": 3501740
+    },
+    {
+      "path": "assets/glTF/Alpaca.gltf",
+      "drive_id": "13dxCPosR1tVx24LKXr6gN44sIOY4hZgo",
+      "bytes": 1435679
+    },
+    {
+      "path": "assets/glTF/Bull.gltf",
+      "drive_id": "1M9gyr2UikIDW_Ynp-OfgiK-JjI7ziPd3",
+      "bytes": 3110158
+    },
+    {
+      "path": "assets/glTF/Cow.gltf",
+      "drive_id": "1lS3t1Sof0FVne1C1WXfdX48qaHES_pDG",
+      "bytes": 3114187
+    },
+    {
+      "path": "assets/glTF/Deer.gltf",
+      "drive_id": "1iGpXKrqYGyZCPGHPPSuDAoKnOXLhXJ0q",
+      "bytes": 3288813
+    },
+    {
+      "path": "assets/glTF/Donkey.gltf",
+      "drive_id": "1Buic-_4vNtmwN0rtMHcdWw3TEaSPz4iW",
+      "bytes": 3564269
+    },
+    {
+      "path": "assets/glTF/Fox.gltf",
+      "drive_id": "1z-CWoUC2vJxrqgGFTYlMaywpE1ooV-bA",
+      "bytes": 3163174
+    },
+    {
+      "path": "assets/glTF/Horse_White.gltf",
+      "drive_id": "1sb2XaaPjEV9Z3a1bG8ReISiGlRXrSA7W",
+      "bytes": 3607730
+    },
+    {
+      "path": "assets/glTF/Horse.gltf",
+      "drive_id": "1hbtY8kxnXiPdwYGVY7rWRgU0jl_-Q-LG",
+      "bytes": 3610082
+    },
+    {
+      "path": "assets/glTF/Husky.gltf",
+      "drive_id": "1oYn47mfq9JAdkJJDcUftbhHNsgQ_CWdt",
+      "bytes": 3059335
+    },
+    {
+      "path": "assets/glTF/ShibaInu.gltf",
+      "drive_id": "1XWUVbmMbiG9E90OqrumueD_pBdnYdyHZ",
+      "bytes": 2894445
+    },
+    {
+      "path": "assets/glTF/Stag.gltf",
+      "drive_id": "1URNoFeIFblJXPFOV6qwPrxZr5dLZ3YGx",
+      "bytes": 3224724
+    },
+    {
+      "path": "assets/glTF/Wolf.gltf",
+      "drive_id": "1lFQoQ9ln2Z2wGuFFWObj9i5jHqUl_ftG",
+      "bytes": 3175890
+    },
+    {
+      "path": "assets/OBJ/Alpaca.mtl",
+      "drive_id": "1PnbP7QIckNYgvvXI-9Gt0NYEurNafyDP",
+      "bytes": 1321
+    },
+    {
+      "path": "assets/OBJ/Alpaca.obj",
+      "drive_id": "1Ik-0DqPQSdI_sVjRTWnS5PMQrY2Ts4s6",
+      "bytes": 96630
+    },
+    {
+      "path": "assets/OBJ/Bull.mtl",
+      "drive_id": "1GUYNeHyJne3MVD_iEIp4NaxbluBUIldB",
+      "bytes": 1313
+    },
+    {
+      "path": "assets/OBJ/Bull.obj",
+      "drive_id": "1Sw81jTBu3cwDZzpa0PwWjXcsVA9TxrIy",
+      "bytes": 115868
+    },
+    {
+      "path": "assets/OBJ/Cow.mtl",
+      "drive_id": "1SuYuLC7BeGOSzqaL8uPeIPRk1IreXJjr",
+      "bytes": 1312
+    },
+    {
+      "path": "assets/OBJ/Cow.obj",
+      "drive_id": "1ra2KeCcgJWsdD4e4txPXO0gGy9zzpnSo",
+      "bytes": 117535
+    },
+    {
+      "path": "assets/OBJ/Deer.mtl",
+      "drive_id": "1WNy7hYvCOoYefsL2wziXbwInpYYVnBQY",
+      "bytes": 1322
+    },
+    {
+      "path": "assets/OBJ/Deer.obj",
+      "drive_id": "1fKVtVxPEob1akISx4xNVezChFnqJP7hB",
+      "bytes": 98994
+    },
+    {
+      "path": "assets/OBJ/Donkey.mtl",
+      "drive_id": "1mUBEmC-RuKpiCg555Tzx10huYE36m3zT",
+      "bytes": 1495
+    },
+    {
+      "path": "assets/OBJ/Donkey.obj",
+      "drive_id": "1RW3a9XUgrykiPX329gIEKjugt6dVfXWz",
+      "bytes": 93777
+    },
+    {
+      "path": "assets/OBJ/Fox.mtl",
+      "drive_id": "1EoGJuNaATAvAuXI5hAsJfRzRsaSvt9Iq",
+      "bytes": 944
+    },
+    {
+      "path": "assets/OBJ/Fox.obj",
+      "drive_id": "1DOGal3SbivDvAkktdETFdLBaL14SSmKw",
+      "bytes": 86835
+    },
+    {
+      "path": "assets/OBJ/Horse_White.mtl",
+      "drive_id": "1FP6YKUsWKpkpcEWthS2WKYPBYcjXEQje",
+      "bytes": 1319
+    },
+    {
+      "path": "assets/OBJ/Horse_White.obj",
+      "drive_id": "1K_uc9fEmWNvp_YbJMGZ33Xc5zNZF0V_u",
+      "bytes": 103021
+    },
+    {
+      "path": "assets/OBJ/Horse.mtl",
+      "drive_id": "1QcFvt7hMxi71EsBY36xtqF5HD8P4E1n9",
+      "bytes": 1495
+    },
+    {
+      "path": "assets/OBJ/Horse.obj",
+      "drive_id": "1YPqSrgw8YgEJ7NZf8hZlNNUf_-sWczPH",
+      "bytes": 103017
+    },
+    {
+      "path": "assets/OBJ/Husky.mtl",
+      "drive_id": "1k4DRXhBCbGorPY7mW0DJG51EDfUQPMcu",
+      "bytes": 975
+    },
+    {
+      "path": "assets/OBJ/Husky.obj",
+      "drive_id": "1LU4p-HhzV2xGPRDT5YO5mzashgoAwdrc",
+      "bytes": 90093
+    },
+    {
+      "path": "assets/OBJ/ShibaInu.mtl",
+      "drive_id": "1-x2Bw-MOG5uaiEHpX2uakAp1Cf_lEB9E",
+      "bytes": 1144
+    },
+    {
+      "path": "assets/OBJ/ShibaInu.obj",
+      "drive_id": "19jS_vFd8WDB95DTQ_3nc0QRSfRUZy9e7",
+      "bytes": 91746
+    },
+    {
+      "path": "assets/OBJ/Stag.mtl",
+      "drive_id": "1KWsQjhmY9KjxCgvWF9TvOYsaUAeFiE82",
+      "bytes": 974
+    },
+    {
+      "path": "assets/OBJ/Stag.obj",
+      "drive_id": "1NlACY4iOEPjbu2BOEIQ6YGfu0c3WjLeE",
+      "bytes": 179720
+    },
+    {
+      "path": "assets/OBJ/Wolf.mtl",
+      "drive_id": "1zhdZOI9sug1wS7eEqkI9y_jRVtm4U8Xm",
+      "bytes": 773
+    },
+    {
+      "path": "assets/OBJ/Wolf.obj",
+      "drive_id": "1nZIWM5QCRAs5VwoIQvsOjmSJQP6H4bem",
+      "bytes": 92431
+    },
+    {
+      "path": "assets/License.txt",
+      "drive_id": "1F2uy8T2fRpdc6gZ4mnS02_C2E63WvKtn",
+      "bytes": 364
+    },
+    {
+      "path": "assets/Preview.jpg",
+      "drive_id": "1HdDYH9Cq4pnwRZ7LPD0zS0lyYI6m3qQT",
+      "bytes": 408998
+    },
+    {
+      "path": "assets/Preview.mp4",
+      "drive_id": "1xH211tvs0ZCuPXs5LUGJ9Kp_9GIMsndj",
+      "bytes": 18458498
+    }
+  ],
+  "retrieved": "2026-10-06"
+}
