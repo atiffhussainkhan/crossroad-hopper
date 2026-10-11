@@ -4,6 +4,10 @@
 > verification gate, and the traps that will cost you an hour. Written for an AI
 > assistant or a new engineer picking this up cold.
 >
+> **Working with another AI?** [`ASSET-MANIFEST.md`](ASSET-MANIFEST.md) and
+> [`docs/MULTI-AGENT-SETUP.md`](docs/MULTI-AGENT-SETUP.md) — load order, the
+> simulation/renderer split, and the one capability gap worth knowing.
+>
 > **The authoritative product spec is [`docs/SPEC-AMENDMENT-001-shipped-product.md`](docs/SPEC-AMENDMENT-001-shipped-product.md).**
 > `docs/REQUIREMENTS-FINAL.md` is the original design record and is largely
 > superseded: it describes an endless, zero-lives grinder with a grind verb, a
