@@ -66,7 +66,14 @@
   .card img {
     width: 100%;
     aspect-ratio: 1;
-    object-fit: cover;
+    /* `contain`, not `cover`. The roster sprites are deliberately cropped to
+       each character's bounding box and are therefore NOT square (709x675,
+       420x686, 463x389...). `cover` fills the square card by cropping the
+       image to fit, which lops characters off top and bottom -- the boy's
+       shirt, the robot's legs, the knight's torso, the superhero's boots all
+       sat flush against the yellow bar. `contain` letterboxes instead, so the
+       whole character always fits and the transparent margins are harmless. */
+    object-fit: contain;
     display: block;
   }
   .card .num {
