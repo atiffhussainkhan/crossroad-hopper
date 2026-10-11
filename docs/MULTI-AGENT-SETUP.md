@@ -72,21 +72,43 @@ appearance, because there is no browser here.
 
 ---
 
-## The one capability gap
+## Seeing the game — this is now possible
 
-This is the single most important thing for a second agent to know.
+```bash
+export PATH="$HOME/.local/node/bin:$PATH"
+python3 -m http.server 8765 --bind 127.0.0.1     # from the project root
+node tools/shoot.js http://localhost:8765/select.html /tmp --play
+```
 
-**Nothing in the current toolchain can see the game render.** The headless gate
-runs the canvas in JavaScriptCore, which records draw calls and rejects NaN —
-it produces no pixels. The same applies to any other agent without a browser.
+Captures the picker and gameplay frames into `/tmp/shot_*.png`, reports any
+console or page error, and prints a pixel histogram of the canvas
+(`min`/`max`/`mean`/`distinctBuckets`). A canvas with fewer than four distinct
+colour buckets is a broken frame wearing a clean render's clothes — which is
+the one failure a draw-call count cannot catch.
 
-That gap is why the render audit could report "734 occlusion inversions"
-inferred from geometry but never confirmed, and why a vignette could be
-*structural* (finite coordinates, no throw) and still visually wrong.
+**Node and Playwright are installed locally, not system-wide:**
 
-**Closing it needs Playwright, which needs Node, which is not installed.** Until
-then: when a change is visual, say so and ask for a screenshot. Do not report a
-render as working because nothing threw.
+| | |
+|---|---|
+| Node 22.14.0 | `~/.local/node` — remove the folder to uninstall |
+| Playwright + Chromium | `~/.local/pw` |
+| add to PATH | `export PATH="$HOME/.local/node/bin:$PATH"` |
+
+Both are free, need no account, and touch nothing outside `~/.local`.
+
+### What having eyes changed
+
+The first screenshot showed the game running, with **all 24 roster sprites
+rendering cleanly over the board** — no opaque box behind any character, which
+was the very first bug this project had. It also showed the board is legible,
+the HUD correct, the death beat working, and traffic rendering as intended.
+
+It could not have shown any of that before. The structural gate reports
+"24/24 sprites resolved, main.js booted 600 frames, no errors" for a game that
+renders a black screen just as happily as one that renders a scene.
+
+**Rule going forward:** a visual change is verified with a picture, or it is
+reported as unverified. `RESULT: NO ERRORS` is not evidence of appearance.
 
 ---
 

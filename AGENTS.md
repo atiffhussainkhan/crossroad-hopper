@@ -122,6 +122,24 @@ module, add it to `index.html` *and* to the `MODULES` list in
 
 ---
 
+## 2b. SEEING the game
+
+Structural tests prove structure. They do not prove appearance — a canvas that
+renders black passes every one of them. There is now a browser:
+
+```bash
+export PATH="$HOME/.local/node/bin:$PATH"
+python3 -m http.server 8765 --bind 127.0.0.1     # from the project root
+node tools/shoot.js http://localhost:8765/select.html /tmp --play
+```
+
+Writes `/tmp/shot_*.png`, reports console errors, and prints a canvas pixel
+histogram. Node 22.14.0 lives in `~/.local/node`, Playwright in `~/.local/pw`;
+both are local, free, and removable by deleting those folders.
+
+**When a change is visual, verify it with a picture.** Report `unverified`
+rather than inferring appearance from a clean console.
+
 ## 3. Running and verifying it
 
 There is no browser automation in this environment (no Chrome, no Node). The game
