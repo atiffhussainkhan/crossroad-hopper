@@ -120,10 +120,17 @@ This environment currently has:
 git      /usr/bin/git              present
 python3  /usr/bin/python3          present
 gh       /Users/mac/bin/gh         present (NOT authenticated)
-node     -- NOT INSTALLED --
-npm      -- NOT INSTALLED --
+node     ~/.local/node  v22.14.0   INSTALLED (local, not system)
+npm      ~/.local/npm-global       INSTALLED
+playwright-mcp  ~/.local/npm-global  registered in ~/.minimax/mcp.json
+context7         MCP remote        registered
+gemini-cli 0.63.0                 installed, needs your Google login
 brew     -- not present --
 ```
+
+Full inventory, with removal instructions: `~/.minimax/toolchain.md`.
+MCP servers load at session start, so `playwright` and `context7` tools appear
+in a new session rather than the one that registered them.
 
 An agent asked to "install the tooling" should check this list before
 downloading anything, and should confirm with the owner before installing a
