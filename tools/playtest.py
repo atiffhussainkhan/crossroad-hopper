@@ -878,11 +878,11 @@ guard("shield pickups are dealt at a quarter and a half of every stage", functio
         __ERRORS.push("shields: stage " + (si + 1) + " pickup " + k + " is a '" +
                       pk.kind + "', not a shield");
       }
-      var pct25 = k === 0 ? 0.25 : 0.50;
-      if (pk.row !== Math.round(goal * pct25)) {
+      var pctOf = k === 0 ? 0.50 : 0.75;
+      if (pk.row !== Math.round(goal * pctOf)) {
         __ERRORS.push("shields: stage " + (si + 1) + " pickup " + k + " sits on row " +
-                      pk.row + ", expected " + Math.round(goal * pct25) +
-                      " (" + Math.round(pct25 * 100) + "% of " + Stages.jumpsFor(si) + ")");
+                      pk.row + ", expected " + Math.round(goal * pctOf) +
+                      " (" + Math.round(pctOf * 100) + "% of " + Stages.jumpsFor(si) + ")");
       }
       if (pk.taken) {
         __ERRORS.push("shields: stage " + (si + 1) + " pickup " + k +

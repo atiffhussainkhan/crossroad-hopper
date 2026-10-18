@@ -433,8 +433,16 @@
        * player for surviving the first quarter, not to ambush them. */
       var goal0 = Stages.jumpsFor(index);
       g.pickups = [
-        { kind: "shield", row: Math.max(4, Math.round(goal0 * 0.25)), taken: false },
-        { kind: "shield", row: Math.max(6, Math.round(goal0 * 0.50)), taken: false },
+        /* Two shields per stage, at a HALF and three QUARTERS of the
+         * crossing. Half is where the first one earns its keep -- by then the
+         * player has survived the opening and has half the board still to
+         * cross -- and three quarters is the last chance before the endgame.
+         *
+         * Placed on plain ground rather than a lane: a pickup sitting in
+         * traffic is a coin flip, and the point of a shield is to reward
+         * surviving the first half, not to ambush the player. */
+        { kind: "shield", row: Math.max(4, Math.round(goal0 * 0.50)), taken: false },
+        { kind: "shield", row: Math.max(6, Math.round(goal0 * 0.75)), taken: false },
       ];
       /* Deal the opening rows NOW, before the player can move.
        *
