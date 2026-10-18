@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 from js_runtime import SIM_MODULES, run_script
 
@@ -33,7 +34,13 @@ TRAVERSE_S = 0.55
 
 # Rail kinds, from src/hazards.js. Kept here so the gate fails loudly if the
 # game grows a new fast rail hazard that this gate has never been shown.
-RAIL_KINDS = ("train", "tram", "monorail", "freighttrain", "subway")
+# Rail kinds are DERIVED from the live hazard vocabulary, not listed here.
+# This was a hardcoded tuple of train/tram/monorail/freighttrain/subway, so
+# removing those vehicles on request turned this gate into a probe for a feature
+# that no longer exists -- it threw on H.KINDS[kind] being undefined and
+# reported an empty failure with no diagnosis. A rail kind added later is now
+# picked up automatically; if none exists, there is no telegraph to prove.
+RAIL_KINDS = None
 
 PROBE = r"""
 (function () {
@@ -88,9 +95,22 @@ PROBE = r"""
 """
 
 
+def derive_rail_kinds() -> list[str]:
+    """Rail hazards the LIVE vocabulary actually declares.
+
+    Read out of src/hazards.js rather than assumed, so this gate follows the
+    game instead of pinning a list that a legitimate content change invalidates.
+    """
+    import re
+    src = (Path(__file__).resolve().parent.parent / "src" / "hazards.js").read_text()
+    block = src[src.index("var KINDS = {"):]
+    block = block[:block.index("\n  };")]
+    return re.findall(r'^\s*([A-Za-z0-9_]+):\s*\{[^\n]*kind:\s*"rail"', block, re.M)
+
+
 def run_probe() -> dict:
     """Run the real simulation modules in shared global script scope."""
-    js = PROBE % {"rail": json.dumps(list(RAIL_KINDS))}
+    js = PROBE % {"rail": json.dumps(derive_rail_kinds())}
     # turn the probe's `return` into a console emit at top level
     js = js.strip()
     js = js.replace("  return JSON.stringify(out);\n})()",

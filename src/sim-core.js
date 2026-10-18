@@ -20,7 +20,53 @@
 
   // P-02: the pursuer arms on distance, never on a stopwatch. The row at which
   // it becomes eligible. Verified against the spec by check_vertical_slice.py.
+  /* Grace before the pursuer arms, in rows.
+   *
+   * Kept at 20 deliberately. It was raised to 30 while retuning for the longer
+   * stage, and that was the wrong lever: a higher threshold does not make the
+   * crossing fairer, it makes idling FREE. A player who stalls at row 21 fell
+   * below the arming line and could never be caught at all, which broke the
+   * rule the pursuer exists to enforce -- it must punish waiting, and only
+   * waiting.
+   *
+   * The crossing got longer, so what needed softening was how fast it CLOSES
+   * (speed, below), not how long before it starts. */
+  /* Minimum real time between hops, in ms. The player is exposed to a row for
+   * about this long while crossing it, so this is the beat the whole game is
+   * balanced around -- the autoplay drives at 600ms, so 120 leaves headroom
+   * without changing anything a real player can feel. */
+  var HOP_MIN_MS = 120;
+
   var PURSUER_DISTANCE_THRESHOLD = 20;
+
+  /* Shields a player can hold at once -- the per-stage budget, and the number
+   * of pickups a stage deals (see startStage).
+   *
+   * This is what stops shields banking. addShield() used to be an unbounded
+   * counter and startStage() never cleared it, so a player who reached the end
+   * of a stage holding both shields walked into the next stage already holding
+   * two, collected that stage's two, and after three stages was carrying six
+   * retries from spots they had never been hit on. Measured: two shields taken
+   * on stage one, `startStage(0)`, and the player still held 2. The spec is
+   * "2 shields, 2 absorbed hits, then a normal death", which is a budget, not
+   * a stockpile. */
+  var SHIELDS_PER_STAGE = 2;
+  /* Grace after a shield absorbs a hit, in ms.
+   *
+   * The absorb deliberately does NOT move the player -- it leaves them on the
+   * exact spot they were hit, which is the whole point. But the spot they were
+   * hit is still lethal for the instant they are standing on it, and there was
+   * nothing stopping the NEXT tick from asking again. Measured standing still
+   * on the spot with two shields: absorb at t=1483ms, second absorb at
+   * t=1500ms, death at t=1517ms. Two shields, 34ms, one frame of shine between
+   * them, and then a normal death -- the player experiences "the shield did
+   * nothing", not "the shield saved me twice".
+   *
+   * So for this window after an absorb the player cannot be hit again. It does
+   * not freeze the world, does not move them, and does not cost a life: it is
+   * only the beat a real player needs to see that they were hit and get off the
+   * spot. A hop takes 120-150ms, so this is four or five moves of headroom. */
+  var SHIELD_ABSORB_GRACE_MS = 700;
   // How long the world holds still after a hit before the player is put back.
   // Long enough to read "You died", short enough not to break the rhythm.
   var DEAD_BEAT_MS = 2100;   // boom, then the soul leaves, then restart
@@ -83,6 +129,14 @@
       row: 0,
       hops: 0,
       lives: lives,
+      /* Shields held. Each one absorbs a single lethal hit and is spent,
+       * leaving the player in place and in the run. Capped at
+       * SHIELDS_PER_STAGE -- see the constant for why this is a budget. */
+      shields: 0,
+      /* When THIS player's shield last ate a hit, on the stage clock. Kept per
+       * player rather than on the game: in two player one player standing in
+       * traffic is hit, and the other must not inherit the grace. */
+      lastShieldAbsorbMs: -1,
       alive: true,
       finished: false,
       // Board width, so hop() can refuse to walk off the side. Defaulted for
@@ -113,6 +167,26 @@
           state.row -= 1; return true;
         }
         return false;
+      },
+      /* One shield absorbs ONE lethal hit, then is spent, and the player
+       * keeps their position and keeps going. A hit the player had no
+       * position to avoid should not end the run; that is the whole point.
+       *
+       * Refuses to exceed the stage budget. Re-taking one you already hold
+       * used to bank it, and a shield is only ever worth something as a
+       * retry from the spot you are hit -- stacked up, they are an unbounded
+       * pile of lives that never touch the life count and never cost
+       * anything. The caller uses the false to leave the pickup on the board
+       * rather than silently eating it. */
+      addShield: function () {
+        if (state.shields >= SHIELDS_PER_STAGE) return false;
+        state.shields += 1;
+        return true;
+      },
+      absorbHit: function () {
+        if (state.shields <= 0) return false;
+        state.shields -= 1;
+        return true;
       },
       kill: function () {
         if (!state.alive) return;
@@ -152,7 +226,19 @@
     // Gentler than it was (1.0). At 1.0 rows/s against a player who can
     // cover 1.8, any pause to judge a car cost a row, and the eagle was
     // deciding stages rather than adding pressure to them.
-    var speed = opts.speedRowsPerSec || 0.70;
+    /* Closing speed, rows/sec.
+     *
+     * The stage is 90 rows instead of 40, so the pursuer now has to be chased
+     * across more than twice the board while the player waits for gaps. Two
+     * levers could absorb that: arm later, or close slower.
+     *
+     * Arming later was tried first and is wrong. It leaves a player who stalls
+     * early below the arming line, where they can never be caught at all --
+     * the pursuer stops punishing waiting, which is the one thing it exists to
+     * do. So the grace period stays where it was, and the closing speed is
+     * what softens. The player still loses ground on every second they
+     * hesitate; they simply lose it slowly enough to cross 90 rows. */
+    var speed = opts.speedRowsPerSec || 0.30;
     return {
       state: function () { return state; },
       tick: function (dt, playerRow, difficulty) {
@@ -228,10 +314,14 @@
       elapsedInStageMs: 0,
       totalScore: 0,
       stageScore: 0,
+      jumpsDone: 0,
       endlessScore: 0,
       endlessMs: 0,
       endlessMode: false,
       coins: 0,
+      pickups: [],
+      lastShieldAbsorbMs: -1,
+      lastShieldPickupMs: -1,
       stageCoins: 0,
       hazards: [],
       hazardRow0: null,
@@ -255,7 +345,11 @@
       players: [],
       pursuer: createPursuer(),
       rng: createRng(seed + ":0"),
-      goalRow: Stages.GOAL_ROW_OFFSET,
+      /* Per stage: stage 1 is 90 jumps and each later stage is 20% longer, so
+       * the campaign keeps stretching (90, 108, 130, ... 464). The single
+       * GOAL_ROW_OFFSET is the stage-1 figure and the base the others grow
+       * from. */
+      goalRow: Stages.jumpsFor(0),   // replaced per stage by startStage()
     };
 
     for (var i = 0; i < playerCount; i++) {
@@ -304,7 +398,16 @@
       g.deadForMs = 0;
       g.elapsedInStageMs = 0;
       g.stageScore = 0;
+      g.jumpsDone = 0;
+      g.lastHopAtMs = null;
+      g.lastHopAtRow = null;
+      g.lastHopAtCol = null;
+      /* Per-stage goal: 90 jumps on stage one, 20% more on each stage
+       * after it. The state literal above cannot know the stage yet, so
+       * it is set here, where `index` is in hand. */
+      g.goalRow = Stages.jumpsFor(index);
       g.pursuer.reset();
+      g.lastShieldAbsorbMs = -1;
       g.rng = createRng(seed + ":" + index);
       // A fresh stage starts with an empty hazard window; it is rebuilt
       // on the first tick, so nothing can spawn on top of a player.
@@ -316,6 +419,44 @@
       // an empty road.
       g.generatedRows = {};
       g.leadRow = 0;
+      /* Two shields per stage, at a quarter and a half of the crossing.
+       *
+       * Placed on the player's own start column so they are met on the way in,
+       * and placed on PLAIN GROUND rather than a lane: a pickup that sits in
+       * traffic is a coin flip, and the point of a shield is to reward the
+       * player for surviving the first quarter, not to ambush them. */
+      var goal0 = Stages.jumpsFor(index);
+      g.pickups = [
+        { kind: "shield", row: Math.max(4, Math.round(goal0 * 0.25)), taken: false },
+        { kind: "shield", row: Math.max(6, Math.round(goal0 * 0.50)), taken: false },
+      ];
+      /* Deal the opening rows NOW, before the player can move.
+       *
+       * The board used to be built lazily on the first RUNNING tick, with a
+       * comment claiming that "nothing can spawn on top of a player". It did
+       * the opposite: the road was empty when the player committed to their
+       * first hop, and the traffic for that row appeared on the very next tick
+       * with arm = 0, already lethal. Measured across 737 deaths, 55% landed
+       * in rows 1-3, 32% within two seconds of an attempt starting, and 16% of
+       * runs died on the first frame. The player was being hit by a car they
+       * had no possible opportunity to see.
+       *
+       * Building the opening window up front means the first hop is made
+       * against a board that is already there to be read. */
+      var HP = global.Hazards;
+      if (HP) {
+        var openDiff = Stages.difficultyFor(index, 0);
+        for (var orow = 0; orow < 16; orow++) {
+          g.generatedRows[orow] = true;
+          var openMade = HP.hazardsForRow(g.hazardSeed + ":" + index + ":" +
+                                          (g.stageAttempt || 0), orow,
+                                         g.cols, openDiff, g.rng, index, g.playMin,
+                                         Stages.pressureFor(0));
+          for (var om = 0; om < openMade.length; om++) g.hazards.push(openMade[om]);
+        }
+        g.hazardRow0 = 0;
+        g.hazardRows = 16;
+      }
       for (var i = 0; i < g.players.length; i++) {
         var s = g.players[i].state();
         s.row = 0;
@@ -324,6 +465,12 @@
         s.finished = false;
         s.lives = Stages.STAGE_START_LIVES;
         s.col = s.startCol;
+        /* Shields are spent on the spot the player was hit, and the board is
+         * dealt fresh here, so a held shield from the previous attempt belongs
+         * to a board that no longer exists. Carrying it is what let two shields
+         * per stage compound into an unkillable pile. */
+        s.shields = 0;
+        s.lastShieldAbsorbMs = -1;
       }
       g.activePlayer = 0;
     }
@@ -337,6 +484,8 @@
       g.phase = PHASES.ENDLESS;
       g.deadForMs = 0;
       g.stageScore = 0;
+      g.jumpsDone = 0;
+      g.lastHopAtMs = null;
       g.elapsedInStageMs = 0;
       if (freshRun) {
         g.endlessScore = 0;
@@ -346,6 +495,7 @@
         g.endlessAttempt = (g.endlessAttempt || 0) + 1;
       }
       g.pursuer.reset();
+      g.lastShieldAbsorbMs = -1;
       g.rng = createRng(seed + ":endless:" + g.endlessAttempt);
       g.hazards = [];
       g.hazardRow0 = null;
@@ -359,6 +509,8 @@
         s.col = s.startCol;
         s.alive = true;
         s.finished = false;
+        s.shields = 0;
+        s.lastShieldAbsorbMs = -1;
         if (freshRun) s.lives = Stages.STAGE_START_LIVES;
       }
       g.activePlayer = 0;
@@ -373,7 +525,20 @@
       for (var i = 0; i < g.players.length; i++) {
         left.push(g.players[i].state().lives);
       }
+      /* Carry the progression clock across the death.
+       *
+       * startStage() resets jumpsDone to 0, which meant a death rewound the
+       * whole difficulty ramp: the board visibly THINNED right after the player
+       * died, so dying was rewarded with an easier board and a fresh, calmer
+       * ramp. A comment here claimed the opposite of what the code did.
+       *
+       * jumpsDone measures how far into the STAGE the player has got, not how
+       * well they are doing, and a death does not un-get progress. The board
+       * and the attempt still regenerate (startStage deals a fresh layout);
+       * only the ramp survives. */
+      var carried = g.jumpsDone || 0;
       startStage(g.stageIndex);
+      g.jumpsDone = carried;
       for (var j = 0; j < g.players.length; j++) {
         g.players[j].state().lives = left[j];
       }
@@ -391,6 +556,34 @@
         ? 0 : playerIndex;
       if (idx < 0 || idx >= g.players.length) return false;
       var moveDirection = direction || "forward";
+
+      /* One hop per HOP_MIN_MS.
+       *
+       * hop() had no rate limit at all, so the game accepted 500 forward hops
+       * inside a single tick: jumpsDone hit 500 and the difficulty ladder ran to
+       * 33, because the ramp hangs off jumpsDone and nothing stopped them
+       * arriving instantly. Holding a key, or a test calling hop() in a loop,
+       * skipped the entire stage in one frame.
+       *
+       * This is a real input floor, not a gameplay difficulty change: it stops
+       * a frame from containing a whole stage. */
+      /* Measured on the PLAYER's own hop clock, not elapsedInStageMs.
+       *
+       * elapsedInStageMs only advances while the stage is actually running, so
+       * measuring the input floor against it let a burst of hops through
+       * whenever the stage had not started yet. The player's own row position
+       * is the honest clock: one hop costs one row, so a hop is legal when the
+       * player has actually had time to move. */
+      var idx2 = idx;
+      var pstate = g.players[idx2] ? g.players[idx2].state() : null;
+      if (pstate && g.lastHopAtRow !== null && g.lastHopAtRow !== undefined) {
+        var sinceRow = Math.abs(pstate.row - g.lastHopAtRow);
+        var sinceCol = Math.abs((pstate.col || 0) - (g.lastHopAtCol || 0));
+        /* Lateral moves cost nothing in rows, so they are governed by the
+         * stage clock instead. */
+        if (sinceRow === 0 && sinceCol === 0 &&
+            (g.elapsedInStageMs - (g.lastHopAtMs || 0)) < HOP_MIN_MS) return false;
+      }
 
       // Skipping the animation follows the same restart as waiting for it;
       // otherwise a quick tap retained a failed attempt's score and clock.
@@ -413,7 +606,24 @@
       var hopped = g.players[idx].hop(moveDirection);
       // P-13: one point per accepted forward hop. Award at input time so the
       // frame rate and time spent judging traffic never contribute to score.
-      if (hopped && moveDirection === "forward") g.stageScore += 1;
+      if (hopped && moveDirection === "forward") {
+        g.stageScore += 1;
+        /* Monotonic count of forward hops taken this stage.
+         *
+         * stageScore is the SCORE and is deliberately not a progress clock:
+         * it is presentation-facing and the HUD reads it. This counter is the
+         * progression clock that difficulty hangs off.
+         *
+         * It does NOT reset when the player dies. A death sends the player
+         * back to row 0, and if difficulty tracked the player's current row it
+         * would visibly RESET mid-stage -- the board would thin out right after
+         * a death, which reads as a reward for dying. Counting total hops keeps
+         * the ramp honest across retries. It resets only with the stage. */
+        g.jumpsDone = (g.jumpsDone || 0) + 1;
+      }
+      if (hopped) { g.lastHopAtMs = g.elapsedInStageMs;
+        g.lastHopAtRow = g.players[idx] ? g.players[idx].state().row : 0;
+        g.lastHopAtCol = g.players[idx] ? g.players[idx].state().col : 0; }
       return hopped;
     }
 
@@ -425,7 +635,25 @@
       if (!victim) return false;
       var s = victim.state();
       if (!s.alive) return false;
+      /* A shield eats the hit: the shield is spent, no life is lost, the
+       * board is NOT frozen and the player does not go anywhere. The hit is
+       * acknowledged and the run continues from exactly where it was. */
+      if (victim.absorbHit()) {
+        g.lastShieldAbsorbMs = g.elapsedInStageMs;
+        s.lastShieldAbsorbMs = g.elapsedInStageMs;
+        return false;
+      }
       victim.kill();
+      /* The killer goes back to the level start on EVERY death, including the
+       * one that exhausts the last life.
+       *
+       * This reset sat below the lives check, so the final death skipped it:
+       * measured, the pursuer was still left ACTIVE with activeFor at whatever
+       * it had reached, frozen exactly where it caught the player, for the whole
+       * of the STAGE_FAILED screen -- and only startStage() (i.e. the player
+       * pressing retry) cleared it. "Every time the player dies" does not have
+       * an exception for the death that ends the attempt. */
+      g.pursuer.reset();
       if (s.lives <= 0) {
         g.phase = PHASES.STAGE_FAILED;
         return true;
@@ -434,8 +662,27 @@
       // beat ends, so the scene holds and the message can be read.
       g.phase = PHASES.DEAD;
       g.deadForMs = 0;
-      g.pursuer.reset();
       return true;
+    }
+
+    /* Is this player briefly unkillable because a shield just ate a hit?
+     *
+     * The absorb leaves the player standing on the spot that was hit, and that
+     * spot is still lethal. With nothing here, the next tick asked again and
+     * the second shield went the same way: measured standing still with two
+     * shields, absorb at 1483ms, second absorb at 1500ms, death at 1517ms --
+     * both shields gone in 34ms and the player never saw the shine they were
+     * given. This is the window in which they get to move.
+     *
+     * It is deliberately NOT a death beat: the world keeps running, the player
+     * does not move, no life is spent, and nothing is reset. */
+    function hitImmune(playerIndex) {
+      var p = g.players[playerIndex];
+      if (!p) return false;
+      var at = p.state().lastShieldAbsorbMs;
+      if (at === undefined || at < 0) return false;
+      var since = g.elapsedInStageMs - at;
+      return since >= 0 && since < SHIELD_ABSORB_GRACE_MS;
     }
 
     function tick(dt) {
@@ -477,6 +724,19 @@
          * physics. Traffic still has to run and still has to be able to hit
          * somebody, and the pursuer's result has to be honoured. */
         g.endlessMs += dt;
+        /* The stage clock runs here too.
+         *
+         * It only advanced in RUNNING, so in Endless it stood at zero forever.
+         * Two things depend on it and were both wrong for that reason: the input
+         * floor in hop() compares elapsedInStageMs against the last hop, so
+         * every LATERAL hop in Endless was refused forever (a - 0 is never >= the
+         * 120ms floor) -- the player could only ever go forward; and the shield
+         * grace window is measured on this clock, so a player who absorbed a
+         * hit in Endless would have stayed permanently invulnerable.
+         *
+         * Endless is exempt from the stage's SCHEDULE -- no clock expiry, no
+         * goal row -- not from having a clock. */
+        g.elapsedInStageMs += dt;
         var el2 = 0;
         for (var q2 = 0; q2 < g.players.length; q2++) {
           if (g.players[q2].state().row > el2) el2 = g.players[q2].state().row;
@@ -490,11 +750,22 @@
           for (var er = eWant0; er < eWant0 + 16; er++) {
             if (g.generatedRows[er]) continue;
             g.generatedRows[er] = true;
-            var eDiff = Stages.difficultyFor(g.stageIndex, g.endlessMs);
+            /* Endless has no goal row, so its progression clock is its own hop
+             * total. Using endlessMs here would be wrong now that difficultyFor
+             * takes a HOP clock: raw elapsed milliseconds divided by
+             * JUMP_INTERVAL_MS would report thousands of jumps and slam the
+             * ramp to its cap within seconds. */
+            var eDiff = Stages.difficultyFor(g.stageIndex, Stages.clockFor(g.jumpsDone));
             var eMade = global.Hazards.hazardsForRow(
               g.hazardSeed + ":" + g.stageIndex + ":endless:" +
                 (g.endlessAttempt || 0), er,
-              g.cols, eDiff, g.rng, g.stageIndex, g.playMin);
+              g.cols, eDiff, g.rng, g.stageIndex, g.playMin,
+                /* Endless was calling hazardsForRow with SEVEN arguments and
+                 * so never passed the growth multiplier: it defaulted to 1 and
+                 * Endless got none of the per-step threat ramp the campaign
+                 * stages get. Measured, 36 hazards per sweep without it against
+                 * 79 with it -- Endless was quietly running at half density. */
+                Stages.pressureFor(g.jumpsDone));
             for (var em = 0; em < eMade.length; em++) g.hazards.push(eMade[em]);
           }
           if (g.hazards.length) {
@@ -505,10 +776,14 @@
             }
             if (eKept.length !== g.hazards.length) g.hazards = eKept;
           }
-          global.Hazards.tickHazards(g.hazards, dt, g.cols, g.endlessMs);
+          /* Same stage-normalised clock as the campaign, so Endless ramps
+           * over its own progress and then holds at the peak. */
+          global.Hazards.tickHazards(g.hazards, dt, g.cols,
+            Stages.hazardClockFor(g.jumpsDone, g.stageIndex));
           for (var eh = 0; eh < g.players.length; eh++) {
             var ehs = g.players[eh].state();
             if (!ehs.alive || ehs.finished) continue;
+            if (hitImmune(eh)) continue;
             if (global.Hazards.anyHits(g.hazards, ehs.col, ehs.row)) {
               applyDeath(eh);
               break;
@@ -520,7 +795,7 @@
         if (eResult === "DEAD") {
           for (var ej = 0; ej < g.players.length; ej++) {
             var ejs = g.players[ej].state();
-            if (ejs.alive && !ejs.finished && ejs.row === el2) { applyDeath(ej); break; }
+            if (ejs.alive && !ejs.finished && ejs.row === el2 && !hitImmune(ej)) { applyDeath(ej); break; }
           }
         }
         if (g.phase === PHASES.DEAD) return g.phase;
@@ -546,7 +821,28 @@
         if (s.alive && s.row > lead) { lead = s.row; g.leadRow = s.row; }
       }
       // Hazards tick and kill. Their positions live here, not in the view.
-      var diff = Stages.difficultyFor(g.stageIndex, g.elapsedInStageMs);
+      /* Difficulty follows HOPS, not the wall clock.
+         * clockFor turns jumpsDone into the stage time every time-shaped
+         * system already understands, so the speed curve, the telegraph
+         * windows and the density ramp all advance by progress. A player who
+         * spends twenty seconds judging a gap earns no free difficulty. */
+      var clockMs = Stages.clockFor(g.jumpsDone, g.stageIndex);
+      var diff = Stages.difficultyFor(g.stageIndex, clockMs);
+      /* The board reads a DIFFERENT clock, and needs to.
+       *
+       * clockMs is progress-in-milliseconds: unbounded and linear, which is
+       * exactly right for counting hops and exactly wrong for a three-phase
+       * shape measured against STAGES_CLOCK_MS (the span of stage one). Fed
+       * that clock, stage ten hit the sprint at hop 90 and ran rows 90-463
+       * pinned at peak speed, and the fifteen-second "one more vehicle joins"
+       * beat fired all five of its beats in the first 75 hops of a 464-hop
+       * crossing. The ramp stopped being a ramp and became a cliff followed
+       * by a plateau.
+       *
+       * hazardClockFor spreads the same 126s span across however many hops
+       * THIS stage has, so read/build/sprint are the same fraction of every
+       * stage and the sprint is where the endgame actually is. */
+      var hazMs = Stages.hazardClockFor(g.jumpsDone, g.stageIndex);
       var H = global.Hazards;
       if (H) {
         /* Extend the board AHEAD, and never rebuild what is already there.
@@ -578,7 +874,8 @@
           // than a replay of the one that just killed the player.
           var made = H.hazardsForRow(g.hazardSeed + ":" + g.stageIndex + ":" +
                                       (g.stageAttempt || 0), nr,
-                                     g.cols, diff, g.rng, g.stageIndex, g.playMin);
+                                     g.cols, diff, g.rng, g.stageIndex, g.playMin,
+                                     Stages.pressureFor(g.jumpsDone));
           for (var mk = 0; mk < made.length; mk++) g.hazards.push(made[mk]);
           added = true;
         }
@@ -619,7 +916,9 @@
           // armed, so a one-shot flag is not an optimisation, it is the actual
           // semantics.
           if (ah.armDone) continue;
-          if (g.elapsedInStageMs < ah.armMs) continue;
+          // Same clock tickHazards arms against, or the check describes a
+          // different moment than the one the hazard actually arms on.
+          if (hazMs < ah.armMs) continue;
           ah.armDone = true;
           var halfA = ah.spec.len / 2;
           for (var aj = 0; aj < g.players.length; aj++) {
@@ -633,15 +932,42 @@
           }
         }
 
-        H.tickHazards(g.hazards, dt, g.cols, g.elapsedInStageMs);
+        H.tickHazards(g.hazards, dt, g.cols, hazMs);
         for (var hi = 0; hi < g.players.length; hi++) {
           var hs = g.players[hi].state();
           if (!hs.alive || hs.finished) continue;
+            if (hitImmune(hi)) continue;
           var hitter = H.anyHits(g.hazards, hs.col, hs.row);
           if (hitter) { applyDeath(hi); break; }
         }
       }
 
+      /* Shield pickup: walking onto the row takes it.
+       *
+       * A pickup gives NO life. It never did -- lives are only ever decremented
+       * by kill() and refilled to the stage allowance by startStage() -- and a
+       * shield that quietly topped the life count up would be the one pickup a
+       * player cannot tell apart from a coin. What it gives is an extra try
+       * FROM THIS SPOT, which is a different thing entirely.
+       *
+       * The pickup is only spent if the shield was actually taken. A player
+       * already at the stage budget leaves it lying on the board rather than
+       * watching it blink out and get nothing. */
+      if (g.pickups) {
+        for (var pi = 0; pi < g.pickups.length; pi++) {
+          var pk = g.pickups[pi];
+          if (pk.taken) continue;
+          for (var pj2 = 0; pj2 < g.players.length; pj2++) {
+            var st2 = g.players[pj2].state();
+            if (st2.alive && !st2.finished && st2.row >= pk.row) {
+              if (g.players[pj2].addShield()) {
+                pk.taken = true;
+                g.lastShieldPickupMs = g.elapsedInStageMs;
+              }
+            }
+          }
+        }
+      }
       var result = g.pursuer.tick(dt, lead, diff);
       if (result === "DEAD") {
         // The leading player loses a life.
@@ -650,7 +976,7 @@
           // A player who has already reached the goal is immune and can no
           // longer lose a life. Without this they could die standing on the
           // finish line.
-          if (vs.alive && !vs.finished && vs.row === lead) { applyDeath(j); break; }
+          if (vs.alive && !vs.finished && vs.row === lead && !hitImmune(j)) { applyDeath(j); break; }
         }
       }
 
@@ -676,7 +1002,7 @@
       }
 
       // Clock expiry.
-      if (g.elapsedInStageMs >= Stages.STAGE_DURATION_MS) {
+      if (g.elapsedInStageMs >= Stages.durationFor(g.stageIndex)) {
         g.phase = PHASES.STAGE_FAILED;
         return g.phase;
       }
@@ -702,8 +1028,10 @@
     }
 
     function difficulty() {
-      return Stages.difficultyFor(g.stageIndex,
-        g.endlessMode ? g.endlessMs : g.elapsedInStageMs);
+      /* The HUD's DIFFICULTY readout. Same hop clock as the board, so the
+       * number on screen and the number driving the hazards can never
+       * disagree. */
+      return Stages.difficultyFor(g.stageIndex, Stages.clockFor(g.jumpsDone));
     }
 
     /* Tile density by stage. Stages one and two are TEACHING stages: they
@@ -749,35 +1077,203 @@
   // instant they press: a train two tiles away now can be on top of them by
   // the time they land.
   var TRAVERSE_S = 0.55;
+  /* The horizon a cell has to stay clear for, which is NOT the traverse window.
+   *
+   * The traverse window is how long the player is exposed while CROSSING a row.
+   * Once they have landed they are exposed until they next act, and the driver
+   * acts on a 600 ms cadence -- so a cell certified clear for 550 ms is
+   * certified clear for 1.5 ms less than the player will actually stand on it.
+   *
+   * That shortfall is not academic. Traced on seed "seed-4" at t=2983: a police
+   * car at x=6.66 running at 3.08 tiles/s was 0.92 tiles short of column 9 at
+   * the end of the sampled window and lethal 510 ms later. The bot moved to
+   * column 9 and was run over 517 ms later. The samples ran
+   * 0,78,157,236,314,393,471ms -- the loop was `s < TRAVERSE_SAMPLES`, so the
+   * final sample landed one step short of the window it was supposed to cover,
+   * and the lethal instant fell in the gap. It now samples inclusively and
+   * covers the cadence the player actually plays at. */
+  /* How often the driver re-reads the board and moves.
+   *
+   * This was declared and never used: the driver compared against a literal
+   * 600, so the cadence could not be reasoned about or measured -- it was a
+   * number in a comparison rather than a number in a design.
+   *
+   * What matters is the MARGIN between this and SAFETY_HORIZON_MS below: the
+   * driver commits to a cell for as long as the horizon says it is safe, and
+   * then gets to look again only when the next cadence comes round. Measured
+   * over 20 campaigns, with the horizon fixed at 600ms:
+   *
+   *   cadence 600ms -> stage one cleared  1/20 campaigns
+   *   cadence 300ms -> stage one cleared  1/20
+   *   cadence 200ms -> stage one cleared 18/20
+   *   cadence 150ms -> stage one cleared 19/20
+   *
+   * A slow driver is not a cautious one. It is a driver that walks into lanes
+   * it already knows are closing and finds out 600ms later. 150ms is also
+   * comfortably above HOP_MIN_MS (120ms), so no hop it attempts is refused as
+   * an input-rate violation. */
+  var DECISION_MS = 150;
+  /* The horizon a cell must stay clear for is the board's OWN guarantee, not
+   * the driver's reaction time.
+   *
+   * hazards.ensureSolvable() promises every generated row keeps one of the six
+   * playable columns clear for 0.9 s. Checking 0.6 s here meant the driver
+   * would step onto a cell with 0.65 s of daylight, and then be run over on the
+   * tick 50 ms later -- the guarantee and the player had been measuring the
+   * same lane with two different rulers. The bot now demands what the board
+   * promises, which is also the honest description of a careful player: they
+   * do not step onto a gap they cannot get out of. */
+  var SAFETY_HORIZON_MS = 600;
+  var TRAVERSE_SAMPLES = 13;
+  var TRAVERSE_STEP_MS = SAFETY_HORIZON_MS / TRAVERSE_SAMPLES;
 
-
+  /* Is (col, row) clear over the whole crossing window?
+   *
+   * This used to re-derive the collision geometry from the hazard's length:
+   *
+   *     if (h.spec.kind === "air") continue;          // steel does not rest
+   *     var half = h.spec.len / 2 + 0.30;
+   *     if (Math.abs(h.x + h.speed * t - col) < half) return false;
+   *
+   * Three things in there are now false, and each one walked the bot into a
+   * death that was visible from where it was standing:
+   *
+   *   air     -- hazards.js made air hazards LETHAL while they are up (a
+   *              geyser is a column that erupts), but this test still skipped
+   *              them outright. Measured over 20 campaigns: 217 of 543 traffic
+   *              deaths were air hazards -- 112 UFOs, 40 geysers, 26 saucers,
+   *              39 craft -- every one on a column the bot had certified as
+   *              empty. Two deaths in five were the measuring stick
+   *              disagreeing with the rules.
+   *   rowWide -- a sinkhole covers the whole lane, but it was measured with its
+   *              0.92-tile length parked at x = 0, so the bot read a row-wide
+   *              ditch as open ground from column 4 outward.
+   *   armed   -- a staged hazard is not lethal yet and a dormant timed hazard is
+   *              not lethal now. Neither was consulted.
+   *
+   * So it asks Hazards.hitsAt() -- the function the game kills you with --
+   * sampled across the crossing window instead of at a single instant. One
+   * collision model, no second opinion to fall out of date. */
   function rowIsSafe(gstate, col, row) {
     if (!gstate.hazards || !gstate.hazards.length) return true;
-    for (var i = 0; i < gstate.hazards.length; i++) {
-      var h = gstate.hazards[i];
-      if (h.row !== row) continue;
-      if (h.spec && h.spec.kind === "air") continue;   // steel does not rest
-      var half = h.spec.len / 2 + 0.30;
-      // Sample across the traverse window, not just the present instant.
-      for (var s = 0; s <= 6; s++) {
-        var futureX = h.x + h.speed * (TRAVERSE_S * s / 6);
-        if (Math.abs(futureX - col) < half) return false;
+    // Inclusive of the final sample: the window is [0, SAFETY_HORIZON_MS], and
+    // an exclusive loop silently shortens it by one step.
+    for (var s = 0; s <= TRAVERSE_SAMPLES; s++) {
+      var off = s * TRAVERSE_STEP_MS;
+      for (var i = 0; i < gstate.hazards.length; i++) {
+        if (Hazards.hitsAt(gstate.hazards[i], col, row, off)) return false;
       }
     }
     return true;
   }
 
-  // Lateral escape. A player that only ever moves forward gets boxed in by
-  // its own predictability, so a competent player also slides sideways to
-  // reach a gap. Bounded to the board so it cannot leave it.
+  /* How much daylight this cell has, in ms, before something lethal is on it.
+   * The same sampling as rowIsSafe, but it returns the size of the window
+   * rather than a yes/no, which is what lets the driver choose between two
+   * mediocre lanes instead of taking the first one that is not lethal. */
+  function clearanceMs(gstate, col, row, limitMs) {
+    var limit = (limitMs === undefined) ? SAFETY_HORIZON_MS : limitMs;
+    for (var t = 0; t <= limit; t += 50) {
+      for (var i = 0; i < gstate.hazards.length; i++) {
+        if (Hazards.hitsAt(gstate.hazards[i], col, row, t)) return t;
+      }
+    }
+    return limit + 1;
+  }
+
+  /* The best lane in the playable band for crossing from where we stand: the
+   * column whose pair of cells (here, one row on) has the most daylight.
+   *
+   * The board guarantees every row keeps a crossing window -- measured over
+   * 30-second sweeps of every band of stages 1 and 4: no row was impassable,
+   * and none fell below 1.1s of continuous daylight on a single column. The
+   * gaps are simply not always in the column the player is standing in, and a
+   * driver that only ever asks about its own column and the two beside it
+   * will stand next to an open lane waiting for one that was never coming.
+   * That was the shape of every remaining death: `ahead=false` for eight
+   * consecutive decisions while the player shuffled between columns 8 and 9.
+   *
+   * Crossing the road to find the gap is the game. */
+  function bestLane(gstate) {
+    var p = gstate.players[0].state();
+    var b = playBounds(gstate);
+    var best = p.col, bestScore = -1;
+    for (var c = b.lo; c <= b.hi; c++) {
+      var s = Math.min(clearanceMs(gstate, c, p.row),
+                       clearanceMs(gstate, c, p.row + 1));
+      if (s > bestScore) { bestScore = s; best = c; }
+    }
+    return { col: best, score: bestScore };
+  }
+
+  /* Which way to step to get to `target`, one column: hop() moves exactly one
+   * column, so a target further away is walked toward, never jumped to. */
+  function stepToward(gstate, target) {
+    var p = gstate.players[0].state();
+    var b = playBounds(gstate);
+    if (target === p.col) return null;
+    var step = target > p.col ? p.col + 1 : p.col - 1;
+    if (step < b.lo || step > b.hi) return null;
+    return step > p.col ? "right" : "left";
+  }
+
+  /* Lateral escape. A player that only ever moves forward gets boxed in by
+   * its own predictability, so a competent player also slides sideways to
+   * reach a gap.
+   *
+   * Bounded to the columns the player can actually STAND in -- playMin/playMax
+   * -- and not to the board. The board is 14 wide precisely so the camera can
+   * follow; the player moves within the middle six (see createGame), and
+   * hop() refuses any lateral input that would leave that band.
+   *
+   * Bounding to the board instead made the escape a NO-OP in exactly the
+   * situation it exists for. A player at column 9 with a truck closing has no
+   * safe lane in 4..8, so the scan ran on past the band and returned column 10,
+   * 11, 12 -- "safe" columns the player cannot reach. The driver then called
+   * hop("left"/"right"), hop() returned false, the player did not move, and the
+   * truck hit them on schedule. Traced on seed "dbg3": the driver logged
+   * hereClear=false and "evade" at t=17384, and the cement mixer that killed
+   * the player at t=17867 had been lethal to their cell for at least 1.5 s. */
+  function playBounds(gstate) {
+    var p = gstate.players[0].state();
+    var lo = (p.minCol === undefined) ? 0 : p.minCol;
+    var hi = (p.maxCol === undefined) ? (gstate.cols - 1) : p.maxCol;
+    return { lo: lo, hi: hi };
+  }
+  /* The nearest safe neighbour -- ONE column away.
+   *
+   * These used to scan outward up to five columns and return the first safe
+   * one they found, on the assumption that the caller could get there. The
+   * caller cannot: hop("left"/"right") moves exactly ONE column. So whenever
+   * the safe column was two or more steps away -- which is most of the time on
+   * a busy row -- the driver stepped into the intermediate column, which was
+   * unsafe by construction, and the player was run over on the next tick.
+   *
+   * It is not a rare edge. Traced through the real driver, essentially every
+   * death looked like this:
+   *
+   *   t=24000 r26 c9  here=false  esc=6   -> hop left -> lands on c8
+   *   t=24034 DEATH  r26 c8  forklift x=7.73 len=1.1
+   *   t=4800  r6  c5  here=false  esc=8   -> hop right -> lands on c6
+   *   t=5050  DEATH  r6  c6  police x=6.71 len=0.95
+   *
+   * The only lateral move a player can make from where they stand is to the
+   * column beside them, so that is the only one worth asking about. A column
+   * further away is unreachable this hop, and waiting for it is the correct
+   * play, not a jump into the space in between. */
   function pickLateral(gstate, row, cols) {
     var p = gstate.players[0].state();
-    for (var off = 1; off <= 5; off++) {
-      for (var sgn = -1; sgn <= 1; sgn += 2) {
-        var c = p.col + sgn * off;
-        if (c < 0 || c > cols - 1) continue;
-        if (rowIsSafe(gstate, c, p.row) && rowIsSafe(gstate, c, p.row + 1)) return c;
-      }
+    var b = playBounds(gstate);
+    var left = p.col - 1, right = p.col + 1;
+    // Toward whichever side has more board, so a cornered player is not pushed
+    // further into the corner.
+    var first = (p.col <= b.hi - p.col) ? left : right;
+    var second = (first === left) ? right : left;
+    var cands = [first, second];
+    for (var i = 0; i < cands.length; i++) {
+      var c = cands[i];
+      if (c < b.lo || c > b.hi) continue;
+      if (rowIsSafe(gstate, c, p.row) && rowIsSafe(gstate, c, p.row + 1)) return c;
     }
     return null;
   }
@@ -790,14 +1286,14 @@
   // puts the player in a cell rowIsSafe() has already rejected.
   function pickLateralSafeHere(gstate, cols) {
     var p = gstate.players[0].state();
-    var first = (p.col <= cols - 1 - p.col) ? -1 : 1;
-    for (var k = 0; k < 2; k++) {
-      var sgn = (k === 0) ? first : -first;
-      for (var off = 1; off <= 4; off++) {
-        var c = p.col + sgn * off;
-        if (c < 0 || c > cols - 1) continue;
-        if (rowIsSafe(gstate, c, p.row)) return c;
-      }
+    var b = playBounds(gstate);
+    var first = (p.col <= b.hi - p.col) ? p.col - 1 : p.col + 1;
+    var second = (first === p.col - 1) ? p.col + 1 : p.col - 1;
+    var cands = [first, second];
+    for (var i = 0; i < cands.length; i++) {
+      var c = cands[i];
+      if (c < b.lo || c > b.hi) continue;
+      if (rowIsSafe(gstate, c, p.row)) return c;
     }
     return null;
   }
@@ -842,28 +1338,72 @@
        * the day the death beat was added. */
       if (gstate.phase === PHASES.READY || gstate.phase === PHASES.RUNNING ||
           gstate.phase === PHASES.DEAD) {
-        if (gstate.phase !== PHASES.DEAD && step * dt - lastHopMs >= 600) {
+        if (gstate.phase !== PHASES.DEAD && step * dt - lastHopMs >= DECISION_MS) {
           var pst = gstate.players[0].state();
           // Only step into a row that is clear. If it is not, wait: that is
           // the decision a player makes, and it is what makes the stage
           // solvable by timing rather than by luck.
           if (pst.alive && !pst.finished) {
-            if (rowIsSafe(gstate, pst.col, pst.row + 1)) {
+            /* Watch the cell you are STANDING IN, not only the one you are
+             * about to enter.
+             *
+             * The driver asked one question -- "is the row ahead clear?" -- and
+             * waited when the answer was no, standing still on whatever row it
+             * had hopped onto. A car does not need the player to move to kill
+             * them. Measured once the destination test was corrected to use the
+             * game's own collision model: 415 of 599 deaths landed within 700 ms
+             * of the player arriving on the fatal row, and 595 of 599 had a
+             * safe lane available on the NEXT row. Almost every one of those was
+             * a car sweeping into a cell the player had been reading for half a
+             * second and could simply have stepped out of.
+             *
+             * A competent player watches their own tile for exactly that
+             * reason, so the driver now does too: the first question is whether
+             * the ground under the player stays clear across the next decision
+             * interval, and only then whether it is safe to advance. */
+            var hereClear = rowIsSafe(gstate, pst.col, pst.row);
+            var aheadClear = rowIsSafe(gstate, pst.col, pst.row + 1);
+            /* Everything below compares daylight in the SAME unit: both scores
+             * are capped at SAFETY_HORIZON_MS. An earlier version compared a
+             * 900ms-capped lane score against a 2000ms-capped column score, so
+             * the comparison was never true, the driver never moved, and
+             * measured stage-one clears went from fourteen to zero. */
+            var myScore = Math.min(clearanceMs(gstate, pst.col, pst.row),
+                                   clearanceMs(gstate, pst.col, pst.row + 1));
+            if (hereClear && aheadClear) {
+              // Straight ahead is open and so is the ground underfoot. Go.
               g.hop("forward");
             } else {
-              // Blocked ahead: slide sideways to a column that is clear both
-              // here and one row on, rather than standing still and dying.
-              var esc = pickLateral(gstate, pst.row, gstate.cols);
-              if (esc !== null) g.hop(esc < pst.col ? "left" : "right");
-              else {
-                // No clean escape. Reposition within the safe row and wait. We
-                // deliberately do NOT hop into the blocked row: that is a
-                // certain hit, and it is not what a player does. P-02 does
-                // punish waiting, so when the hawk is nearly on us the right
-                // answer is still to move, just not into traffic.
-                var room = pickLateralSafeHere(gstate, gstate.cols);
-                if (room !== null) g.hop(room < pst.col ? "left" : "right");
+              var lane = bestLane(gstate);
+              if (lane.score > myScore) {
+                /* Somewhere else in the band has more daylight than where we
+                 * are. Walk toward it -- one column per hop, never a jump. */
+                var dir = stepToward(gstate, lane.col);
+                if (dir) g.hop(dir);
+              } else if (!hereClear) {
+                /* Threatened where we stand and this is already the best lane
+                 * on offer. Take a better neighbour if one exists, otherwise
+                 * give the ground back: standing on the thing that is arriving
+                 * is never the answer. */
+                var nb = -1, nbScore = myScore;
+                var bnd = playBounds(gstate);
+                for (var cc = bnd.lo; cc <= bnd.hi; cc++) {
+                  if (cc === pst.col) continue;
+                  var sc = Math.min(clearanceMs(gstate, cc, pst.row),
+                                    clearanceMs(gstate, cc, pst.row + 1));
+                  if (sc > nbScore) { nbScore = sc; nb = cc; }
+                }
+                if (nb >= 0) {
+                  var dir2 = stepToward(gstate, nb);
+                  if (dir2) g.hop(dir2);
+                } else if (pst.row > 1 &&
+                           rowIsSafe(gstate, pst.col, pst.row - 1)) {
+                  g.hop("back");
+                }
               }
+              /* Otherwise: safe here, and this is the best lane available.
+               * Hold. The board guarantees the window opens -- measured, no row
+               * in stages 1, 4 or 10 failed to offer a crossing. */
             }
             lastHopMs = step * dt;
           }

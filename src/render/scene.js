@@ -267,6 +267,193 @@
     var cw = I.projectS(col + 0.30, row + 0.50, 0.0);
     I.ellipse(ctx, cw[0], cw[1] + 3, 6, 6, "#1c1c20");
   }
+  /* ---- library-imported kinds -------------------------------------------
+   *
+   * The library import added war machines, aliens and craft to the hazard
+   * vocabulary. A kind that spawns but has no draw function is the worst
+   * defect this game can ship: it kills the player while being invisible, and
+   * the 2D path is the fallback whenever WebGL is unavailable or still booting.
+   * Every kind below draws a distinct, readable silhouette -- the point is that
+   * the player can see what is about to hit them and judge it. */
+
+  function drawBoxKit(ctx, col, row, len, body, accent) {
+    // Shared chassis for the armoured/war vehicles.
+    var x0 = col + (1 - len) / 2;
+    hazardShadow(ctx, col, row, len, 0.20);
+    I.cubeFrac(ctx, x0, row + 0.14, len, 0.34, 0.06, 0.24, I.shade(body, 0.70));
+    I.cubeFrac(ctx, x0 + 0.02, row + 0.17, len - 0.04, 0.30, 0.24, 0.18, body);
+    I.cubeFrac(ctx, x0, row + 0.14, len, 0.34, 0.42, 0.05, I.shade(body, 1.20));
+    // Wheels, so it reads as a vehicle rather than a wall.
+    for (var w = 0; w < 2; w++) {
+      var p = I.projectS(x0 + 0.22 + w * Math.max(0.3, len - 0.5), row + 0.26, 0.04);
+      I.ellipse(ctx, p[0], p[1] + 2, 8, 8, "#2a2a32");
+    }
+    if (accent) {
+      var t = I.projectS(col + 0.5, row + 0.30, 0.52);
+      I.ellipse(ctx, t[0], t[1], 3, 3, accent);
+    }
+  }
+
+  function drawArmoredVan(ctx, col, row, scene, h) {
+    drawBoxKit(ctx, col, row, h.spec.len, "#4f5a52", "#ff4d3d");
+    // Riveted plate line: the armour is the read.
+    I.cubeFrac(ctx, col + 0.16, row + 0.18, h.spec.len - 0.32, 0.26, 0.20, 0.06, "#6b766c");
+  }
+  function drawWarPickup(ctx, col, row, scene, h) {
+    drawBoxKit(ctx, col, row, h.spec.len, "#6b5a3a", "#ffd23d");
+    I.cubeFrac(ctx, col + 0.30, row + 0.16, 0.50, 0.26, 0.44, 0.20, "#3f4a5a");
+  }
+  function drawSiegeRam(ctx, col, row, scene, h) {
+    var len = h.spec.len, x0 = col + (1 - len) / 2;
+    hazardShadow(ctx, col, row, len, 0.22);
+    I.cubeFrac(ctx, x0, row + 0.14, len, 0.40, 0.06, 0.28, "#7a5f3a");
+    // The beam: a log hanging from an A-frame.
+    var top = I.projectS(col + 0.5, row + 0.30, 1.05);
+    I.cubeFrac(ctx, col + 0.34, row + 0.16, 0.32, 0.22, 0.80, 0.14, "#5a452c");
+    I.cubeFrac(ctx, col + 0.28, row + 0.22, 0.44, 0.24, 0.06, 0.18, "#6b5033");
+    I.line(ctx, [[top[0], top[1]], [top[0], top[1] + 10]], "#4a3a26", 3);
+  }
+  function drawCatapult(ctx, col, row, scene, h) {
+    var len = h.spec.len, x0 = col + (1 - len) / 2;
+    hazardShadow(ctx, col, row, len, 0.20);
+    I.cubeFrac(ctx, x0, row + 0.14, len, 0.26, 0.06, 0.22, "#6b5033");
+    var a = I.projectS(col + 0.34, row + 0.22, 0.34);
+    var b = I.projectS(col + 0.72, row + 0.26, 1.05);
+    I.line(ctx, [[a[0], a[1]], [b[0], b[1]]], "#8a6a3a", 5);
+    var c = I.projectS(col + 0.86, row + 0.34, 0.52);
+    I.ellipse(ctx, c[0], c[1], 7, 7, "#3f3f46");
+  }
+  function drawTrebuchet(ctx, col, row, scene, h) {
+    var len = h.spec.len, x0 = col + (1 - len) / 2;
+    hazardShadow(ctx, col, row, len, 0.24);
+    I.cubeFrac(ctx, x0, row + 0.14, len, 0.30, 0.06, 0.26, "#5f4a30");
+    var a = I.projectS(col + 0.22, row + 0.22, 0.26);
+    var b = I.projectS(col + 0.78, row + 0.26, 1.35);
+    I.line(ctx, [[a[0], a[1]], [b[0], b[1]]], "#7a5f3a", 6);
+    var s = I.projectS(col + 0.92, row + 0.40, 1.30);
+    I.ellipse(ctx, s[0], s[1], 5, 5, "#d8c49a");
+  }
+  function drawBallista(ctx, col, row, scene, h) {
+    var len = h.spec.len, x0 = col + (1 - len) / 2;
+    hazardShadow(ctx, col, row, len, 0.18);
+    I.cubeFrac(ctx, x0, row + 0.15, len, 0.22, 0.06, 0.20, "#6b5033");
+    var b = I.projectS(col + 0.5, row + 0.26, 0.72);
+    I.line(ctx, [[b[0] - 10, b[1] + 6], [b[0] + 10, b[1] - 2]], "#c8b48a", 3);
+  }
+  function drawCannonGeneric(ctx, col, row, scene, h, body, mobile) {
+    var len = h.spec.len, x0 = col + (1 - len) / 2;
+    hazardShadow(ctx, col, row, len, 0.18);
+    if (mobile) I.cubeFrac(ctx, x0, row + 0.16, len, 0.24, 0.04, 0.20, body);
+    else I.cubeFrac(ctx, col + 0.24, row + 0.20, 0.52, 0.28, 0.10, 0.26, I.shade(body, 0.8));
+    var b = I.projectS(col + 0.42, row + 0.30, 0.60);
+    I.line(ctx, [[b[0] - 8, b[1] + 4], [b[0] + 12, b[1] - 5]], I.shade(body, 0.7), 6);
+    for (var w = 0; w < 2; w++) {
+      var p = I.projectS(x0 + 0.20 + w * (len - 0.5), row + 0.24, 0.04);
+      I.ellipse(ctx, p[0], p[1] + 2, 7, 7, "#2a2a32");
+    }
+  }
+  function drawCannon(ctx, col, row, scene, h) { drawCannonGeneric(ctx, col, row, scene, h, "#3f4650", false); }
+  function drawPirateCannon(ctx, col, row, scene, h) { drawCannonGeneric(ctx, col, row, scene, h, "#4a3a2a", false); }
+  function drawCannonMobile(ctx, col, row, scene, h) { drawCannonGeneric(ctx, col, row, scene, h, "#3f4650", true); }
+  function drawTurretGeneric(ctx, col, row, scene, h, body, twin) {
+    hazardShadow(ctx, col, row, h.spec.len, 0.16);
+    I.cubeFrac(ctx, col + 0.28, row + 0.20, 0.44, 0.32, 0.08, 0.30, body);
+    var b = I.projectS(col + 0.5, row + 0.34, 0.78);
+    if (twin) {
+      I.line(ctx, [[b[0] - 6, b[1] + 3], [b[0] + 9, b[1] - 4]], "#2a2a32", 4);
+      I.line(ctx, [[b[0] - 4, b[1] + 6], [b[0] + 11, b[1] - 1]], "#2a2a32", 4);
+    } else {
+      I.line(ctx, [[b[0] - 5, b[1] + 4], [b[0] + 10, b[1] - 4]], "#2a2a32", 5);
+    }
+  }
+  function drawTurret(ctx, col, row, scene, h) { drawTurretGeneric(ctx, col, row, scene, h, "#5a6270", false); }
+  function drawTurretDouble(ctx, col, row, scene, h) { drawTurretGeneric(ctx, col, row, scene, h, "#4a5260", true); }
+
+  function drawUfoGeneric(ctx, col, row, scene, h, hull, lit) {
+    // Lane-independent craft: a saucer over its own shadow, so it reads as
+    // hovering rather than sitting on the road.
+    var c = I.projectS(col + 0.5, row + 0.34, 0.92);
+    hazardShadow(ctx, col, row, h.spec.len, 0.14);
+    I.ellipse(ctx, c[0], c[1], 17, 7, I.shade(hull, 0.75));
+    I.ellipse(ctx, c[0], c[1] - 3, 15, 6, hull);
+    var d = I.projectS(col + 0.5, row + 0.34, 0.62);
+    I.ellipse(ctx, d[0], d[1], 7, 5, lit || "#8affd8");
+  }
+  function drawUfoA(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#b9c2cc", "#8affd8"); }
+  function drawUfoB(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#a8b4c2", "#ffd23d"); }
+  function drawUfoC(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#c2a8b9", "#ff8ad8"); }
+  function drawUfoD(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#b4c2a8", "#a8ff8a"); }
+  function drawUfoSaucer(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#c8d4e0", "#7ad8ff"); }
+  function drawUfoDrone(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#a0b8c8", "#8affd8"); }
+  function drawXenoDrone(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#8ad8b0", "#ff5c8a"); }
+
+  function drawStarfighter(ctx, col, row, scene, h) {
+    var c = I.projectS(col + 0.5, row + 0.34, 0.86);
+    hazardShadow(ctx, col, row, h.spec.len, 0.16);
+    var p = I.projectS(col + 0.14, row + 0.30, 0.70), q = I.projectS(col + 0.86, row + 0.30, 0.70);
+    I.line(ctx, [[p[0], p[1] - 6], [q[0], q[1] + 4]], "#d8dde6", 5);
+    I.line(ctx, [[c[0], c[1] - 8], [c[0], c[1] + 6]], "#8f98a6", 4);
+    I.ellipse(ctx, c[0], c[1] - 8, 4, 3, "#7ad8ff");
+  }
+  function drawSpeederCraft(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#c2ccd8", "#8ad8ff"); }
+  function drawRacerCraft(ctx, col, row, scene, h) { drawUfoGeneric(ctx, col, row, scene, h, "#d8b48a", "#ff9a5c"); }
+
+  function drawAlienBody(ctx, col, row, body, h, tall) {
+    hazardShadow(ctx, col, row, h.spec.len, 0.16);
+    I.cubeFrac(ctx, col + 0.28, row + 0.18, 0.44, tall ? 0.42 : 0.32, 0.08, 0.26, I.shade(body, 0.75));
+    I.cubeFrac(ctx, col + 0.30, row + 0.21, 0.40, tall ? 0.36 : 0.27, tall ? 0.42 : 0.34, 0.20, body);
+    // Two eyes, so it is a creature and not a box.
+    var e = I.projectS(col + 0.5, row + 0.28, tall ? 0.78 : 0.60);
+    I.ellipse(ctx, e[0] - 4, e[1], 3, 3, "#0d1a14");
+    I.ellipse(ctx, e[0] + 4, e[1], 3, 3, "#0d1a14");
+  }
+  function drawAlienGrunt(ctx, col, row, scene, h) { drawAlienBody(ctx, col, row, "#5aa87f", h, false); }
+  function drawTentacleAlien(ctx, col, row, scene, h) {
+    hazardShadow(ctx, col, row, h.spec.len, 0.16);
+    I.cubeFrac(ctx, col + 0.30, row + 0.20, 0.40, 0.34, 0.08, 0.24, "#7a5aa8");
+    for (var i = 0; i < 3; i++) {
+      var t = I.projectS(col + 0.24 + i * 0.26, row + 0.26, 0.10);
+      I.line(ctx, [[t[0], t[1]], [t[0] + (i - 1) * 5, t[1] - 9]], "#9a7ac8", 3);
+    }
+  }
+  function drawXenoQueen(ctx, col, row, scene, h) { drawAlienBody(ctx, col, row, "#c85a9a", h, true); }
+  function drawMechWalker(ctx, col, row, scene, h) {
+    hazardShadow(ctx, col, row, h.spec.len, 0.18);
+    I.cubeFrac(ctx, col + 0.28, row + 0.18, 0.44, 0.40, 0.06, 0.24, "#5a6270");
+    I.cubeFrac(ctx, col + 0.34, row + 0.20, 0.32, 0.22, 0.40, 0.18, "#8a94a4");
+    for (var l = 0; l < 2; l++) {
+      var p = I.projectS(col + 0.30 + l * 0.40, row + 0.26, 0.10);
+      I.line(ctx, [[p[0], p[1]], [p[0], p[1] - 10]], "#3f4650", 3);
+    }
+    var e = I.projectS(col + 0.5, row + 0.26, 0.62);
+    I.ellipse(ctx, e[0], e[1], 4, 3, "#ff5c8a");
+  }
+  function drawRobotDog(ctx, col, row, scene, h) {
+    hazardShadow(ctx, col, row, h.spec.len, 0.14);
+    I.cubeFrac(ctx, col + 0.26, row + 0.18, 0.48, 0.20, 0.10, 0.18, "#7a8290");
+    var hd = I.projectS(col + 0.80, row + 0.24, 0.34);
+    I.ellipse(ctx, hd[0], hd[1], 7, 6, "#8a94a4");
+    I.ellipse(ctx, hd[0], hd[1] - 1, 2, 2, "#ff5c8a");
+  }
+  function drawSpaceSlug(ctx, col, row, scene, h) {
+    hazardShadow(ctx, col, row, h.spec.len, 0.12);
+    for (var i = 0; i < 3; i++) {
+      var p = I.projectS(col + 0.30 + i * 0.16, row + 0.26, 0.10 + i * 0.04);
+      I.ellipse(ctx, p[0], p[1], 8 - i, 6 - i, i % 2 ? "#8ad8a0" : "#6ac488");
+    }
+  }
+  function drawHorse(ctx, col, row, scene, h) {
+    hazardShadow(ctx, col, row, h.spec.len, 0.18);
+    I.cubeFrac(ctx, col + 0.26, row + 0.18, 0.48, 0.28, 0.16, 0.22, "#8a6a4a");
+    var hd = I.projectS(col + 0.80, row + 0.24, 0.52);
+    I.cubeFrac(ctx, col + 0.70, row + 0.20, 0.18, 0.18, 0.40, 0.16, "#8a6a4a");
+    I.ellipse(ctx, hd[0], hd[1], 6, 5, "#9a7a58");
+    for (var l = 0; l < 2; l++) {
+      var p = I.projectS(col + 0.34 + l * 0.28, row + 0.24, 0.10);
+      I.line(ctx, [[p[0], p[1]], [p[0], p[1] - 9]], "#6b5033", 3);
+    }
+  }
+
   function drawRoller(ctx, col, row, scene, h) {
     var body = "#e05c2b";
     hazardShadow(ctx, col, row, h.spec.len, 0.18);
@@ -802,12 +989,6 @@
     I.ellipse(ctx, hd[0] + 2, hd[1] - 1.5, 1.5, 1.5, "#ffd23d");
     I.line(ctx, [[hd[0] + 4, hd[1] - 4], [hd[0] + 9, hd[1] - 6]], "#c94f3d", 1.6);
   }
-  function drawBoulder(ctx, col, row, scene, h) {
-    var b = I.shade(scene.ground, 0.62);
-    I.ellipse(ctx, ...pt(col, row, 0.0), 20, 9, "rgba(0,0,0,0.18)");
-    I.blob(ctx, col + 0.18, row + 0.20, 0.62, 0.56, 0.0, 0.42, b);
-    I.blob(ctx, col + 0.34, row + 0.30, 0.34, 0.30, 0.40, 0.22, I.shade(b, 1.2));
-  }
   /* A geyser and a steam vent: TIMED, not moving. They erupt on a beat and
    * are harmless between eruptions, which is a completely different thing to
    * read than a vehicle. The ground ring is the tell. */
@@ -984,7 +1165,18 @@
     crocodile: drawCrocodile,
     canoe: drawCanoe, duck: drawDuck, swan: drawSwan,
     icefloe: drawIcefloe, sled: drawSled,
-    snake: drawSnake, boulder: drawBoulder, hawk: drawHawk,
+    aliengrunt: drawAlienGrunt, tentaclealien: drawTentacleAlien,
+    xenoqueen: drawXenoQueen, xenodrone: drawXenoDrone,
+    ufodrone: drawUfoDrone, ufosaucer: drawUfoSaucer, starfighter: drawStarfighter,
+    mechwalker: drawMechWalker, robotdog: drawRobotDog, spaceslug: drawSpaceSlug,
+    ufoa: drawUfoA, ufob: drawUfoB, ufoc: drawUfoC, ufod: drawUfoD,
+    armoredvan: drawArmoredVan, warpickup: drawWarPickup,
+    cannon: drawCannon, piratecannon: drawPirateCannon, cannonmobile: drawCannonMobile,
+    turret: drawTurret, turretdouble: drawTurretDouble,
+    trebuchet: drawTrebuchet, catapult: drawCatapult, ballista: drawBallista,
+    siegeram: drawSiegeRam, horse: drawHorse,
+    speedercraft: drawSpeederCraft, racercraft: drawRacerCraft,
+snake: drawSnake, hawk: drawHawk,
   };
   // The timed ones are not a plain lookup: what they draw depends on whether
   // they are UP this instant, which is the whole mechanic.
@@ -1210,7 +1402,7 @@
     drawTrain: drawTrain, drawTram: drawTram, drawMonorail: drawMonorail,
     drawFreighttrain: drawFreighttrain, drawSubway: drawSubway,
     drawLog: drawLog, drawTurtle: drawTurtle, drawAlligator: drawAlligator,
-    drawCrocodile: drawCrocodile, drawSnake: drawSnake, drawBoulder: drawBoulder,
+    drawCrocodile: drawCrocodile, drawSnake: drawSnake,
     drawCanoe: drawCanoe, drawDuck: drawDuck, drawSwan: drawSwan,
     drawIcefloe: drawIcefloe, drawSled: drawSled,
     drawHawk: drawHawk,

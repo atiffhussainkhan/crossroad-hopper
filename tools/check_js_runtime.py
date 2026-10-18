@@ -346,7 +346,24 @@ Stages.STAGES.forEach(function (s) {
 var stray = 0, checked = 0, birdsOnGrass = 0;
 for (var si = 0; si < Stages.STAGES.length; si++) {
   var st = Stages.STAGES[si];
-  for (var rr = 0; rr < 40; rr++) {
+  /* Scan the WHOLE stage, at ITS OWN length, not a fixed number of rows.
+   *
+   * The endgame bird appears once row progress passes 0.62 of the way to the
+   * goal. That fell inside the old fixed 40-row scan because the goal row WAS
+   * 40. At the 90-hop stage length the endgame window opens around row 53, so
+   * a probe still scanning 0..39 saw no bird anywhere and reported "the
+   * endgame bird never flies over the lawn" -- the probe measuring against a
+   * hardcoded stage length that no longer exists.
+   *
+   * Stages then grew their own jump counts (90, 108, ... 464), and this scan
+   * was still reading GOAL_ROW_OFFSET -- stage ONE's length -- for all ten of
+   * them. The endgame is the last stretch before each stage's OWN goal, so for
+   * stage 2 it opens at row 91 and for stage 10 at row 447: both past the end
+   * of a 0..89 scan, so the probe found no bird on nine of the ten stages and
+   * reported the same phantom it had already been fixed for once. Read the
+   * goal from the table the win condition is read from. */
+  var goalRow = Stages.jumpsFor(si);
+  for (var rr = 0; rr < goalRow; rr++) {
     Hazards.hazardsForRow("pg" + si + rr, rr, st.id, 4,
                           SimCore.createRng("pg" + si + rr), si, 4)
       .forEach(function (h) {
@@ -1095,24 +1112,82 @@ def assert_pursuer_is_escapable() -> list[str]:
     script = "".join('load("%s");' % rel for rel in CHAIN)
     script += """
 var out = [];
+var FRAME_MS = 16.667;
+/* One hop about every 550ms: the cadence the autoplay drives at, comfortably
+ * above the HOP_MIN_MS input floor, so the walk is a legal player cadence
+ * rather than a machine-gun that the floor would refuse. */
+var HOP_EVERY_MS = 550;
+var WINDOW_FRAMES = 4000;   /* ~67s of measurement */
+
+/* The arming row, MEASURED off the shipped pursuer instead of hardcoded here,
+ * so the walk follows PURSUER_DISTANCE_THRESHOLD if it ever moves. */
+var ARM_ROW = 0;
+var arm = SimCore.createPursuer();
+for (var ar = 0; ar < 400; ar++) { arm.tick(1000, ar, 0); if (arm.state().mode !== "DISTANCE_LOCKED") { ARM_ROW = ar; break; } }
+/* Two rows past arming: far enough that the pursuer is live before the
+ * measurement starts, close enough that it is not already on the player when
+ * it arms (that is the "caught instantly" defect, not the one under test). */
+var WALK_ROW = ARM_ROW + 2;
+
+/* No traffic: the pursuer must be the only thing that can kill, or this probe
+ * measures the road instead of the pursuer.
+ *
+ * The WALK needs this as much as the measurement does, and not having it was
+ * the whole bug. Walking up a LIVE board is how this probe used to fail: the
+ * player was run over at rows 4, 12 and 6, each death restarted the stage and
+ * put them back on row 0, and the walk stalled around row 11. The pursuer arms
+ * at row 20, so it was never reached, and the probe reported "the pursuer does
+ * nothing" about a pursuer it had never got near. Every hop was accepted all
+ * the way up -- the input floor was not what stopped the walk. */
+function clearTraffic(g) { g.state().hazards.length = 0; }
+
+/* Drive the player to WALK_ROW by destination, not by hop count: a fixed count
+ * of hops assumes every hop is accepted, and one refused hop silently costs a
+ * row. It reports what happened, so a stalled walk is a LOUD failure rather
+ * than a quiet "the pursuer is dead". */
+function walk(g) {
+  var accepted = 0, refused = 0, lastHop = 0, f = 0;
+  while (f < WINDOW_FRAMES) {
+    var p = g.state().players[0].state();
+    if (p.row >= WALK_ROW) {
+      return { ok: true, at: p.row, accepted: accepted, refused: refused };
+    }
+    if (p.lives < 4) {
+      return { ok: false, why: "traffic-killed@row" + p.row +
+               " accepted=" + accepted + " refused=" + refused };
+    }
+    if (f * FRAME_MS - lastHop >= HOP_EVERY_MS) {
+      if (g.hop("forward", 0)) accepted++; else refused++;
+      lastHop = f * FRAME_MS;
+    }
+    clearTraffic(g);
+    g.tick(FRAME_MS);
+    f++;
+  }
+  var e = g.state().players[0].state();
+  return { ok: false, why: "stalled@row" + e.row + "/target" + WALK_ROW +
+           " accepted=" + accepted + " refused=" + refused };
+}
+
 function run(hopping) {
   var g = SimCore.createGame({playerCount: 1, seed: "pursuer"});
-  g.hop("forward", 0);
-  for (var i = 0; i < 20; i++) g.hop("forward", 0);
-  for (var t = 0; t < 5; t++) g.tick(16.667);
+  var w = walk(g);
+  if (!w.ok) return "no-walk:" + w.why;
   var lastHop = 0, n = 0;
-  while (n++ < 4000) {
-    if (hopping && n * 16.667 - lastHop >= 550) { g.hop("forward", 0); lastHop = n * 16.667; }
-    // No traffic: the pursuer must be the only thing that can kill.
-    var pr = g.state().players[0].state().row;
-    g.state().hazards.length = 0;
-    g.state().hazardRow0 = pr - 4; g.state().hazardRows = 12;
-    g.tick(16.667);
-    if (g.state().phase === "DEAD" || g.state().phase === "STAGE_FAILED")
-      return "caught@" + (n * 16.667 / 1000).toFixed(2);
+  while (n < WINDOW_FRAMES) {
+    if (hopping && n * FRAME_MS - lastHop >= HOP_EVERY_MS) { g.hop("forward", 0); lastHop = n * FRAME_MS; }
+    clearTraffic(g);
+    g.tick(FRAME_MS);
+    n++;
+    var ph = g.state().phase;
+    if (ph === "DEAD" || ph === "STAGE_FAILED")
+      return "caught@" + (n * FRAME_MS / 1000).toFixed(2);
+    // Reaching the goal row ENDS the crossing. That is a survival, not a catch.
+    if (ph === "STAGE_CLEAR") return "safe";
   }
   return "safe";
 }
+out.push("armRow=" + ARM_ROW + ",walkRow=" + WALK_ROW);
 out.push("moving=" + run(true));
 out.push("still=" + run(false));
 var st = SimCore.createPursuer();
@@ -1127,6 +1202,15 @@ print(out.join(" | "));
             kv[k.strip()] = v.strip()
     if "moving" not in kv:
         return [f"could not parse the pursuer probe: {text[:200]}"]
+    # A walk that never reached the arming row is a broken PROBE, not a verdict
+    # on the pursuer. Say which, so the failure can never again be mistaken for
+    # "the pursuer does nothing" -- which is exactly how this probe died once.
+    stalled = [c for c in ("moving", "still") if kv.get(c, "").startswith("no-walk:")]
+    if stalled:
+        return [
+            f"the pursuer probe could not walk the player to the arming row "
+            f"({kv.get('armRow', '?')}) for: {', '.join(stalled)} -- {kv[stalled[0]]}"
+        ]
     if kv["moving"] != "safe":
         problems.append(
             f"a player who keeps hopping is {kv['moving']} by the pursuer. It is "

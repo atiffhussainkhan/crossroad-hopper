@@ -479,7 +479,11 @@
     var livesStr = "";
     for (var li = 0; li < s.players.length; li++) {
       if (li) livesStr += " / ";
-      livesStr += String(s.players[li].state().lives);
+      var ls = s.players[li].state();
+      /* Shields sit beside lives, because lives alone cannot tell the player
+       * whether the next hit costs a life or a shield -- and that difference
+       * is the entire reward for taking one. */
+      livesStr += String(ls.lives) + (ls.shields > 0 ? " \u{1F6E1}" + ls.shields : "");
     }
     elLives.textContent = livesStr;
 
@@ -491,7 +495,14 @@
     } else if (s.phase === SimCore.PHASES.DEAD) {
       showBanner("YOU ARE DEAD", "Tap to skip and restart");
     } else if (s.phase === SimCore.PHASES.READY) {
-      showBanner("Stage " + stage.id + " — " + stage.name, "Tap to start");
+      /* "foot", not "centre": the READY prompt used to be painted across the
+       * middle of the board, which is precisely where the next shield pickup
+       * stands. A 66% black plate over it left the player starting a stage
+       * looking at a dim brown smudge instead of the shield they were about to
+       * walk into -- the pickup was only ever visible once the run started.
+       * Below the character's feet there is nothing but road already crossed,
+       * so that is where the prompt goes. */
+      showBanner("Stage " + stage.id + " — " + stage.name, "Tap to start", "foot");
     } else if (s.phase === SimCore.PHASES.STAGE_CLEAR) {
       if (s.stageIndex === Stages.STAGES.length - 1) {
         showBanner("Campaign clear", "Tap for Endless mode");
@@ -526,9 +537,51 @@
     };
   }
 
-  function showBanner(title, sub) {
-    if (elBanner.dataset.title === title) return;
+  /* Pin the banner to the foot of the board.
+   *
+   * The prompt is moved by shrinking the banner BOX: the dark plate and the
+   * text are positioned against it, so a short box at the bottom of the board
+   * takes the whole overlay down there, clear of the crossing. */
+  function placeBanner(place) {
+    var foot = place === "foot";
+    elBanner.style.top = foot ? "auto" : "";
+    elBanner.style.bottom = foot ? "0" : "";
+    elBanner.style.height = foot ? "16%" : "";
+    // A short board still has to fit two lines of text in the strip.
+    elBanner.style.minHeight = foot ? "52px" : "";
+  }
+
+  /* The plate is a ::before pseudo-element, so its box cannot be reached from
+   * an inline style. At the default full-board size its 38%/38% insets give a
+   * slab about 120px tall -- comfortable. Inside a 16% strip the same
+   * percentages leave a 20px band that the text no longer fits, so the plate
+   * is told to fill the strip instead. One injected rule beats a second
+   * element, and it only applies while the READY prompt is placed there.
+   *
+   * The foot prompt also runs smaller: a board is allowed to be 220px tall,
+   * where a 26px title over a 14px subtitle overflows a 16% strip and spills
+   * onto the lanes above it. A corner-sized prompt fits that board, and a
+   * prompt that no longer owns the middle of the screen suits the crossing. */
+  (function installBannerPlacementRule() {
+    if (document.getElementById("banner-placement")) return;
+    var css = document.createElement("style");
+    css.id = "banner-placement";
+    css.textContent = "#banner[data-place='foot']::before{" +
+        "top:auto;bottom:0;left:8%;right:8%;height:100%;}" +
+      "#banner[data-place='foot'] .banner-title{font-size:20px;}" +
+      "#banner[data-place='foot'] .banner-sub{font-size:12px;}";
+    document.head.appendChild(css);
+  })();
+
+  function showBanner(title, sub, place) {
+    place = place || "centre";
+    // `sub` is part of the key: the loading banner's "N/M models ready" has to
+    // keep updating, and the title alone never changes while that runs.
+    if (elBanner.dataset.title === title && elBanner.dataset.sub === sub &&
+        elBanner.dataset.place === place) return;
     elBanner.dataset.title = title;
+    elBanner.dataset.sub = sub;
+    elBanner.dataset.place = place;
     elBanner.innerHTML = "";
     var h = document.createElement("div");
     h.className = "banner-title" + (title === "YOU ARE DEAD" ? " death" : "");
@@ -538,11 +591,15 @@
     p.textContent = sub;
     elBanner.appendChild(h);
     elBanner.appendChild(p);
+    placeBanner(place);
     elBanner.style.display = "flex";
   }
 
   function hideBanner() {
     elBanner.dataset.title = "";
+    elBanner.dataset.sub = "";
+    elBanner.dataset.place = "";
+    placeBanner("centre");
     elBanner.style.display = "none";
   }
 

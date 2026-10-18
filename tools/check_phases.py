@@ -39,13 +39,26 @@ PROBE = r"""
 (function () {
   var H = Hazards, S = Stages, C = SimCore;
   var out = { problems: [], stats: {} };
-  var goal = S.GOAL_ROW_OFFSET, safeGoal = H.SAFE_GOAL_ROWS;
+  var safeGoal = H.SAFE_GOAL_ROWS;
+
+  /* One goal row and one stage clock PER STAGE, read from the same table the
+   * win condition is read from.
+   *
+   * This gate used to build every stage as GOAL_ROW_OFFSET rows -- 90 -- and to
+   * sample the sprint at STAGES_CLOCK_MS, the span of stage one. Stages now
+   * carry their own jump counts (90, 108, ... 464), and the hazard builder
+   * reads the same per-stage number for its finish apron and its endgame. So a
+   * 90-row scan of stage ten stops 380 rows short of the finish: the endgame
+   * never appears in the list, and the gate reported stages 2-10 as having no
+   * bird and no ditch when in fact it had never looked at their endings. */
+  function goalFor(stageIndex) { return S.jumpsFor(stageIndex); }
+  function clockFor(stageIndex) { return S.clockMsFor(stageIndex); }
 
   /* A whole stage's worth of hazards for one stage, as a single flat list that
    * can then be walked forward through the stage clock. */
   function buildStage(stageIndex, difficulty, tag) {
     var list = [];
-    for (var r = H.SAFE_START_ROWS; r < goal - safeGoal; r++) {
+    for (var r = H.SAFE_START_ROWS; r < goalFor(stageIndex) - safeGoal; r++) {
       var Rng = C.createRng(tag + ":" + stageIndex + ":" + r);
       var made = H.hazardsForRow(tag + ":" + stageIndex + ":" + r, r, 14,
                                  difficulty, Rng, stageIndex, 0);
@@ -77,7 +90,10 @@ PROBE = r"""
   var f0 = H.speedFactorAt(0);
   var fRead = H.speedFactorAt(H.READ_MS - 1000);
   var fBuild = H.speedFactorAt(H.BUILD_END_MS);
-  var fEnd = H.speedFactorAt(90000);
+  /* The stage is 90 hops and the curve is measured against the
+   * hop-derived clock, so sampling at a hardcoded 90000 read the ramp
+   * mid-build and reported "the sprint barely speeds up". */
+  var fEnd = H.speedFactorAt(Stages.STAGES_CLOCK_MS);
   out.stats.speed = { read: f0, endOfRead: fRead, endOfBuild: fBuild, end: fEnd };
   if (fRead !== 1.0) {
     out.problems.push("the board is not running at its base speed during the " +
@@ -136,7 +152,7 @@ PROBE = r"""
   var armGaps = [], reachedOptional = 0, armStages = 0;
   for (var bs = 0; bs < S.stageCount(); bs++) {
     var arms = {};
-    for (var br = H.SAFE_START_ROWS; br < goal - safeGoal; br++) {
+    for (var br = H.SAFE_START_ROWS; br < goalFor(bs) - safeGoal; br++) {
       var bRng = C.createRng("arm" + bs + ":" + br);
       var bMade = H.hazardsForRow("arm" + bs + ":" + br, br, 14,
                                   S.getStage(bs).baseline + 5, bRng, bs, 0);
@@ -188,6 +204,7 @@ PROBE = r"""
   // ---- 2. per-stage: one-sided read, then the build, then the sprint -----
   var vocab = [], readOneSided = 0, buildTwoWay = 0, countClimbs = 0,
       speedClimbs = 0, stages = 0, pitsPerStage = [], birdsPerStage = [],
+      ditchBoards = [],
       worstKinds = 99, worstStage = 0;
 
   for (var st = 0; st < S.stageCount(); st++) {
@@ -196,7 +213,14 @@ PROBE = r"""
 
     var read = at(list, H.READ_MS - 2000);
     var build = at(list, H.BUILD_END_MS);
-    var sprint = at(list, 90000);
+    /* Sampled at the END of THIS stage's own clock, which is what its hazards are
+       built against. This was a hardcoded 90000, which with a 126000ms stage
+       fell INSIDE the build window -- so the "sprint" was sampled before the
+       sprint began and read slower than the build, failing every stage as
+       "barely speeds up". STAGES_CLOCK_MS then had the same flaw one level up:
+       it is stage ONE's span, so it read the finish of a 464-row stage at the
+       126-second mark, a third of the way in. */
+    var sprint = at(list, clockFor(st));
 
     // The read must be one direction, on every stage.
     var rd = Object.keys(read.dirs);
@@ -226,12 +250,23 @@ PROBE = r"""
      * single 35-row crossing does not contain ten distinct objects, so every
      * stage "failed" at 7-9 while actually carrying a dozen. A vocabulary is
      * what a stage can produce across its boards, not what one board happened
-     * to show, so this counts over several independent boards. */
+     * to show, so this counts over several independent boards.
+     *
+     * The sweep also records, per board, whether it carried a ditch at all --
+     * the count below still ASSERTS on one board, but the stat beside it shows
+     * how much of that verdict is the board draw and how much is the stage. */
     var pool = {};
+    var boardsWithDitch = 0;
     for (var sd = 0; sd < 8; sd++) {
       var bl = buildStage(st, S.getStage(st).baseline + 5, "v" + sd);
-      for (var v = 0; v < bl.length; v++) pool[bl[v].kind] = 1;
+      var boardPits = 0;
+      for (var v = 0; v < bl.length; v++) {
+        pool[bl[v].kind] = 1;
+        if (bl[v].kind === "sinkhole") boardPits++;
+      }
+      if (boardPits > 0) boardsWithDitch++;
     }
+    ditchBoards.push(boardsWithDitch + "/8");
     var distinct = Object.keys(pool).length;
     if (distinct < worstKinds) { worstKinds = distinct; worstStage = st + 1; }
     vocab.push({ stage: st + 1, name: name,
@@ -282,6 +317,7 @@ PROBE = r"""
   out.stats.worstKinds = worstKinds;
   out.stats.worstStage = worstStage;
   out.stats.pitsPerStage = pitsPerStage;
+  out.stats.ditchBoards = ditchBoards;
   out.stats.birdsPerStage = birdsPerStage;
 
   return JSON.stringify(out);
@@ -328,6 +364,8 @@ def main() -> int:
     print("    speed rises on every 15s beat with no flat interval")
     print("    arm times   : " + "; ".join(st["armGaps"][:3]) + " ...")
     print(f"  ditches       : {st['pitsPerStage']} per stage")
+    print("    boards w/ditch: " + ", ".join(st["ditchBoards"]) +
+          "  (a stage that promises a ditch wants 8/8)")
     print(f"  birds         : {st['birdsPerStage']} per stage")
 
     if data["problems"]:

@@ -14,10 +14,13 @@
 #   6. check_hazard_reach.py — Phase 2: no rail hazard may enter a lane without
 #                           a telegraph at least as long as the traverse window
 #
-#   7. check_endgame.py — two-way traffic, a bird per stage, warned sink
+#   7. check_growth_ramp.py — the "+50% more killing items every 15 hops" ramp,
+#                           measured through the real hazard generator
+#
+#   8. check_endgame.py — two-way traffic, a bird per stage, warned sink
 #                       holes, and the doubled board density
 #
-#   8. check_phases.py   — the shape of a stage over time: a one-sided read,
+#   9. check_phases.py   — the shape of a stage over time: a one-sided read,
 #                       a build that gains the other side, a 15-second sprint
 #                       at the end, a ten-object vocabulary, a ditch and a bird
 #                       in every stage
@@ -58,6 +61,7 @@ gate "check_models (3D library)" tools/check_models.py
 gate "check_js_renderer"     tools/check_js_renderer.py
 gate "check_js_runtime"       tools/check_js_runtime.py
 gate "check_hazard_reach"     tools/check_hazard_reach.py
+gate "check_growth_ramp"       tools/check_growth_ramp.py
 gate "check_endgame"          tools/check_endgame.py
 gate "check_phases"           tools/check_phases.py
 gate "scoring and Endless"    tools/check_scoring.py

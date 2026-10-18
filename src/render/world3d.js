@@ -19,6 +19,10 @@ const api = window.World3D = {
 const canvas = document.getElementById('board-3d');
 const templates = new Map();
 const rows = new Map();
+let shieldMesh = null;
+let shieldInstance = null;
+let shieldGlow = null;
+const shieldAuras = [];        // one shimmer per player, not one per game
 const hazards = new Map();
 const materialCache = new Map();
 const instancePool = new Map();
@@ -73,6 +77,29 @@ function ring(parent, color) {
   mesh.position.y = 0.025;
   parent.add(mesh);
   return mesh;
+}
+
+/* The shimmer under a player who is holding a shield.
+ *
+ * One ring was not feedback. It was drawn at the same radius, the same height
+ * and essentially the same colour as the marker ring that is under EVERY
+ * player, so "shielded" and "not shielded" produced the same picture -- and
+ * the two coincident surfaces fought for the depth buffer. Two rings at a
+ * different radius and height, the outer one breathing, read as a different
+ * state from across the board, which is the whole job of the effect. */
+function aura(parent, color) {
+  const group = new THREE.Group();
+  const inner = new THREE.Mesh(geometry.ring, material('#cff2ff', true));
+  inner.rotation.x = -Math.PI / 2;
+  inner.scale.setScalar(1.18);
+  const outer = new THREE.Mesh(geometry.ring, material(color, true));
+  outer.rotation.x = -Math.PI / 2;
+  outer.scale.setScalar(1.62);
+  group.add(inner, outer);
+  group.position.y = 0.03;
+  group.userData.outer = outer;
+  parent.add(group);
+  return group;
 }
 
 function modelURL(entry) {
@@ -281,6 +308,28 @@ function resetWorld(s, stage) {
     avatar.deathFallback = false;
   }
   goalLayer.clear();
+  /* Shield pickups.
+   *
+   * One floating model for the next un-taken pickup, spinning slowly so it
+   * reads as something to walk into rather than scenery. Placed on the
+   * player's own column, because that is the only column they are guaranteed
+   * to be able to reach.
+   *
+   * The instance goes back through release() on every rebuild, so a stage
+   * change takes the pooled clone instead of cloning the whole node hierarchy
+   * -- and building a fresh AnimationMixer for it -- on every attempt. */
+  if (shieldInstance) { release(shieldInstance); shieldInstance = null; }
+  shieldMesh = null;
+  shieldGlow = null;          // a child of the instance; release() drops it
+  const pending = (s.pickups || []).filter(p => p.kind === 'shield' && !p.taken);
+  if (pending.length && manifest.pickups && manifest.pickups.shield) {
+    const entry = manifest.pickups.shield;
+    shieldInstance = instantiate(entry, { height: entry.height || 0.62, maxWidth: 0.72 });
+    shieldMesh = shieldInstance.group;
+    shieldMesh.userData.pickups = pending;
+    scene.add(shieldMesh);
+    shieldGlow = ring(shieldMesh, '#7ad8ff');
+  }
   if (!s.endlessMode) {
     for (let col = s.playMin - 0.5; col < s.playMax + 0.5; col += 0.3) {
       block(goalLayer, col + 0.15, 0.014, -s.goalRow,
@@ -476,6 +525,66 @@ function render(s, stage, poses, nowMs) {
     const key = [s.stageIndex, s.stageAttempt, s.endlessMode, s.endlessAttempt].join(':');
     if (gameIdentity !== s || key !== worldKey) resetWorld(s, stage);
     const active = Math.min(s.activePlayer || 0, poses.length - 1);
+
+    /* Park the shield on the NEXT pickup row in front of the player and spin
+     * it. It is drawn at the player's own column so it is always reachable. */
+    if (shieldMesh) {
+      const pk = shieldMesh.userData.pickups || [];
+      let target = null;
+      /* Only an UNTaken pickup draws. The array was captured at resetWorld,
+         * and reading `p.row` alone kept re-selecting a shield the player had
+         * already collected, so it stayed on screen after being picked up. */
+        for (const p of pk) {
+          if (p.taken) continue;
+          if (p.row > (poses[active].row || 0) - 2 && (!target || p.row < target.row)) target = p;
+        }
+      if (target) {
+        shieldMesh.visible = true;
+        shieldMesh.position.set(poses[active].col + 0.5, 0.72 + Math.sin(nowMs / 320) * 0.06, -target.row);
+        shieldMesh.rotation.y = nowMs / 900;
+        if (shieldGlow) { shieldGlow.position.y = -0.70 - Math.sin(nowMs / 320) * 0.06; }
+      } else {
+        shieldMesh.visible = false;
+      }
+    }
+
+    /* A shielded player shines. This is the whole feedback loop: the player
+     * must be able to SEE that the hit they just took cost a shield and not a
+     * life, without reading a number. The state is read from the simulation
+     * every frame and the shimmer is removed in that same frame, so it cannot
+     * outlive the shield that paid for it by even one frame.
+     *
+     * One shimmer per PLAYER. A single global ring followed the active player,
+     * so in two-player mode the player who was not driving got no shield
+     * feedback at all while their life string still read "3 🛡1" in the HUD. */
+    while (shieldAuras.length > s.players.length) shieldAuras.pop().removeFromParent();
+    for (let pi = 0; pi < s.players.length; pi++) {
+      const player = s.players[pi], pose = poses[pi];
+      const holding = !!(player && pose && player.state().shields > 0);
+      if (holding && !shieldAuras[pi]) shieldAuras[pi] = aura(avatarLayer, '#7fdcff');
+      else if (!holding && shieldAuras[pi]) {
+        shieldAuras[pi].removeFromParent();
+        shieldAuras[pi] = null;
+      }
+      /* The aura is parked under the player EVERY frame.
+       *
+       * Created in place it stays at the layer origin -- world (0, 0.025, 0),
+       * which is beside the start line and behind the camera -- so a player
+       * holding a shield got no shield feedback at all. Reading the pose fresh
+       * each frame (rather than parenting to the avatar) is what stops it being
+       * left behind at a stale position when the player moves or dies.
+       *
+       * It lives in WORLD space, so the height is the tile and only the tile.
+       * Subtracting the hop lift here -- copied from the avatar marker, which
+       * cancels it out because that ring is a child of the avatar group -- drove
+       * the shimmer half a tile UNDERGROUND for the whole of every hop: the
+       * shield feedback blinked out on take-off and popped back on landing. */
+      const shimmer = shieldAuras[pi];
+      if (!shimmer) continue;
+      shimmer.position.set(pose.col, 0.03, -pose.row);
+      shimmer.userData.outer.scale.setScalar(1.62 + Math.sin(nowMs / 240 + pi * 1.7) * 0.10);
+    }
+
     let focus = poses[active];
     if (poses.length > 1 && Math.abs(poses[0].row - poses[1].row) < 5) {
       focus = { col: (poses[0].col + poses[1].col) / 2, row: (poses[0].row + poses[1].row) / 2 };
@@ -576,8 +685,14 @@ async function boot() {
   goalLayer = new THREE.Group();
   scene.add(rowLayer, hazardLayer, avatarLayer, goalLayer);
   backdrop = block(scene, 6.5, -0.55, -5, 60, 0.05, 80, '#89b785');
+  /* Preload every model the game can put on screen, INCLUDING the shield pickup.
+   * Leaving pickups out meant the shield template was never in `templates`, so
+   * instantiate() threw during the first stage build and the whole 3D layer
+   * fell back to the canvas view -- a pickup that breaks the renderer is not a
+   * pickup, it is an outage. */
+  const pickupEntries = manifest.pickups ? Object.values(manifest.pickups) : [];
   const entries = [...manifest.characters, ...Object.values(manifest.hazards),
-    ...Object.values(manifest.scenery), manifest.pursuer];
+    ...Object.values(manifest.scenery), manifest.pursuer, ...pickupEntries];
   const urls = [...new Set(entries.map(modelURL))];
   api.modelCount = urls.length;
   const loader = new GLTFLoader();
@@ -594,7 +709,21 @@ async function boot() {
   pursuer.warning = ring(pursuer.group, '#ffad35');
   pursuer.group.visible = false;
   scene.add(pursuer.group);
-  const fits = ['car', 'log', 'train'].map(kind => {
+  /* Sanity-fit three representative models at boot: a short ground vehicle, a
+   long one, and a water log. This proves a model's world width agrees with its
+   collision length, which is what stops a car clipping the player who is
+   standing legally inside its hitbox.
+   *
+   * These names must exist in Hazards.KINDS. 'train' used to be the long case
+   and was removed from the vocabulary with the rail vehicles; reading its spec
+   here threw during boot, World3D.ready never flipped true, and the game
+   silently fell back to the 2D sprite renderer -- every model loaded into
+   memory (175/175) and none of it was ever shown. The check now derives its
+   cases from the live vocabulary instead of naming hazards that can be
+   deleted. */
+  const fitKinds = ['car', 'log', 'trebuchet']
+    .filter(kind => window.Hazards.KINDS[kind] && manifest.hazards[kind]);
+  const fits = fitKinds.map(kind => {
     const spec = window.Hazards.KINDS[kind];
     const entry = manifest.hazards[kind];
     const sample = instantiate(entry, {

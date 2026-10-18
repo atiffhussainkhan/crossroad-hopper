@@ -81,7 +81,17 @@
    * introduces an obstacle the player has never seen is a coin flip; one that
    * accelerates what they already know is a test.
    * ------------------------------------------------------------------- */
-  var STAGE_DURATION_MS = 90000;
+  /* The stage length, read from Stages rather than restated here.
+   *
+   * This was a hardcoded 90000, which silently became a SECOND source of
+   * truth for how long a stage lasts. When the stage grew to 90 hops the
+   * speed curve kept ramping on a 90-second schedule while the board ran to a
+   * 126-second one, so the "sprint" -- the 1.25x-to-2.2x acceleration -- fired
+   * around hop 64 and then sat capped while the endgame pile-up landed at hop
+   * 56. Measured, a competent player died at row 56 every single time, which
+   * is precisely the row where the bird, the pits and the 1.4x density all
+   * arrive at once. One number, one place. */
+  var STAGE_DURATION_MS = (global.Stages && global.Stages.STAGES_CLOCK_MS) || 90000;
   /* A stage is SIX fifteen-second intervals, and each one is louder than the
    * last. This is the whole difficulty curve, and it is deliberately evenly
    * spaced rather than front-loaded.
@@ -137,6 +147,76 @@
   // not against the opening speed: a gap that only exists at 1.0x is not a gap.
   var PEAK_SPEED_FACTOR = speedFactorAt(STAGE_DURATION_MS);
 
+  /* REACTION-TIME SPEED CAP.
+   *
+   * Speed is the difficulty lever that does not need more objects than there
+   * are columns, which is exactly what a 6-wide board needs -- but it has to
+   * stop somewhere, and it was stopping nowhere.
+   *
+   * A hazard's speed is `baseSpeed * speedFactorAt(stage clock)`, and BOTH
+   * factors rise: difficulty adds 2% per step on top of a per-kind base that
+   * already reaches 4.2 tiles/s, and the sprint multiplies the result by up to
+   * 2.2. They compound. Measured on stage one during the sprint, a police car
+   * -- one of the shortest things in the game, 0.95 tiles long -- was running
+   * at 7.78 tiles/s. It crossed the 1.51 tiles that cover a player's column in
+   * 194ms. The player cannot see a car, decide, and leave in 194ms; the hop
+   * cadence alone is 300ms. That is not difficulty, it is a coin flip, and it
+   * is where the endgame became a wall: deaths clustered on rows carrying fast
+   * vehicles during the sprint, with a clear lane open on the next row.
+   *
+   * So speed is bounded from the player's side of the rule instead of the
+   * designer's: nothing may cross a player's column faster than
+   * MIN_COLUMN_CROSS_MS. For a hazard of length L that is
+   *
+   *     maxSpeed = (L + 2 * PLAYER_HALF) / MIN_COLUMN_CROSS_MS
+   *
+   * The ramp keeps climbing right up to the point where it stops being
+   * readable, and then stops, which is what a ramp should do.
+   *
+   * WHAT THIS IS AND IS NOT. The fairness guarantee in this game is not this
+   * number -- it is the crossing window. Every generated row is filtered until
+   * one of the six playable columns stays clear for 0.9s or more, measured over
+   * the row's full hazard cycle with the game's own collision test: measured
+   * across 904 rows of all ten stages, zero rows with no window at all and zero
+   * below the hop horizon. That is what stops a stage being unclearable, and it
+   * is enforced in ensureSolvable(). This cap is a backstop against the
+   * COMPOUNDING -- base speed x difficulty x sprint, three factors that all
+   * rise at once -- which used to put a police car at 7.8 tiles/s and a 194ms
+   * column crossing with no relation to anything the player was shown.
+   *
+   * The value is set by arithmetic, not taste. check_phases.py requires the
+   * fastest object on the board to be at least 1.6x faster in the sprint than
+   * at the end of the build, and the build/sprint factors are 1.25 and 2.2, so
+   * the fastest object must be UNCLAMPED at the end of the build:
+   *
+   *     declared_top <= maxSpeedFor(len) / (difficulty_boost x 2.2)
+   *
+   * At a 300ms bound that puts a police car (len 0.95) at 2.29 tiles/s, down
+   * from 4.2 -- it would have to be slower than a taxi to survive its own
+   * sprint, and the fast-vehicle vocabulary the stages are built from would
+   * disappear. At 180ms the same arithmetic gives 3.40, so only the two
+   * genuinely extreme kinds move at all, and the clamp still removes a 194ms
+   * crossing. The clamp is applied to the table below rather than to
+   * individual hand-edited numbers, so it cannot drift out of step with
+   * PEAK_SPEED_FACTOR or with a kind being added.
+   */
+  var MIN_COLUMN_CROSS_MS = 180;
+  var PLAYER_HALF = 0.28;
+  /* Tiles per second. `len` is in tiles and MIN_COLUMN_CROSS_MS in ms, so only
+   * ONE conversion belongs here -- dividing the length by 1000 as well made the
+   * cap 0.005 tiles/s, which froze the entire board and made the game look
+   * solved. */
+  function maxSpeedFor(spec) {
+    if (!spec || !spec.len) return Infinity;
+    return (spec.len + 2 * PLAYER_HALF) / (MIN_COLUMN_CROSS_MS / 1000);
+  }
+  function capSpeed(speed, spec) {
+    var mag = Math.abs(speed);
+    var cap = maxSpeedFor(spec);
+    return (mag > cap) ? cap * (speed < 0 ? -1 : 1) : speed;
+  }
+
+
   /* Every obstacle the game can spawn, and what makes it a decision.
    *
    *   len     hitbox length in tiles. A truck that is 2.6 long occupies most
@@ -179,14 +259,8 @@
     cementmixer:{ len: 1.85, speed: [0.8, 1.3], kind: "ground" },
     motorbike:  { len: 0.90, speed: [2.2, 3.2], kind: "ground" },
     golfcart:   { len: 0.95, speed: [0.9, 1.4], kind: "ground" },
-    // --- rail ------------------------------------------------------------
-    train:     { len: 3.40, speed: [4.0, 6.0], kind: "rail" },
-    tram:      { len: 2.20, speed: [2.0, 3.0], kind: "rail" },
-    monorail:  { len: 2.80, speed: [3.0, 4.4], kind: "rail" },
     /* Two more rail kinds, for the same reason as the four above: three was
      * not a vocabulary, it was a sample. */
-    freighttrain: { len: 3.60, speed: [3.2, 4.6], kind: "rail" },
-    subway:    { len: 2.60, speed: [2.4, 3.4], kind: "rail" },
     // --- water -----------------------------------------------------------
     log:       { len: 0.90, speed: [0.7, 1.3], kind: "water" },
     turtle:    { len: 0.62, speed: [0.3, 0.6], kind: "water" },
@@ -211,7 +285,6 @@
     // on land, and that is the whole point -- it is the safe-looking tile
     // you are not supposed to trust.
     snake:     { len: 0.90, speed: [0.6, 1.1], kind: "water" },
-    boulder:   { len: 1.20, speed: [0.9, 1.5], kind: "ground" },
     // A geyser: the column erupts on a beat. Lethal only while it is up, and
     // it looks like water rather than a vehicle, so it reads as a different
     // kind of danger entirely.
@@ -249,7 +322,49 @@
      * the stage guarantees near the finish. */
     hawk:     { len: 1.05, speed: [1.8, 2.6], kind: "ground", flies: true,
                 endgame: true },
+
+    /* --- war machines, siege engines and aliens ---------------------------
+     *
+     * These arrive with the library import and are referenced by the stage
+     * lists, but they were never given a SPEC here. A stage that named one of
+     * them was asking the spawner for a hazard that did not exist: the rail
+     * lane was generating undefined objects and the run died at a fixed row
+     * every time. Declaring them is what makes them usable.
+     *
+     * `flies` marks the lane-independent ones that cross open ground, which is
+     * what lets an alien reach the lawn. */
+    ufoa:        { len: 1.20, speed: [1.1, 1.8], kind: "air", flies: true },
+    ufob:        { len: 1.20, speed: [1.2, 1.9], kind: "air", flies: true },
+    ufoc:        { len: 1.20, speed: [1.3, 2.1], kind: "air", flies: true },
+    ufod:        { len: 1.20, speed: [1.4, 2.2], kind: "air", flies: true },
+
+    cannon:      { len: 1.50, speed: [1.0, 1.7], kind: "ground" },
+    piratecannon:{ len: 1.45, speed: [1.0, 1.7], kind: "ground" },
+    cannonmobile:{ len: 1.80, speed: [1.1, 1.8], kind: "ground" },
+    turret:      { len: 1.30, speed: [0.9, 1.5], kind: "ground" },
+    turretdouble:{ len: 1.60, speed: [0.9, 1.5], kind: "ground" },
+    trebuchet:   { len: 3.00, speed: [0.9, 1.4], kind: "ground" },
+    ballista:    { len: 2.80, speed: [1.1, 1.7], kind: "ground" },
+    siegeram:    { len: 2.40, speed: [1.2, 1.8], kind: "ground" },
+
+    speedercraft:{ len: 1.05, speed: [1.8, 2.8], kind: "air", flies: true },
+    racercraft:  { len: 1.15, speed: [2.0, 3.0], kind: "air", flies: true },
+    horse:       { len: 1.30, speed: [1.0, 1.7], kind: "ground" },
+
   };
+
+  /* Trim any kind whose declared top speed could not survive a full sprint
+   * inside the reaction bound, so that the sprint stays a visible ramp instead
+   * of every fast hazard arriving pre-capped and flat. */
+  var MAX_DIFFICULTY_BOOST = 1.24;   // 2% per step, 12 steps (see makeHazard)
+  (function clampKindsToReactionBound() {
+    for (var name in KINDS) {
+      var spec = KINDS[name];
+      if (!spec || !spec.speed || spec.speed[1] <= 0) continue;
+      var budget = maxSpeedFor(spec) / (MAX_DIFFICULTY_BOOST * PEAK_SPEED_FACTOR);
+      if (spec.speed[1] > budget) spec.speed[1] = budget;
+    }
+  })();
 
   // Per-column speed variance, so two hazards in the same row are not a wall.
   // True while a hazard is still only ANNOUNCED: it has not entered the lane
@@ -306,6 +421,11 @@
       tel: spec.kind === "rail"
              ? { t: rng.range(0, TELEGRAPH_MS), ms: TELEGRAPH_MS } : null,
       x: rng.range(xMin === undefined ? -cols : xMin - 0.5, cols + 0.5),
+      /* The board width this hazard was built for, kept so that a collision
+       * test can be asked about the FUTURE without being handed cols as well:
+       * the wrap boundary is cols + 1.5, and guessing it wrong makes the
+       * prediction describe a different board than the one being played. */
+      cols: cols,
       wobble: rng.range(0.5, 1.5),      // log drift phase
       dead: false,
     };
@@ -346,19 +466,140 @@
    * at base speed, against five at 2.2x later -- which is what lets the second
    * vehicle at fifteen seconds read as a doubling instead of as noise.
    */
-  var OPENING_GUARANTEED_ROWS = 6;   // rows 1..6 always carry traffic
+  /* The endgame is a fixed number of rows from the goal, not a FRACTION of the
+   * stage.
+   *
+   * At a 40-row stage a 0.62 fraction meant "the last ~15 rows". At 90 rows the
+   * same fraction means the last ~34 -- more than double the stretch the
+   * endgame was designed for. Pits block an entire row and always need waiting
+   * out, the bird arrives every second row, and density is multiplied 1.4x, so
+   * doubling that window compounds three pressures into twice as many rows.
+   * Measured, a competent player died at row 56 every single run -- row 56 is
+   * exactly where the stretched endgame opens -- and cleared the stage zero
+   * times out of thirty.
+   *
+   * Pinning it to rows keeps the intended shape of the finish regardless of how
+   * long the stage is. */
+  var OPENING_GUARANTEED_ROWS = 6;   // rows 1..6 are the guaranteed-traffic band
+  var ENDGAME_ROWS = 15;
+
+  /* ---------------------------------------------------------------------
+   * THE BOARD GENERATOR'S THREE NUMBERS.
+   *
+   * Everything about how full a row is comes from here, so the ramp can be
+   * reasoned about as arithmetic instead of re-measured after every edit.
+   * They are all read from Stages (which is the owner of difficulty) except
+   * the first two, which shape what that difficulty means on a six-wide board.
+   * ------------------------------------------------------------------- */
+  /* OPENING_BOOST -- how much busier the first rows are than the body.
+   *
+   * This was `return 1.0`, an ABSOLUTE density, not a boost, and it was the
+   * single worst line in the generator.
+   *
+   * Density is consumed as `if (rng.next() > chance) break`, so 1.0 does not
+   * bias the roll, it ELIMINATES it: every row 1..6 got its first vehicle
+   * every time, and the follow-on chance (1.0 x 0.83) put up to five on a
+   * row. The busiest part of a stage was therefore its first six rows, and
+   * the board then fell away behind them -- measured hazards per row by
+   * tenth of the stage: 0.70, 0.40, 0.49, 0.59, 0.59, 0.67, 0.69, 0.72,
+   * 0.77, 1.45. The ramp the design asks for is monotonic and that is the
+   * one thing that curve is not.
+   *
+   * It also killed the player. A run has four lives and no way back, so a
+   * six-row wall at full density at the mouth of the stage is where a run
+   * ends. Traced over 20 forward-only runs: 44 of 80 deaths landed on rows
+   * 2-9, and the board was measurable at only 0.70 hazards per row overall.
+   * A guarantee the player cannot survive is not a guarantee, it is a wall.
+   *
+   * So the opening is a BOOST on the stage's own rate -- clearly busier than
+   * the body, and the first traffic the player ever sees is on screen the
+   * moment the stage begins -- rather than a saturation of it. */
+  var OPENING_BOOST = 1.9;
+  /* SECOND_HAZARD_GAIN / SECOND_HAZARD_FLOOR -- the opposite direction.
+   *
+   * Once a row has traffic, the counter-flow hazard joins the board on the
+   * fifteen-second beat with a chance of
+   *
+   *     densityNow * SECOND_HAZARD_GAIN + SECOND_HAZARD_FLOOR
+   *
+   * rather than `densityNow * 0.83`. Multiplying a sparse board's own rate by
+   * a shrink factor compounds two small probabilities: measured, only 9.7% of
+   * rows carried traffic in both directions, and only 5.4% under the geometry
+   * tools/check_endgame.py probes with. That is "technically two-way and
+   * practically not", which is the exact phrase the old curve already carried
+   * in its comment.
+   *
+   * The floor is the point. "The opposite direction joins" is a promise about
+   * the BUILD phase, and the build happens on every row that has anything to
+   * build on -- not on the minority that happened to win two independent
+   * small rolls. The gain still scales with density, so a crowded row gets a
+   * busier counter-flow and a sparse one gets a lighter one. */
+  var SECOND_HAZARD_GAIN = 0.45;
+  var SECOND_HAZARD_FLOOR = 0.55;
+  /* How fast each further hazard on a row gets less likely.
+   *
+   * A row can hold at most `cols` distinct lethal columns, so the count on a
+   * row cannot keep doubling -- it has to flatten against a finite board. This
+   * is the geometric term that makes it flatten: hazard n+1 is
+   * SECOND_HAZARD_GAIN/HAZARD_DECAY times as likely as hazard n, so the
+   * expected number on a row converges instead of growing without bound.
+   *
+   *   E[n] = d (1 + c + c^2 + c^3 + ...) where c = 1 / HAZARD_DECAY
+   *
+   * With HAZARD_DECAY = 1.75, c = 0.571 and E[n] tops out at 1/0.429 = 2.33
+   * times the row density. At the live board's 0.40-0.50 density that is
+   * 0.93-1.17 hazards per row, which is the top of the target band, and it
+   * is the SAME curve at every difficulty -- only the density under it moves.
+   * That is what makes the ramp monotonic by construction: one rising input,
+   * one fixed response. */
+  var HAZARD_DECAY = 1.75;
+  /* The ceiling on a row's per-hazard chance. Above this the roll stops being
+   * a probability and the count is decided by the loop bound instead. */
+  var MAX_ROW_DENSITY = 1.0;
+  function isEndgame(row, goalRow) {
+    return row >= (goalRow - ENDGAME_ROWS - SAFE_GOAL_ROWS);
+  }
+  /* The goal row of the stage being GENERATED.
+   *
+   * buildRow() used to read `Stages.GOAL_ROW_OFFSET` here -- the stage-ONE
+   * figure, 90 -- and use it for the finish apron AND for isEndgame(). That is
+   * the bug that made the campaign impossible, and it is invisible at the old
+   * length: a 40-row stage has GOAL_ROW_OFFSET 40, so the two numbers agreed.
+   *
+   * The stage table now runs 90, 108, 130, ... 464 jumps, so the same line
+   * said "this stage ends at row 90" for all ten of them. Measured on the live
+   * board, stage 10 carried 0.41 objects per row over rows 0-57 and then
+   * 0.00 for every row from 88 to 461: 81% of the crossing was an empty road
+   * running at sprint speed, with the endgame -- birds, pits and the 1.4x
+   * density boost -- parked at rows 73-87, a third of the way in.
+   *
+   * One number per stage, read from the same table the win condition is read
+   * from, so the finish apron and the endgame always sit at the end of the
+   * stage the player is actually crossing. */
+  function goalRowFor(stageIndex) {
+    if (stageIndex !== undefined && stageIndex !== null && global.Stages &&
+        global.Stages.jumpsFor) return global.Stages.jumpsFor(stageIndex);
+    return (global.Stages && global.Stages.GOAL_ROW_OFFSET) || 40;
+  }
+  /* The chance that ONE hazard is placed on this row.
+   *
+   * Monotonic in the row by construction, which is the property the difficulty
+   * curve depends on and the property the old `return 1.0` destroyed. Two
+   * inputs, both non-decreasing as the player advances: `base` (the stage's own
+   * rate, lifted by Stages' growth ramp) and the opening boost, which applies
+   * to the first rows and then stops. Nothing here can make row R+1 emptier
+   * than row R.
+   *
+   * Past the opening this is exactly `base`, untouched. An earlier version
+   * tapered back gradually from the opening rate over rows 7-11, which reached
+   * a third of the way across the board and made the game harder for no reason
+   * the design asked for. The opening is the thing that was empty; only the
+   * opening gets the boost, and it is a multiplier rather than a ceiling so
+   * that the player is shown traffic immediately without being placed inside
+   * a wall. */
   function rowDensity(row, base) {
-    // Rows past the opening get the stage's own base rate, untouched.
-    //
-    // An earlier version of this tapered back gradually, lifting rows 7-11 to
-    // somewhere between the opening rate and the base rate. It measured well --
-    // "the board is fuller" -- and it made the game measurably harder for no
-    // reason the design asked for: the request was about the START of a stage,
-    // and the change reached a third of the way across the board. The autoplay
-    // probe went from clearing a stage to clearing none. The opening is the
-    // thing that was empty; only the opening gets fixed.
-    if (row <= OPENING_GUARANTEED_ROWS) return 1.0;
-    return base;
+    var d = (row <= OPENING_GUARANTEED_ROWS) ? base * OPENING_BOOST : base;
+    return d > MAX_ROW_DENSITY ? MAX_ROW_DENSITY : d;
   }
 
   /* How many vehicles per row have joined the board at a given stage time.
@@ -459,7 +700,15 @@
    * boards happen to". A stage that is pure grass in its closing stretch has
    * no such row, and gets -1, which simply means no guarantee for it. */
   function firstEndgamePitRow(laneMix, laneKey, goalRow) {
-    var from = Math.ceil((goalRow - SAFE_GOAL_ROWS) * 0.62);
+    /* Start at the ENDGAME WINDOW, not at a fixed fraction of the stage.
+     *
+     * The fraction (0.62) was calibrated on a 40-row stage, where it meant
+     * "row 24, inside the last fifteen". Run against a 464-row stage it puts
+     * the guaranteed pit at row 285 -- 180 rows before the endgame even opens,
+     * and the one row the player can rely on being a ditch is a row they will
+     * have forgotten. The search now walks in from the same fixed
+     * ENDGAME_ROWS window everything else uses. */
+    var from = Math.max(0, goalRow - ENDGAME_ROWS - SAFE_GOAL_ROWS);
     for (var r = from; r < goalRow - SAFE_GOAL_ROWS; r++) {
       if (laneClassOf(r, laneMix, laneKey) !== "grass") return r;
     }
@@ -481,14 +730,61 @@
    * simply never spawns it, because the lane is not there to hold it.
    */
   var LANE_KINDS = {
+    /* The road is a stage's main vocabulary, so it also carries the war
+     * machines and the aliens. legalForLane only spawns what a lane LISTS,
+     * which is why every imported kind was previously orphaned: declared in
+     * KINDS, present in the manifest, drawn by the renderer, and unreachable. */
     road: ["car", "racecar", "taxi", "police", "truck", "bus", "tractor",
            "forklift", "roller", "tumbleweed", "limousine",
-           "ambulance", "cementmixer", "motorbike", "golfcart"],
-    rail: ["train", "tram", "monorail", "freighttrain", "subway"],
+           "ambulance", "cementmixer", "motorbike", "golfcart",
+           "cannon", "piratecannon",
+           "cannonmobile", "turret", "turretdouble", "trebuchet",
+           "ballista", "siegeram", "horse"],
+    /* The rail lane no longer carries trains, trams or monorails -- those
+     * read as metal barriers crossing the road rather than as things that
+     * kill you, and they were removed on request. The lane itself stays: it is
+     * still a distinct, readable trackway, and it now carries ground vehicles
+     * that plainly belong on a road. */
+    rail: ["cementmixer", "forklift", "tractor"],
     water: ["log", "turtle", "snake", "alligator", "crocodile",
             "canoe", "duck", "swan", "icefloe", "sled"],
   };
-  var OPEN_KINDS = ["geyser", "steamvent", "boulder"];
+/* Legal on ANY lane, including the open lawn the player can see is walkable.
+   *
+   * THE RULE, stated once: only the airborne may cross standable ground. A car
+   * on a row the renderer drew as grass is the "looks walkable, is lethal"
+   * defect that check_js_runtime.py exists to catch, and this list is the only
+   * thing that can cause it. Everything on it earns its place by being typed
+   * `air` or marked `flies`:
+   *
+   *   geyser, steamvent   erupt from below, so they belong on open ground
+   *   ufoa..ufod, crafts  lane-independent saucers; crossing the lawn is the
+   *                      entire point of them
+   *   hawk                the endgame bird, which flies over the lawn
+   *
+   * It is DERIVED from KINDS rather than written out by hand, which is the
+   * only way it stays true: the hand-written list had already drifted once
+   * (it still named `boulder`, a ground-typed rock that was deleted from KINDS
+   * entirely) and it omitted `hawk`, which has been placed on lawn rows all
+   * along. Adding a flying kind to KINDS now puts it here automatically, and
+   * deleting one cannot leave a name that spawns nothing.
+   *
+   * A kind that is neither `air` nor `flies` can never enter this list, so the
+   * "no ground-typed kind crosses the lawn" invariant is enforced by the
+   * derivation rather than by a promise in a comment. isOpenKind() re-checks
+   * it at the point of use. */
+  function crossesOpenGround(name) {
+    var spec = KINDS[name];
+    return !!(spec && (spec.kind === "air" || spec.flies));
+  }
+  var OPEN_KINDS = (function deriveOpenKinds() {
+    var out = [];
+    for (var name in KINDS) if (crossesOpenGround(name)) out.push(name);
+    return out;
+  })();
+  function isOpenKind(kind) {
+    return crossesOpenGround(kind);
+  }
 
   function kindsForStage(stageIndex) {
     if (stageIndex === undefined || !global.Stages || !global.Stages.getStage) return null;
@@ -497,10 +793,14 @@
     return st.hazardKinds;
   }
 
-  /* A hazard kind this lane can legally carry, or null. */
+  /* A hazard kind this lane can legally carry, or null.
+   *
+   * The open-ground branch is re-derived here rather than read out of
+   * OPEN_KINDS, so a name that somehow stopped being airborne stops being
+   * legal on the lawn the moment the table says so. */
   function legalForLane(kind, lane) {
     if (LANE_KINDS[lane] && LANE_KINDS[lane].indexOf(kind) >= 0) return kind;
-    if (OPEN_KINDS.indexOf(kind) >= 0) return kind;   // legal on any lane
+    if (isOpenKind(kind)) return kind;              // airborne: any lane
     return null;
   }
 
@@ -546,7 +846,7 @@
   }
 
   function buildRow(row, cols, density, Rng, stageIndex, laneMixIn, laneKeyIn, xMin,
-                   difficulty) {
+                   difficulty, maxHere) {
     var rng = Rng;
     var out = [];
     var laneMix = laneMixIn, laneKey = laneKeyIn;
@@ -557,7 +857,7 @@
         if (st) { laneMix = st.laneMix; laneKey = st.id; }
       }
     }
-    var goalRow = (global.Stages && global.Stages.GOAL_ROW_OFFSET) || 40;
+    var goalRow = goalRowFor(stageIndex);
     // The aprons. Absolute rows, not window-relative: row0 is the camera
     // window and moves as the player advances.
     if (row < SAFE_START_ROWS) return out;
@@ -570,8 +870,7 @@
      * chance: a guarantee the player discovers by playing is worth much less
      * than one they can anticipate, and a stage that sometimes ends with no
      * bird at all is a stage whose ending cannot be learned. */
-    var progress = row / Math.max(1, goalRow - SAFE_GOAL_ROWS);
-    var endgame = progress >= 0.62;
+    var endgame = isEndgame(row, goalRow);
 
     /* A sink hole on some endgame rows. It only ever appears in the last
      * third, where the player is already reading the board hard, and always
@@ -652,7 +951,23 @@
      * to a row on a clock the player can feel. Row density just has to be
      * enough that every lane is a lane. A mild back-heaviness survives so the
      * closing stretch still reads as the busiest part of the board. */
-    var densityNow = density * (endgame ? 1.4 : 1.0);
+    /* Endgame density, with a floor on survivability.
+     *
+     * The 1.4x endgame boost was safe when a stage was 40 rows long. At 90 rows
+     * the endgame sits on a board that is ALSO carrying the +50%-per-15-hops
+     * growth multiplier, and the two compound: measured, rows in the final
+     * stretch carried 2.16-2.80 lethal columns out of the six the player has.
+     * That is not a hard ending, it is a wall with no gap in it -- crossing the
+     * last rows became a coin flip the player could not read or plan.
+     *
+     * So the endgame boost is now conditional: dense, but never dense enough to
+     * close every lane. `MAX_ENDGAME_DENSITY` leaves room for the player to be
+     * somewhere safe, which is what makes the ending a timing decision rather
+     * than a lottery. */
+    var endgameBoost = endgame ? 1.4 : 1.0;
+    var MAX_ENDGAME_DENSITY = 0.92;
+    var densityNow = density * endgameBoost;
+    if (densityNow > MAX_ENDGAME_DENSITY) densityNow = MAX_ENDGAME_DENSITY;
     /* One vehicle joins on each fifteen-second beat of the stage, so a row can
      * hold five: one for the read, then one more at 15s, 30s, 45s and 60s.
      *
@@ -661,20 +976,51 @@
      * objects for a stage to show a ten-object vocabulary on a SINGLE
      * crossing: measured at three per row, stage one showed seven to nine
      * distinct kinds on one board and never ten. */
-    var maxHere = 5;
+    /* How many vehicles this row may carry.
+     *
+     * This is the growth step's "more killing items" channel, and it is
+     * capped at what six columns can physically carry: the stage's own
+     * MAX_HAZARDS_PER_ROW. Past four, ensureSolvable deletes the surplus again
+     * -- a fifth object on six columns does not make a row harder, it makes it
+     * a wall and then makes it easy again once the filter thins it. The
+     * offline preview path does not know the stage's progress, so it keeps the
+     * old flat five and the filters do the same work either way. */
+    if (maxHere === undefined || maxHere === null) maxHere = 5;
     var placed = 0;
     for (var attempt = 0; attempt < 6 && placed < maxHere; attempt++) {
       /* How likely the NEXT hazard on this row is.
        *
-       * Flatter than the old `density / (placed + 1)` halving, which meant the
-       * second hazard appeared on only a handful of rows and "the other side
-       * starts coming" was true of about four lanes out of twenty-five --
-       * technically two-way and practically not. ensureSolvable is what
-       * decides whether a row can afford each extra vehicle: they are all
-       * judged against the SPRINT speed, so the ones that cannot leave a
-       * crossable gap at sprint speed are dropped. */
-      var chance = placed === 0 ? densityNow
-                 : densityNow * (0.95 - 0.12 * placed);
+       * Hazard 0 is armed by the row's own density -- that is the roll that
+       * decides whether this row has traffic at all, and it is the only knob
+       * the difficulty ramp moves.
+       *
+       * Every hazard after the first is the counter-flow half of the BUILD
+       * phase, and it is deliberately NOT a second independent copy of the
+       * same small probability. `densityNow * 0.83` was: two small rolls in a
+       * row, so two-way traffic was true of 9.7% of rows and the "then they
+       * start coming the other way" beat had almost no rows to happen on. The
+       * counter-flow hazard now joins with
+       *
+       *     densityNow * SECOND_HAZARD_GAIN + SECOND_HAZARD_FLOOR
+       *
+       * and each subsequent one is HAZARD_DECAY times less likely than the
+       * last, which is what makes the count converge on a six-column board
+       * instead of climbing until ensureSolvable strips it back out again.
+       * ensureSolvable still has the final word on every one of them: each is
+       * judged at the speed the board will be running when the player gets
+       * there, and dropped if it cannot leave a crossable gap.
+       *
+       *   P(n+1th hazard) = (densityNow * GAIN + FLOOR) / DECAY^(n-1)
+       *
+       * so hazard 1 is the raw counter-flow chance -- 0.8 at typical density,
+       * which is "every row that has traffic gets both directions" -- and the
+       * third, fourth and fifth are 0.46, 0.26 and 0.15 of that. The expected
+       * count on a row is densityNow x (1 + 0.8 + 0.37 + 0.10 + 0.01), about
+       * 2.3x the density, and that factor is the SAME at every difficulty. */
+      var chance = (placed === 0) ? densityNow
+                 : (densityNow * SECOND_HAZARD_GAIN + SECOND_HAZARD_FLOOR) /
+                   Math.pow(HAZARD_DECAY, placed - 1);
+      if (chance > 1) chance = 1;
       if (rng.next() > chance) break;
       var kk = (placed === 0) ? k
               : pickKind(laneClassOf(row, laneMix, laneKey), stageIndex, rng);
@@ -712,6 +1058,23 @@
     return out;
   }
 
+  /* Accept either Stages.pressureFor()'s object or the legacy bare multiplier,
+   * so every existing caller -- the game, and the gates under tools/ -- keeps
+   * working while the game itself passes the full pressure. */
+  var MAX_STEPS = 6;
+  function toPressure(growth) {
+    if (growth && typeof growth === "object") return growth;
+    var mult = (growth && isFinite(growth) && growth > 0) ? growth : 1;
+    var n = 0;
+    if (mult > 1.0001) n = Math.round(Math.log(mult) / Math.log(1.5));
+    if (n > 6) n = 6;
+    if (global.Stages && global.Stages.pressureFor) {
+      return global.Stages.pressureFor(n * ((global.Stages.DIFFICULTY_STEP_JUMPS) || 15));
+    }
+    return { steps: n, growth: mult, ramp: 0.75 + 0.75 * Math.min(1, n / MAX_STEPS),
+             maxHere: 5, pace: 1 };
+  }
+
   /* The same row, generated on demand, from its own seed. Deterministic:
    * asking twice gives the same car in the same place, so a row can be
    * re-queried without the board jumping. */
@@ -719,7 +1082,7 @@
    * to the playable band, because the board is deliberately wider than the
    * view (so the camera can follow the player) and a car in a column the player
    * can never reach is a car that is neither a threat nor worth rendering. */
-  function hazardsForRow(seed, row, cols, difficulty, Rng, stageIndex, xMin) {
+  function hazardsForRow(seed, row, cols, difficulty, Rng, stageIndex, xMin, growth) {
     /* Row density: the stage's base rate, boosted across the opening rows.
      *
      * The boost used to live only in buildHazards(), which this function's
@@ -734,15 +1097,66 @@
      * default mix -- which is how cars once ended up on rows the player could
      * see were lawn.
      */
-    var base = Math.min(0.82, 0.55 + difficulty * 0.026);
+    /* The stage's own base rate, from its difficulty -- see Stages' two-axis
+     * density note. This is the ACROSS-STAGES axis and it was accidentally
+     * dropped; with every stage at one density the campaign had no stage-to-
+     * stage escalation at all. */
+    var base = (global.Stages && global.Stages.DENSITY_BASE !== undefined)
+      ? Math.min(global.Stages.MAX_BASE_DENSITY,
+                 global.Stages.DENSITY_BASE +
+                 (difficulty || 0) * global.Stages.DENSITY_PER_DIFFICULTY)
+      : Math.min(0.82, 0.55 + difficulty * 0.026);
     var lo = xMin === undefined ? 0 : xMin;
     var rowRng = (Rng && Rng.fork) ? Rng.fork(String(row))
             : (global.SimCore && global.SimCore.createRng
                ? global.SimCore.createRng(seed + ":r" + row) : Rng);
-    var density = rowDensity(row, base);
+    /* +50% more killing items every 15 hops.
+     *
+     * Stages.growthFor() existed and exported this multiplier but nothing ever
+     * CALLED it, so the "number of items to kill rises 50% every 15 jumps"
+     * requirement was declared and never actually implemented. It is applied
+     * here, to density, because density is what decides how many objects a row
+     * carries.
+     *
+     * Capped at the multiplier Stages caps at, and additionally never allowed
+     * to exceed 1.0 in absolute terms -- density above 1.0 would place more
+     * objects on a row than the row has columns, which is not a difficulty
+     * curve, it is a malformed board. */
+    /* `growth` used to be a bare multiplier applied to density, which is where
+     * the ramp died: 0.55 x 1.5 = 0.83 already pins a per-row probability near
+     * its ceiling, so by the third step every row was at density 1.0 and steps
+     * four, five and six changed nothing a player could see. Measured on the
+     * live board, the last third of a stage carried FEWER objects than the
+     * middle: 27 -> 43 -> 56 -> 61 -> 52 -> 52 -> 38.
+     *
+     * It is now Stages.pressureFor(): a DENSITY ramp across the six steps, a
+     * per-row object budget that grows 1 -> 4, and a pace multiplier the stage
+     * clock applies. Each is monotonic and each is bounded by the board.
+     *
+     * A bare number is still accepted -- the gates under tools/ call this
+     * function with the old signature -- and is read as a growth multiplier, so
+     * they keep working. */
+    var pressure = toPressure(growth);
+    var density = rowDensity(row, base * pressure.ramp);
+    if (density > 1) density = 1;
     var made = buildRow(row, cols, density, rowRng, stageIndex, undefined, undefined,
-                        lo, difficulty);
-    return ensureSolvable(made, { needGap: 0.9 });
+                        lo, difficulty, pressure.maxHere);
+    /* Judge this row at the speed THIS row will be crossed at.
+     *
+     * ensureSolvable defaults to PEAK_SPEED_FACTOR, which is the right
+     * standard for the last fifteen rows of a stage and far too harsh for the
+     * other eighty per cent: measured, a row at 1.3x was being thinned to
+     * satisfy a test written for 2.2x, and the early board was paying the
+     * endgame's price.
+     *
+     * The player meets row R at roughly jump R, so the speed factor at that
+     * point in the stage is what its gap has to survive. Rows near the goal
+     * still get the peak, because near the goal they ARE at the peak. */
+    var rowScale = (stageIndex !== undefined && global.Stages &&
+                    global.Stages.hazardClockFor)
+      ? speedFactorAt(global.Stages.hazardClockFor(row, stageIndex))
+      : PEAK_SPEED_FACTOR;
+    return ensureSolvable(made, { needGap: 0.9, speedScale: rowScale });
   }
 
   /* Solvability filter. P-12 requires that every generated stage be
@@ -777,54 +1191,88 @@
    * player cross. Measured on 813 generated rows: 88 were judged crossable and
    * were not. All 88 carried a sinkhole; 0 of 704 rows without one failed. */
   var GAP_MIN_COL = 4, GAP_MAX_COL = 9, GAP_PLAYER_HALF = 0.28;
+  /* The crossability sweep, asked as the same question the collision test
+   * answers: is this column clear for the next `needGap` seconds?
+   *
+   * It used to hand-roll that question and got it wrong in the same way the
+   * autoplay did, for the same reason: `if (h.spec.kind === "air") continue`.
+   * Air hazards became lethal when they are up, and the filter still threw them
+   * away -- so it certified rows that a geyser could close, which is precisely
+   * the guarantee it exists to provide. It now asks hitsAt(), which is the
+   * function the game kills the player with, so "the lane has a gap" and "the
+   * lane is crossable" are the same statement.
+   *
+   * The sweep runs against a copy of the row running at `speedScale`, because
+   * the gap has to survive the speed the board will actually be at when the
+   * player gets there, not the speed it is at while the row is being built. */
   function laneHasGap(list, row, needGap, speedScale, cols, minCol, maxCol) {
-    var period = 6.0;                 // seconds; long enough for a wrap cycle
     var k = speedScale || 1;
     var nCols = cols === undefined ? 14 : cols;
     var loCol = minCol === undefined ? GAP_MIN_COL : minCol;
     var hiCol = maxCol === undefined ? GAP_MAX_COL : maxCol;
     // Must match tickHazards exactly, or the filter is judging another board.
     var wrapHi = nCols + 1.5, wrapLo = -1.5, wrapSpan = wrapHi - wrapLo;
+    /* Sweep ONE FULL CYCLE of this row, not a fixed six seconds.
+     *
+     * A fixed 6s window is only long enough for a hazard that wraps the board
+     * in under six seconds, and several do not: an alligator is 2.6 tiles long
+     * and runs at 0.4-0.9 tiles/s, so it takes 19-42 seconds to come back
+     * around, and a tumbling weed reverses on a 14-tile span every ~10s. A gap
+     * that opens at t=9s was invisible to a sweep that stopped at 6s, so the
+     * filter certified rows whose gap was outside its own horizon.
+     *
+     * Measured after the collision model was corrected: sweeping 30s instead of
+     * the filter's 6s found 2.5-3.8% of rows on stages 3, 5 and 6 with NO
+     * crossing window at all -- not a short one, none. Those are walls, and a
+     * stage containing one cannot be completed by anyone.
+     *
+     * The period is derived from the slowest thing on the row (plus a quarter
+     * of margin), and the sample budget is fixed, so a slow row costs the same
+     * as a fast one. */
+    var slowest = Infinity, slowestOsc = 0;
+    for (var pi = 0; pi < list.length; pi++) {
+      var ph = list[pi];
+      if (ph.spec.kind === "air") continue;
+      if (ph.osc) {
+        var oscPeriod = (2 * ph.osc.span) / Math.max(0.05, Math.abs(ph.speed));
+        if (oscPeriod > slowestOsc) slowestOsc = oscPeriod;
+        continue;
+      }
+      var sp = Math.abs(ph.speed);
+      if (sp > 0.01 && sp < slowest) slowest = sp;
+    }
+    var period = 6.0;
+    if (slowest < Infinity) period = Math.max(period, (wrapSpan / slowest) * 1.25);
+    if (slowestOsc > 0) period = Math.max(period, slowestOsc * 1.25);
+    /* Also long enough for any timed hazard to complete a cycle, so a pit or a
+     * geyser cannot hide its closed phase outside the window. */
+    for (var ti = 0; ti < list.length; ti++) {
+      if (list[ti].cycle) period = Math.max(period, (list[ti].cycle.periodMs / 1000) * 1.3);
+    }
+    var SAMPLES = 240;
+    var dtMs = (period * 1000) / SAMPLES;
+    /* Work on a copy so a certified row is left at the speed it will be ticked
+     * at, and so the drop loop can re-run the question at the same scale. */
+    var scaled = [];
+    for (var i = 0; i < list.length; i++) {
+      var h = list[i];
+      if (h.spec.kind === "air" || !isFinite(h.speed)) { scaled.push(h); continue; }
+      var c = {};
+      for (var key in h) c[key] = h[key];
+      c.speed = capSpeed(h.speed * k, h.spec);
+      c.baseSpeed = undefined;        // a projection, not a live hazard
+      scaled.push(c);
+    }
     for (var col = loCol; col <= hiCol; col++) {
       var clearFor = 0;
-      for (var s = 0; s <= period * 20; s++) {
+      for (var s = 0; s <= SAMPLES; s++) {
         var blocked = false;
-        for (var i = 0; i < list.length; i++) {
-          var h = list[i];
-          if (h.row !== row) continue;
-          if (h.spec.kind === "air") continue;
-          // A train still inside its warning window occupies no lane, so it
-          // cannot be the thing that closes the last crossing gap.
-          if (isTelegraphing(h)) continue;
-          // At peak speed every hazard in the row is armed, so the sweep below
-          // is the sprint board. There is no phase in which a staged hazard is
-          // the only thing standing between the player and the far side.
-          //
-          // A row-wide hazard -- a ditch -- is the case this used to get
-          // wrong. `hits()` returns true for EVERY column while a pit is open,
-          // but the sweep below measured it with its 0.92-tile length like any
-          // other vehicle, concluded there was a gap nine columns wide, and
-          // kept the row. The filter was therefore proving a lane crossable
-          // that the game itself would not let you cross, which is the exact
-          // shape of the "looks walkable, is lethal" defect. A pit blocks the
-          // whole row, and only for as long as it is actually open.
-          if (h.spec.rowWide) {
-            var open = true;
-            if (h.cycle) {
-              open = ((h.cycle.t + s * 50) % h.cycle.periodMs) < h.cycle.on;
-            }
-            if (open) { blocked = true; break; }
-            continue;
-          }
-          var x = h.x + h.speed * k * (s / 20);
-          // Wrap exactly as tickHazards does, or this sweep is a fiction.
-          if (x > wrapHi) x -= wrapSpan;
-          if (x < wrapLo) x += wrapSpan;
-          if (Math.abs(x - col) < (h.spec.len / 2 + GAP_PLAYER_HALF)) { blocked = true; break; }
+        for (var j = 0; j < scaled.length; j++) {
+          if (hitsAt(scaled[j], col, row, s * dtMs)) { blocked = true; break; }
         }
         if (!blocked) {
-          clearFor += 0.05;
-          if (clearFor >= needGap) return true;
+          clearFor += dtMs;
+          if (clearFor >= needGap * 1000) return true;
         } else {
           clearFor = 0;
         }
@@ -902,7 +1350,7 @@
       // never hit anybody, because every comparison against NaN is false.
       if (h.spec.kind !== "air" &&
           typeof h.baseSpeed === "number" && isFinite(h.baseSpeed)) {
-        h.speed = h.baseSpeed * factor * (h.speed < 0 ? -1 : 1);
+        h.speed = capSpeed(h.baseSpeed * factor * (h.speed < 0 ? -1 : 1), h.spec);
       }
       if (h.spec.kind === "air") {
         /* An air hazard does not TRAVEL, but it still has a BEAT.
@@ -1009,6 +1457,82 @@
     return (h.now || 0) < h.armMs;
   }
 
+  /* WHERE this hazard will be, `offsetMs` from now.
+   *
+   * A prediction has to obey the same rules the board obeys, or it is a
+   * description of some other game: an oscillating hazard really does turn
+   * around, a timed one really is dormant part of the time, an announced train
+   * really is harmless until its warning runs out, and a vehicle really does
+   * wrap at cols + 1.5. This walks the hazard forward in the same 50 ms steps
+   * tickHazards uses, so the answer is the board's, not an approximation of it. */
+  function advanceTo(h, offsetMs) {
+    if (!offsetMs || offsetMs <= 0) return h.x;
+    var cols = (h.cols === undefined) ? 14 : h.cols;
+    var wrapHi = cols + 1.5, wrapLo = -1.5, wrapSpan = wrapHi - wrapLo;
+    var x = h.x;
+    if (h.spec.kind === "air") return x;              // does not travel
+    var steps = Math.max(1, Math.ceil(offsetMs / 50));
+    var dtMs = offsetMs / steps;
+    var mid = h.osc ? h.osc.mid : 0;
+    /* The telegraph countdown and the oscillator position are carried in
+     * LOCALS. The first version of this walked `h.tel.t` directly, so every
+     * prediction drained the live hazard's warning: asking "is this lane clear
+     * in 600ms?" silently made the train stop warning before it arrived, and
+     * the autoplay -- which asks about dozens of cells several times a second --
+     * burned the telegraph down faster than the stage clock ever could. A
+     * question must not change the answer. */
+    var tel = h.tel ? h.tel.t : 0;
+    for (var i = 0; i < steps; i++) {
+      if (tel > 0) { tel -= dtMs; continue; }
+      if (h.osc) {
+        var sweep = h.speed * (dtMs / 1000);
+        x += sweep;
+        mid += sweep;
+        if (mid > h.osc.span || mid < 0) {
+          mid += (mid > h.osc.span ? -h.osc.span : h.osc.span);
+          x += sweep * 2;
+        }
+        continue;
+      }
+      x += h.speed * (dtMs / 1000);
+      if (x > wrapHi) x -= wrapSpan;
+      else if (x < wrapLo) x += wrapSpan;
+    }
+    return x;
+  }
+
+  /* Is this hazard's column lethal at (playerCol, playerRow) `offsetMs` from
+   * now? `hits()` is exactly this with no offset, so there is ONE collision
+   * model: the autoplay in src/sim-core.js asks this one rather than
+   * re-deriving a second, slightly different one that drifts out of date. */
+  function hitsAt(h, playerCol, playerRow, offsetMs) {
+    if (!h || h.row !== playerRow) return false;
+    var off = offsetMs || 0;
+    // Not on the board yet: not drawn, not moved, not lethal.
+    if (h.armMs && (h.now || 0) + off < h.armMs) return false;
+    // Dormant means harmless. An "air" hazard used to be excluded outright,
+    // which made every such obstacle decorative; now they kill while they are
+    // up, which is the whole point of a geyser.
+    if (h.cycle) {
+      var ct = (h.cycle.t + off) % h.cycle.periodMs;
+      if (ct < 0) ct += h.cycle.periodMs;
+      if (ct >= h.cycle.on) return false;
+    }
+    // An announced train is not on the lane yet. It is visible, and it is
+    // harmless, which is exactly what makes the crossing a decision.
+    if (h.tel && h.tel.t - off > 0) return false;
+    // A ditch spans the whole lane: there is no column that is safe while it
+    // is open. That is what makes it a hole you must not be standing in rather
+    // than a vehicle you can walk around.
+    if (h.spec.rowWide) return true;
+    if (h.spec.kind === "air") {
+      // A column hazard that erupts in place: it covers its own tile only.
+      return Math.abs(h.x - playerCol) < (h.spec.len / 2 + 0.28);
+    }
+    var x = advanceTo(h, off);
+    return Math.abs(x - playerCol) < (h.spec.len / 2 + 0.28);
+  }
+
   function hits(h, playerCol, playerRow, playerHalf) {
     if (h.row !== playerRow) return false;
     // Not on the board yet: not drawn, not moved, not lethal.
@@ -1041,15 +1565,19 @@
     // Module-private it made the gate's row bound NaN, and every endgame
     // assertion passed vacuously because no rows were ever scanned.
     SAFE_START_ROWS: SAFE_START_ROWS, SAFE_GOAL_ROWS: SAFE_GOAL_ROWS,
+    /* The closing stretch, so a gate can scan the rows the builder actually
+     * treats as endgame instead of mirroring the constant. */
+    ENDGAME_ROWS: ENDGAME_ROWS, isEndgame: isEndgame,
     isActive: isActive,
     pickKind: pickKind, legalForLane: legalForLane,
     LANE_KINDS: LANE_KINDS, OPEN_KINDS: OPEN_KINDS,
+    isOpenKind: isOpenKind,
     // Exported so tools/hazard_probe.py can assert the opening is actually dense.
     rowDensity: rowDensity,
     OPENING_GUARANTEED_ROWS: OPENING_GUARANTEED_ROWS,
     perRowCapAt: perRowCapAt,
     KINDS: KINDS, makeHazard: makeHazard, buildHazards: buildHazards,
-    tickHazards: tickHazards, hits: hits, anyHits: anyHits,
+    tickHazards: tickHazards, hits: hits, hitsAt: hitsAt, anyHits: anyHits,
     laneHasGap: laneHasGap, ensureSolvable: ensureSolvable,
     // Phase 2 item 3. Exported so tools/check_hazard_reach.py can assert the
     // telegraph is never shorter than the traverse window.
@@ -1061,5 +1589,8 @@
     ARM_STEP_MS: ARM_STEP_MS,
     READ_DIR: READ_DIR,
     speedFactorAt: speedFactorAt, PEAK_SPEED_FACTOR: PEAK_SPEED_FACTOR,
+    /* Reaction-time bound, exported so it can be asserted against every
+     * kind in the table rather than trusted. */
+    MIN_COLUMN_CROSS_MS: MIN_COLUMN_CROSS_MS, maxSpeedFor: maxSpeedFor,
   };
 })(typeof window !== "undefined" ? window : (typeof global !== "undefined" ? global : this));

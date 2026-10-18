@@ -83,34 +83,34 @@ def _turtle_colour(scene: dict) -> str:
 SCENES = [
     dict(id=1,  name="Suburb",       sky=("#8fc7f0", "#d8ecf9"), ground="#7ba05b", alt="#6f9450",
          road="#4a4a52", water="#3f7fb5", hazard="#ff4d3d", hazard2="#f2a03d",
-         foliage="#3f8a3d", foliage2="#57a84f", trunk="#7a5433", accent="#ffffff", hazardKinds=["car","taxi","police","tractor","forklift","roller","tumbleweed","ambulance","golfcart","geyser","boulder","sinkhole"], scenery=["hedge", "tree", "mailbox", "bush", "flowerbed", "fence"]),
+         foliage="#3f8a3d", foliage2="#57a84f", trunk="#7a5433", accent="#ffffff", hazardKinds=["car","taxi","police","ambulance","bus","truck","limousine","motorbike","golfcart","tractor","forklift","roller","tumbleweed","cementmixer","racecar","cannon","turret","cannonmobile","ballista","siegeram","ufoa","geyser","horse"], scenery=["hedge", "tree", "mailbox", "bush", "flowerbed", "fence"]),
     dict(id=2,  name="River",        sky=("#7fb6e0", "#dcecf7"), ground="#3f7fb5", alt="#37719f",
          road="#4a4a52", water="#2f6f9f", hazard="#ff4d3d", hazard2="#8a5a2b",
-         foliage="#2f6b40", foliage2="#438a52", trunk="#6b4a2b", accent="#e8f4ff", hazardKinds=["log","turtle","alligator","snake","crocodile","canoe","duck","swan","boulder","steamvent","sinkhole"], scenery=["reed", "lily", "rock", "lily", "reed"]),
+         foliage="#2f6b40", foliage2="#438a52", trunk="#6b4a2b", accent="#e8f4ff", hazardKinds=["log","turtle","snake","alligator","crocodile","canoe","duck","swan","icefloe","sled","ufob","speedercraft","racercraft","steamvent","ufoa","turret","geyser","horse","cannon","golfcart","trebuchet"], scenery=["reed", "lily", "rock", "lily", "reed"]),
     dict(id=3,  name="Desert",       sky=("#f0c88a", "#fce9c4"), ground="#d9b168", alt="#cfa45c",
          road="#5a5048", water="#3f7fb5", hazard="#ff4d3d", hazard2="#a89a3a",
-         foliage="#5f8a3f", foliage2="#7aa84f", trunk="#8a6a3a", accent="#fff6e0", hazardKinds=["car","tumbleweed","tractor","racecar","bus","truck","taxi","limousine","cementmixer","motorbike","golfcart","boulder","sinkhole"], scenery=["cactus", "rock", "bone", "boulder"]),
+         foliage="#5f8a3f", foliage2="#7aa84f", trunk="#8a6a3a", accent="#fff6e0", hazardKinds=["car","taxi","bus","truck","limousine","motorbike","golfcart","racecar","tractor","cementmixer","tumbleweed","roller","forklift","trebuchet","catapult","ballista","siegeram","cannon","turret","cannonmobile","ufoa","horse"], scenery=["cactus", "rock", "bone", "boulder"]),
     dict(id=4,  name="Farmland",     sky=("#c2d8b0", "#eef4dc"), ground="#d9d264", alt="#cbbc58",
          road="#54585e", water="#3f7fb5", hazard="#ff4d3d", hazard2="#e8b53d",
-         foliage="#4a7a3a", foliage2="#5f9c48", trunk="#7a5433", accent="#fffce8", hazardKinds=["tractor","car","limousine","truck","train","tram","forklift","cementmixer","roller","monorail","subway","tumbleweed","boulder","sinkhole"], scenery=["haybale", "fence", "tree", "windmill"]),
+         foliage="#4a7a3a", foliage2="#5f9c48", trunk="#7a5433", accent="#fffce8", hazardKinds=["tractor","car","truck","bus","limousine","motorbike","golfcart","cementmixer","forklift","roller","horse","siegeram","ballista","cannon","turret","cannonmobile","catapult","trebuchet","racecar","tumbleweed","ufoa","ambulance","police"], scenery=["haybale", "fence", "tree", "windmill"]),
     dict(id=5,  name="Night City",   sky=("#131a2e", "#38445f"), ground="#2b3040", alt="#262b39",
          road="#1e222c", water="#26405e", hazard="#ff4d3d", hazard2="#4ad9ff",
-         foliage="#2a3a4a", foliage2="#365068", trunk="#2a2f38", accent="#7de8ff", hazardKinds=["taxi","tram","bus","police","racecar","train","car","truck","ambulance","motorbike","monorail","subway","forklift","geyser","sinkhole"], scenery=["neon", "building", "streetlamp", "hydrant", "postbox"]),
+         foliage="#2a3a4a", foliage2="#365068", trunk="#2a2f38", accent="#7de8ff", hazardKinds=["taxi","police","bus","car","truck","limousine","motorbike","golfcart","racecar","ambulance","tractor","cementmixer","forklift","roller","ufoa","ufob","ufoc","ufod","speedercraft","turretdouble","cannonmobile","geyser"], scenery=["neon", "building", "streetlamp", "hydrant", "postbox"]),
     dict(id=6,  name="Frozen Lake",  sky=("#b8d8e8", "#edf7fc"), ground="#c8e4f0", alt="#bcd9e8",
          road="#262b33", water="#5aa0c0", hazard="#ff4d3d", hazard2="#6b4a8a",
-         foliage="#3d6b5a", foliage2="#4f8570", trunk="#5a4636", accent="#ffffff", hazardKinds=["sled","turtle","log","crocodile","alligator","icefloe","swan","duck","canoe","boulder","steamvent","sinkhole"], scenery=["pine", "iceberg", "pine", "rock"]),
+         foliage="#3d6b5a", foliage2="#4f8570", trunk="#5a4636", accent="#ffffff", hazardKinds=["sled","turtle","log","crocodile","alligator","icefloe","swan","duck","canoe","horse","ufob","speedercraft","racercraft","turret","cannon","steamvent","ufoa","golfcart","bus","trebuchet","roller"], scenery=["pine", "iceberg", "pine", "rock"]),
     dict(id=7,  name="Rainforest",   sky=("#6ba87a", "#cce7c6"), ground="#3f7a4a", alt="#387044",
          road="#4a4438", water="#2f6f8a", hazard="#ff4d3d", hazard2="#7ac94f",
-         foliage="#24522f", foliage2="#357a42", trunk="#5a4028", accent="#e8ffd8", hazardKinds=["log","snake","car","boulder","turtle","alligator","crocodile","canoe","duck","geyser","steamvent","tractor","sinkhole"], scenery=["vine", "fern", "tree", "bush"]),
+         foliage="#24522f", foliage2="#357a42", trunk="#5a4028", accent="#e8ffd8", hazardKinds=["log","snake","crocodile","alligator","canoe","duck","ufoa","ufob","ufoc","ufod","speedercraft","racercraft","tractor","car","turret","cannon","trebuchet","geyser","steamvent","tumbleweed"], scenery=["vine", "fern", "tree", "bush"]),
     dict(id=8,  name="Construction", sky=("#b8bec8", "#e8ecf2"), ground="#9aa0a8", alt="#8f959d",
          road="#6b7078", water="#4a6a8a", hazard="#ff4d3d", hazard2="#e05c4b",
-         foliage="#7a8a4a", foliage2="#8fa85a", trunk="#8a6a3a", accent="#ffffff", hazardKinds=["forklift","roller","monorail","truck","tram","tractor","cementmixer","golfcart","train","subway","boulder","sinkhole"], scenery=["scaffold", "cone", "crate", "pylon"]),
+         foliage="#7a8a4a", foliage2="#8fa85a", trunk="#8a6a3a", accent="#ffffff", hazardKinds=["forklift","roller","truck","tractor","cementmixer","golfcart","bus","car","catapult","ballista","trebuchet","siegeram","cannon","cannonmobile","turret","turretdouble","racecar","ufoa","motorbike","limousine","horse","ambulance","police"], scenery=["scaffold", "cone", "crate", "pylon"]),
     dict(id=9,  name="Storm",        sky=("#3a4450", "#727d8c"), ground="#4a5560", alt="#434d57",
          road="#333a44", water="#38566b", hazard="#ff4d3d", hazard2="#7ac9e8",
-         foliage="#2f3742", foliage2="#3d4a58", trunk="#33383f", accent="#d8e8f4", hazardKinds=["limousine","tram","tumbleweed","train","bus","monorail","car","police","ambulance","subway","freighttrain","steamvent","sinkhole"], scenery=["pylon", "puddle", "pylon", "debris"]),
+         foliage="#2f3742", foliage2="#3d4a58", trunk="#33383f", accent="#d8e8f4", hazardKinds=["car","police","bus","truck","limousine","motorbike","taxi","racecar","tumbleweed","cannon","turretdouble","cannonmobile","ufoa","ufob","ufoc","ufod","speedercraft","racercraft","steamvent","ambulance"], scenery=["pylon", "puddle", "pylon", "debris"]),
     dict(id=10, name="Volcano",      sky=("#3a1f1c", "#9c4326"), ground="#5a3a34", alt="#52342e",
          road="#3a2a26", water="#8a3a1a", hazard="#ff4d3d", hazard2="#ffd23d",
-         foliage="#2a1a18", foliage2="#3f2622", trunk="#3a2a26", accent="#ffb03d", hazardKinds=["bus","steamvent","log","train","roller","tram","alligator","freighttrain","subway","crocodile","canoe","duck","boulder","sinkhole"], scenery=["lavaVent", "obsidian", "boulder", "debris"]),
+         foliage="#2a1a18", foliage2="#3f2622", trunk="#3a2a26", accent="#ffb03d", hazardKinds=["bus","steamvent","geyser","truck","roller","motorbike","cementmixer","trebuchet","catapult","ballista","siegeram","cannon","cannonmobile","turret","racecar","limousine","ufoa","tumbleweed","ambulance","forklift"], scenery=["lavaVent", "obsidian", "boulder", "debris"]),
 ]
 
 
@@ -473,6 +473,42 @@ def draw_roller(c: Canvas, col: float, row: float, scene: dict) -> None:
     """Preview stub. The playable draws this in src/render/scene.js; the
     Python sheet exists to check the STAGE DATA, not to be the art."""
     cube(c, col + 0.34, row + 0.34, 0.32, 0.32, 0.0, 0.34, scene.get("hazard", "#888"))
+
+# --- library-imported kinds -----------------------------------------------
+# Preview stubs in the same spirit as the ones above: this sheet exists to
+# prove every hazard a stage DECLARES has a renderer, so a stage can never
+# reference something that draws nothing. The real art for these lives in
+# src/render/scene.js.
+
+def draw_war_vehicle(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Armoured van / war pickup."""
+    cube(c, col + 0.20, row + 0.30, 0.60, 0.34, 0.02, 0.26, scene.get("hazard2", "#888"))
+
+def draw_artillery(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Cannon, and the mobile or pirate variants."""
+    cube(c, col + 0.32, row + 0.34, 0.36, 0.28, 0.04, 0.28, scene.get("hazard", "#888"))
+    cube(c, col + 0.52, row + 0.28, 0.34, 0.10, 0.18, 0.14, scene.get("hazard2", "#777"))
+
+def draw_turret_kind(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Fixed turret."""
+    cube(c, col + 0.36, row + 0.32, 0.28, 0.30, 0.06, 0.28, scene.get("hazard", "#888"))
+
+def draw_siege_engine(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Trebuchet, catapult, ballista, siege ram."""
+    cube(c, col + 0.24, row + 0.30, 0.52, 0.22, 0.04, 0.24, scene.get("hazard2", "#888"))
+
+def draw_creature(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Aliens and robots."""
+    cube(c, col + 0.34, row + 0.32, 0.32, 0.34, 0.06, 0.24, scene.get("hazard2", "#888"))
+
+def draw_craft(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Saucer, star fighter and the rest of the flying kinds."""
+    cube(c, col + 0.30, row + 0.30, 0.40, 0.14, 0.62, 0.14, scene.get("hazard2", "#888"))
+
+def draw_beast(c: Canvas, col: float, row: float, scene: dict) -> None:
+    """Horse, slug."""
+    cube(c, col + 0.28, row + 0.32, 0.44, 0.26, 0.08, 0.24, scene.get("log", "#888"))
+
 
 def draw_monorail(c: Canvas, col: float, row: float, scene: dict) -> None:
     """Preview stub. The playable draws this in src/render/scene.js; the

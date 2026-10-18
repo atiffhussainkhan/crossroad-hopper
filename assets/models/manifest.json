@@ -386,6 +386,646 @@
       },
       "animated": true,
       "nativeForward": "+z"
+    },
+    {
+      "id": 25,
+      "rosterId": "char_25",
+      "name": "Casual Bald",
+      "model": "assets/models/characters/Casual_Bald.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Bald Casual",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 26,
+      "rosterId": "char_26",
+      "name": "Casual Female",
+      "model": "assets/models/characters/Casual_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Casual Woman",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 27,
+      "rosterId": "char_27",
+      "name": "Casual 2 Female",
+      "model": "assets/models/characters/Casual2_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Casual Two Woman",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 28,
+      "rosterId": "char_28",
+      "name": "Casual 2 Male",
+      "model": "assets/models/characters/Casual2_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Casual Two Man",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 29,
+      "rosterId": "char_29",
+      "name": "Casual 3 Female",
+      "model": "assets/models/characters/Casual3_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Casual Three Woman",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 30,
+      "rosterId": "char_30",
+      "name": "Cowboy Female",
+      "model": "assets/models/characters/Cowboy_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Cowgirl",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 31,
+      "rosterId": "char_31",
+      "name": "Cowboy Male",
+      "model": "assets/models/characters/Cowboy_Male.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Cowboy",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 32,
+      "rosterId": "char_32",
+      "name": "Old Doctor",
+      "model": "assets/models/characters/Doctor_Female_Old.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Elderly Doctor",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 33,
+      "rosterId": "char_33",
+      "name": "Young Doctor",
+      "model": "assets/models/characters/Doctor_Male_Young.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Young Doctor",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 34,
+      "rosterId": "char_34",
+      "name": "Elf",
+      "model": "assets/models/characters/Elf.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Elf",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 35,
+      "rosterId": "char_35",
+      "name": "Goblin Female",
+      "model": "assets/models/characters/Goblin_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Goblin Woman",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 36,
+      "rosterId": "char_36",
+      "name": "Kimono Female",
+      "model": "assets/models/characters/Kimono_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Kimono Woman",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 37,
+      "rosterId": "char_37",
+      "name": "Golden Knight",
+      "model": "assets/models/characters/Knight_Golden_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Gold Knight",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 38,
+      "rosterId": "char_38",
+      "name": "Ninja Female",
+      "model": "assets/models/characters/Ninja_Female.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Ninja Woman",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 39,
+      "rosterId": "char_39",
+      "name": "Ninja Hair",
+      "model": "assets/models/characters/Ninja_Male_Hair.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Long-Haired Ninja",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 40,
+      "rosterId": "char_40",
+      "name": "Witch",
+      "model": "assets/models/characters/Witch.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Witch",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 41,
+      "rosterId": "char_41",
+      "name": "Alpaca",
+      "model": "assets/models/characters/Alpaca.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Alpaca",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Gallop_Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 42,
+      "rosterId": "char_42",
+      "name": "Bull",
+      "model": "assets/models/characters/Bull.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Bull",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Gallop_Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 43,
+      "rosterId": "char_43",
+      "name": "Stag",
+      "model": "assets/models/characters/Stag.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Stag",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Gallop_Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 44,
+      "rosterId": "char_44",
+      "name": "Wolf",
+      "model": "assets/models/characters/Wolf.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Wolf",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Gallop_Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 45,
+      "rosterId": "char_45",
+      "name": "Deer",
+      "model": "assets/models/characters/Deer.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Deer",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Gallop_Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 46,
+      "rosterId": "char_46",
+      "name": "Mecha George",
+      "model": "assets/models/characters/George.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Mecha Pilot",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 47,
+      "rosterId": "char_47",
+      "name": "Mecha Stan",
+      "model": "assets/models/characters/Stan.gltf",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Walkie Talkie Mech",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump",
+        "death": "Death"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 48,
+      "rosterId": "char_48",
+      "name": "Barbarian",
+      "model": "assets/models/characters/Barbarian.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Barbarian",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump_Full_Short",
+        "death": "Death_A"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 49,
+      "rosterId": "char_49",
+      "name": "Adventurer Mage",
+      "model": "assets/models/characters/Mage.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Battle Mage",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump_Full_Short",
+        "death": "Death_A"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 50,
+      "rosterId": "char_50",
+      "name": "Rogue",
+      "model": "assets/models/characters/Rogue.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Rogue",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump_Full_Short",
+        "death": "Death_A"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 51,
+      "rosterId": "char_51",
+      "name": "Skeleton Warrior",
+      "model": "assets/models/characters/Skeleton_Warrior.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Bone Warrior",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump_Full_Short",
+        "death": "Death_A"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 52,
+      "rosterId": "char_52",
+      "name": "Skeleton Mage",
+      "model": "assets/models/characters/Skeleton_Mage.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Bone Sorcerer",
+      "animation": {
+        "idle": "Idle",
+        "hop": "Jump_Full_Short",
+        "death": "Death_A"
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 53,
+      "rosterId": "char_53",
+      "name": "Zombie",
+      "model": "assets/models/kenney/graveyard/character-zombie.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Undead",
+      "animation": {
+        "idle": "idle",
+        "hop": "walk",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 54,
+      "rosterId": "char_54",
+      "name": "Lion",
+      "model": "assets/models/kenney/cube-pets/animal-lion.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Big Cat",
+      "animation": {
+        "idle": "idle",
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 55,
+      "rosterId": "char_55",
+      "name": "Horse",
+      "model": "assets/models/kenney/prototype/animal-horse.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Horse",
+      "animation": {
+        "idle": null,
+        "hop": "run",
+        "death": null
+      },
+      "animated": true,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 56,
+      "rosterId": "char_56",
+      "name": "Speeder Craft",
+      "model": "assets/models/kenney/space/craft_speederA.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Speeder Craft",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 57,
+      "rosterId": "char_57",
+      "name": "Racer Craft",
+      "model": "assets/models/kenney/space/craft_racer.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Racer Craft",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 58,
+      "rosterId": "char_58",
+      "name": "Pirate Cannon",
+      "model": "assets/models/kenney/pirate/cannon.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Pirate Cannon",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 59,
+      "rosterId": "char_59",
+      "name": "Cannon Mobile",
+      "model": "assets/models/kenney/pirate/cannon-mobile.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Cannon Mobile",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 60,
+      "rosterId": "char_60",
+      "name": "Turret",
+      "model": "assets/models/kenney/tower-defense/weapon-turret.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "Turret",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 61,
+      "rosterId": "char_61",
+      "name": "UFO Alpha",
+      "model": "assets/models/kenney/tower-defense/enemy-ufo-a.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "UFO Alpha",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 62,
+      "rosterId": "char_62",
+      "name": "UFO Bravo",
+      "model": "assets/models/kenney/tower-defense/enemy-ufo-b.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "UFO Bravo",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 63,
+      "rosterId": "char_63",
+      "name": "UFO Charlie",
+      "model": "assets/models/kenney/tower-defense/enemy-ufo-c.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "UFO Charlie",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
+    },
+    {
+      "id": 64,
+      "rosterId": "char_64",
+      "name": "UFO Delta",
+      "model": "assets/models/kenney/tower-defense/enemy-ufo-d.glb",
+      "height": 1.1,
+      "yaw": 3.141592653589793,
+      "originalName": "UFO Delta",
+      "animation": {
+        "idle": null,
+        "hop": null,
+        "death": null
+      },
+      "animated": false,
+      "nativeForward": "+z"
     }
   ],
   "hazards": {
@@ -509,46 +1149,6 @@
       "fit": "length",
       "analogue": "Small kart used as a cart analogue"
     },
-    "train": {
-      "model": "assets/models/kenney/train/train-locomotive-c.glb",
-      "length": 3.4,
-      "yaw": 1.5707963267948966,
-      "nativeForward": "+z",
-      "fit": "length",
-      "analogue": null
-    },
-    "tram": {
-      "model": "assets/models/kenney/train/train-tram-round.glb",
-      "length": 2.2,
-      "yaw": 1.5707963267948966,
-      "nativeForward": "+z",
-      "fit": "length",
-      "analogue": null
-    },
-    "monorail": {
-      "model": "assets/models/kenney/train/train-electric-bullet-c.glb",
-      "length": 2.8,
-      "yaw": 1.5707963267948966,
-      "nativeForward": "+z",
-      "fit": "length",
-      "analogue": "Electric bullet train used for monorail traffic"
-    },
-    "freighttrain": {
-      "model": "assets/models/kenney/train/train-carriage-container-blue.glb",
-      "length": 3.6,
-      "yaw": 1.5707963267948966,
-      "nativeForward": "+z",
-      "fit": "length",
-      "analogue": null
-    },
-    "subway": {
-      "model": "assets/models/kenney/train/train-electric-subway-a.glb",
-      "length": 2.6,
-      "yaw": 1.5707963267948966,
-      "nativeForward": "+z",
-      "fit": "length",
-      "analogue": null
-    },
     "log": {
       "model": "assets/models/kenney/nature/log.glb",
       "length": 0.9,
@@ -629,14 +1229,6 @@
       "fit": "length",
       "analogue": "Caterpillar; no snake in the local pack"
     },
-    "boulder": {
-      "model": "assets/models/kenney/nature/rock_largeA.glb",
-      "length": 1.2,
-      "yaw": 1.5707963267948966,
-      "nativeForward": "+z",
-      "fit": "length",
-      "analogue": null
-    },
     "geyser": {
       "model": "assets/models/kenney/space/crater.glb",
       "length": 1.0,
@@ -671,6 +1263,126 @@
       "nativeForward": "+z",
       "fit": "length",
       "analogue": "Parrot; no hawk in the local pack"
+    },
+    "ufoa": {
+      "model": "assets/models/kenney/tower-defense/enemy-ufo-a.glb",
+      "length": 1.2,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Tower defence UFO, variant A"
+    },
+    "ufob": {
+      "model": "assets/models/kenney/tower-defense/enemy-ufo-b.glb",
+      "length": 1.2,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Tower defence UFO, variant B"
+    },
+    "ufoc": {
+      "model": "assets/models/kenney/tower-defense/enemy-ufo-c.glb",
+      "length": 1.2,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Tower defence UFO, variant C"
+    },
+    "ufod": {
+      "model": "assets/models/kenney/tower-defense/enemy-ufo-d.glb",
+      "length": 1.2,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Tower defence UFO, variant D"
+    },
+    "cannon": {
+      "model": "assets/models/kenney/tower-defense/weapon-cannon.glb",
+      "length": 1.5,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "turret": {
+      "model": "assets/models/kenney/tower-defense/weapon-turret.glb",
+      "length": 1.3,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "turretdouble": {
+      "model": "assets/models/kenney/space/turret_double.glb",
+      "length": 1.6,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Two-seat space turret emplacement"
+    },
+    "speedercraft": {
+      "model": "assets/models/kenney/space/craft_speederA.glb",
+      "length": 1.05,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "racercraft": {
+      "model": "assets/models/kenney/space/craft_racer.glb",
+      "length": 1.15,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "horse": {
+      "model": "assets/models/kenney/prototype/animal-horse.glb",
+      "length": 1.3,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Standalone horse; no mounted rider in the local pack"
+    },
+    "piratecannon": {
+      "model": "assets/models/kenney/pirate/cannon.glb",
+      "length": 1.45,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "cannonmobile": {
+      "model": "assets/models/kenney/pirate/cannon-mobile.glb",
+      "length": 1.8,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Wagon-mounted pirate cannon"
+    },
+    "trebuchet": {
+      "model": "assets/models/kenney/castle/siege-trebuchet.glb",
+      "length": 3.0,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": "Wide counterweight siege engine"
+    },
+    "ballista": {
+      "model": "assets/models/kenney/castle/siege-ballista.glb",
+      "length": 2.8,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
+    },
+    "siegeram": {
+      "model": "assets/models/kenney/castle/siege-ram.glb",
+      "length": 2.4,
+      "yaw": 1.5707963267948966,
+      "nativeForward": "+z",
+      "fit": "length",
+      "analogue": null
     }
   },
   "scenery": {
@@ -728,6 +1440,12 @@
       "yaw": 0,
       "analogue": null
     },
+    "boulder": {
+      "model": "assets/models/kenney/nature/rock_smallTopA.glb",
+      "height": 0.55,
+      "yaw": 0,
+      "analogue": null
+    },
     "cactus": {
       "model": "assets/models/kenney/nature/cactus_tall.glb",
       "height": 1.3,
@@ -737,12 +1455,6 @@
     "bone": {
       "model": "assets/models/kenney/space/bones.glb",
       "height": 0.2,
-      "yaw": 0,
-      "analogue": null
-    },
-    "boulder": {
-      "model": "assets/models/kenney/nature/rock_largeA.glb",
-      "height": 0.9,
       "yaw": 0,
       "analogue": null
     },
@@ -866,6 +1578,132 @@
       "yaw": 0,
       "analogue": null
     },
+    "industrialA": {
+      "model": "assets/models/kenney/city-industrial/building-a.glb",
+      "height": 3.2,
+      "yaw": 0,
+      "analogue": null
+    },
+    "industrialB": {
+      "model": "assets/models/kenney/city-industrial/building-b.glb",
+      "height": 3.0,
+      "yaw": 0,
+      "analogue": null
+    },
+    "chimney": {
+      "model": "assets/models/kenney/city-industrial/chimney-large.glb",
+      "height": 3.4,
+      "yaw": 0,
+      "analogue": null
+    },
+    "shopfront": {
+      "model": "assets/models/kenney/city-commercial/building-a.glb",
+      "height": 2.6,
+      "yaw": 0,
+      "analogue": null
+    },
+    "farmhouse": {
+      "model": "assets/models/kenney/modular-buildings/building-sample-house-a.glb",
+      "height": 2.4,
+      "yaw": 0,
+      "analogue": null
+    },
+    "castlewall": {
+      "model": "assets/models/kenney/castle/wall-half.glb",
+      "height": 1.6,
+      "yaw": 0,
+      "analogue": null
+    },
+    "castlecorner": {
+      "model": "assets/models/kenney/castle/wall-corner.glb",
+      "height": 1.6,
+      "yaw": 0,
+      "analogue": null
+    },
+    "castlegate": {
+      "model": "assets/models/kenney/castle/gate.glb",
+      "height": 2.2,
+      "yaw": 0,
+      "analogue": null
+    },
+    "castletower": {
+      "model": "assets/models/kenney/castle/tower-square-mid.glb",
+      "height": 3.0,
+      "yaw": 0,
+      "analogue": null
+    },
+    "brokencolumn": {
+      "model": "assets/models/kenney/retro-fantasy/column-damaged.glb",
+      "height": 2.0,
+      "yaw": 0,
+      "analogue": null
+    },
+    "battlement": {
+      "model": "assets/models/kenney/retro-fantasy/battlement.glb",
+      "height": 1.5,
+      "yaw": 0,
+      "analogue": null
+    },
+    "dungeonwall": {
+      "model": "assets/models/kenney/modular-dungeon/template-wall.glb",
+      "height": 1.8,
+      "yaw": 0,
+      "analogue": null
+    },
+    "crypt": {
+      "model": "assets/models/kenney/graveyard/crypt.glb",
+      "height": 1.9,
+      "yaw": 0,
+      "analogue": null
+    },
+    "brokengravestone": {
+      "model": "assets/models/kenney/graveyard/gravestone-broken.glb",
+      "height": 0.55,
+      "yaw": 0,
+      "analogue": null
+    },
+    "factorycrane": {
+      "model": "assets/models/kenney/factory/crane.glb",
+      "height": 3.2,
+      "yaw": 0,
+      "analogue": null
+    },
+    "conveyor": {
+      "model": "assets/models/kenney/factory/conveyor.glb",
+      "height": 1.4,
+      "yaw": 0,
+      "analogue": null
+    },
+    "rockfield": {
+      "model": "assets/models/kenney/survival/rock-a.glb",
+      "height": 0.7,
+      "yaw": 0,
+      "analogue": null
+    },
+    "autumntree": {
+      "model": "assets/models/kenney/survival/tree-autumn-tall.glb",
+      "height": 2.6,
+      "yaw": 0,
+      "analogue": null
+    },
+    "terrainboulder": {
+      "model": "assets/models/terrain/mdvl_nature_boulder_01.glb",
+      "height": 1.1,
+      "yaw": 0,
+      "analogue": null
+    },
+    "terraincliff": {
+      "model": "assets/models/terrain/mdvl_nature_cliff_01.glb",
+      "height": 1.8,
+      "yaw": 0,
+      "analogue": null
+    },
+    "deadtree": {
+      "model": "assets/models/terrain/mdvl_nature_deadtree_01.glb",
+      "height": 2.3,
+      "yaw": 0,
+      "analogue": null
+    },
     "treeBack": {
       "model": "assets/models/kenney/nature/tree_oak.glb",
       "height": 2.2,
@@ -877,6 +1715,14 @@
       "height": 2.2,
       "yaw": 0,
       "analogue": null
+    }
+  },
+  "pickups": {
+    "shield": {
+      "model": "assets/models/pickups/shield_round.gltf",
+      "height": 0.62,
+      "yaw": 0,
+      "analogue": "KayKit round shield; absorbs one lethal hit"
     }
   },
   "pursuer": {

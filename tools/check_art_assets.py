@@ -51,6 +51,22 @@ HAZARD_FNS = {
     "icefloe": "draw_icefloe",
     "boulder": "draw_boulder", "geyser": "draw_geyser",
     "steamvent": "draw_steamvent", "sinkhole": "draw_sinkhole",
+    # Library-imported kinds. Grouped onto shared preview stubs: this map
+    # exists to prove a declared hazard HAS a renderer, not to assert art.
+    "armoredvan": "draw_war_vehicle", "warpickup": "draw_war_vehicle",
+    "cannon": "draw_artillery", "piratecannon": "draw_artillery",
+    "cannonmobile": "draw_artillery",
+    "turret": "draw_turret_kind", "turretdouble": "draw_turret_kind",
+    "trebuchet": "draw_siege_engine", "catapult": "draw_siege_engine",
+    "ballista": "draw_siege_engine", "siegeram": "draw_siege_engine",
+    "mechwalker": "draw_creature", "robotdog": "draw_creature",
+    "aliengrunt": "draw_creature", "tentaclealien": "draw_creature",
+    "xenoqueen": "draw_creature",
+    "ufoa": "draw_craft", "ufob": "draw_craft", "ufoc": "draw_craft",
+    "ufod": "draw_craft", "ufodrone": "draw_craft", "ufosaucer": "draw_craft",
+    "xenodrone": "draw_craft", "starfighter": "draw_craft",
+    "speedercraft": "draw_craft", "racercraft": "draw_craft",
+    "horse": "draw_beast", "spaceslug": "draw_beast",
 }
 
 SCENERY_FNS = {

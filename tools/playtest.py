@@ -577,18 +577,42 @@ guard("main.js input regressions", function () {
   }
   function click(id) { __elements[id].dispatchEvent({ type: "click" }); }
   function key(k, target) { __g.dispatchEvent({ type: "keydown", key: k, target: target || document.body }); }
+  /* One beat of real frames between inputs.
+   *
+   * hop() has an input floor: a player who has not moved since their last
+   * accepted hop cannot hop again until HOP_MIN_MS of stage clock has passed.
+   * These inputs arrived back to back inside a single frame, so the floor
+   * swallowed the second and third -- "A key did not move the player left" and
+   * "forward button did not hop once" both failed, and worse, the checks
+   * BETWEEN them passed for the wrong reason: a swallowed input looks exactly
+   * like an input that correctly did nothing.
+   *
+   * A beat between them makes each check measure the rule it names. Ten frames
+   * is ~167ms of page time, comfortably past the 120ms floor. */
+  function beat() {
+    for (var i = 0; i < 10; i++) {
+      var cb = __rafCb;
+      __rafCb = null;
+      if (cb) { cb(__clock); } else { __clock += 16.667; }
+    }
+  }
   click("mode"); // Start a fresh two-player game.
   var g = __browserGame, p0 = g.state().players[0].state(), p1 = g.state().players[1].state();
   var startCol = p0.col;
+  beat();
   click("move-right");
   check(p0.col === startCol + 1, "right button did not move player 0");
+  beat();
   key("a");
   check(p0.col === startCol, "A key did not move the player left");
   var before = p0.row;
+  beat();
   key(" ", __elements["move-forward"]);
   check(p0.row === before, "Space on a focused button also triggered a global hop");
+  beat();
   click("move-forward");
   check(p0.row === before + 1, "forward button did not hop once");
+  beat();
   key("ArrowDown");
   check(p0.row === before, "down arrow did not hop back");
 

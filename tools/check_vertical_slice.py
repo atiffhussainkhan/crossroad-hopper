@@ -92,7 +92,7 @@ def probe_failures() -> list[str]:
     d = run_probe("""
 var rows = [];
 for (var s = 0; s < Stages.stageCount(); s++) {
-  for (var t = 0; t <= 90000; t += 15000) {
+  for (var t = 0; t <= Stages.STAGES_CLOCK_MS; t += Stages.DIFFICULTY_STEP_MS) {
     rows.push({stage: s, t: t, d: Stages.difficultyFor(s, t)});
   }
 }
@@ -196,11 +196,25 @@ g2.tick(16.667);
 r.phaseAfterBothFinished = g2.state().phase;
 
 // --- clock expiry fails the stage
+/* Past THIS stage's own safety net. durationFor() scales with the stage's jump
+ * count (jumps x allowance + grace, floored at STAGE_DURATION_MS), so the old
+ * fixed 6000 frames -- 100 seconds -- stopped an order of magnitude short of
+ * stage one's net and the stage simply carried on: "clock expiry gave RUNNING"
+ * was the probe reporting that it had not run the clock out.
+ *
+ * Traffic is switched off for this one game so the stage can only end the way
+ * this case names: otherwise a player standing at row one for the whole net is
+ * run over long before it, and the case passes without ever reaching the
+ * clock. Restored immediately afterwards. */
+var liveHazards = Hazards;
+Hazards = null;
 var g3 = SimCore.createGame({playerCount: 1, seed: "probe3"});
 g3.hop("forward");
-for (var k = 0; k < 6000; k++) g3.tick(16.667);
+var clockTicks = Math.ceil(Stages.durationFor(g3.state().stageIndex) / 16.667) + 10;
+for (var k = 0; k < clockTicks; k++) g3.tick(16.667);
 r.phaseAfterClock = g3.state().phase;
 r.elapsedAtClockFail = g3.state().elapsedInStageMs;
+Hazards = liveHazards;
 
 console.log("@@P@@" + JSON.stringify(r));
 """)
@@ -345,14 +359,33 @@ console.log("@@P@@" + JSON.stringify(r));
 
     # ST-12: both players act in the same tick. The previous build queued
     # turns, so six taps moved player 0 and player 1 never moved at all.
+    # Each player is driven at a cadence the input floor admits: hop() refuses a
+    # second hop from a player who has not moved since their last one until
+    # HOP_MIN_MS of stage clock has passed, so three taps in a single instant
+    # used to land as one hop each. This asserts ST-12 (the two players are not
+    # queued behind each other) and used to read a failure about the input
+    # floor instead -- p0=1, p1=1. The floor is what a player feels; the queue
+    # is what ST-12 is about. Beat between the taps so both are legal, and the
+    # rows still prove each player moved on their own.
+    # Traffic is off for this case for the same reason: hopping three rows in
+    # 750ms walks player 0 into a live board, and a run-over sends them back to
+    # row 0 -- which reads as "p0=1" and looks exactly like a turn queue. This
+    # case is about whether two players are queued behind each other, so
+    # nothing else is allowed to move them. Restored immediately afterwards.
     s = run_probe("""
+var liveHazards = Hazards;
+Hazards = null;
 var g = SimCore.createGame({playerCount: 2, seed: "sim"});
-g.hop("forward", 0); g.hop("forward", 0); g.hop("forward", 0);
-g.hop("forward", 1); g.hop("forward", 1);
-console.log("@@P@@" + JSON.stringify({
-  p0: g.state().players[0].state().row,
-  p1: g.state().players[1].state().row
-}));
+function beat() { g.tick(150); }   // > HOP_MIN_MS (120)
+beat(); g.hop("forward", 0);
+beat(); g.hop("forward", 0);
+beat(); g.hop("forward", 0);
+beat(); g.hop("forward", 1);
+beat(); g.hop("forward", 1);
+var st = { p0: g.state().players[0].state().row,
+           p1: g.state().players[1].state().row };
+Hazards = liveHazards;
+console.log("@@P@@" + JSON.stringify(st));
 """)
     if s["p0"] != 3 or s["p1"] != 2:
         out.append(

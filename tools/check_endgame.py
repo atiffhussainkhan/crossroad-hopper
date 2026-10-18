@@ -24,14 +24,58 @@ PROBE = r"""
 (function () {
   var H = Hazards, S = Stages, C = SimCore;
   var out = { problems: [], stats: {} };
-  var goal = S.GOAL_ROW_OFFSET, safeGoal = H.SAFE_GOAL_ROWS;
-  var endgameFrom = Math.ceil((goal - safeGoal) * 0.62);
+  var safeGoal = H.SAFE_GOAL_ROWS;
+
+  /* The closing stretch of EACH stage, and where each stage ends.
+   *
+   * The goal comes from the same table the win condition is read from. The
+   * window used to be computed from the builder's own ENDGAME_ROWS, read as
+   * `H.ENDGAME_ROWS || 15`. hazards.js declares `var ENDGAME_ROWS = 15` but does
+   * NOT export it and does not export isEndgame(), so that read has always been
+   * the fallback: a literal 15 mirrored into this gate, tracking the source only
+   * by luck. Change ENDGAME_ROWS in hazards.js and this window silently stops
+   * matching the builder's, and the assertions below scan the wrong rows.
+   *
+   * So the window is now MEASURED instead: the first row that can actually
+   * carry an endgame kind -- a hawk or a sinkhole, both of which buildRow() only
+   * ever places inside isEndgame() -- found by sweeping the stage and asking the
+   * real generator. That is the builder's own boundary, whatever the constants
+   * say today or next month.
+   *
+   * Measured per stage it lands on goalRow - ENDGAME_ROWS - SAFE_GOAL_ROWS,
+   * which is what the old literal assumed, but it is now derived rather than
+   * assumed. */
+  function goalFor(stageIndex) { return S.jumpsFor(stageIndex); }
+
+  var _endgameCache = {};
+  function endgameFromFor(stageIndex) {
+    if (_endgameCache[stageIndex] !== undefined) return _endgameCache[stageIndex];
+    var goal = goalFor(stageIndex), D = S.getStage(stageIndex).baseline + 5;
+    var found = -1;
+    for (var r = H.SAFE_START_ROWS; r < goal - safeGoal && found < 0; r++) {
+      for (var tag = 0; tag < 6 && found < 0; tag++) {
+        var t = "endgameWindow:" + stageIndex + ":" + tag + ":" + r;
+        var m = H.hazardsForRow(t, r, 14, D, C.createRng(t), stageIndex, 0,
+                                S.pressureFor(r));
+        for (var i = 0; i < m.length; i++) {
+          if (m[i].kind === "hawk" || m[i].kind === "sinkhole") { found = r; break; }
+        }
+      }
+    }
+    /* -1 means the builder placed no endgame kind anywhere on this stage. The
+     * assertions below then scan nothing, which would make them pass vacuously,
+     * so fall back to the last playable stretch: still a real window, and the
+     * bird/pit assertions will fail honestly if the endgame is genuinely gone. */
+    _endgameCache[stageIndex] = (found < 0) ? Math.max(0, goal - safeGoal - 15) : found;
+    return _endgameCache[stageIndex];
+  }
 
   // ---- 1. two-way traffic rises as the stage clock advances --------------
   // Sample each stage at its baseline and at its hardest difficulty and
   // compare how many rows carry hazards travelling both ways.
   function twoWayCount(stageIndex, difficulty, seedTag) {
     var both = 0, rows = 0;
+    var goal = goalFor(stageIndex), endgameFrom = endgameFromFor(stageIndex);
     for (var r = endgameFrom; r < goal - safeGoal; r++) {
       var Rng = C.createRng(seedTag + ":" + stageIndex + ":" + r);
       var made = H.hazardsForRow(seedTag + ":" + stageIndex + ":" + r, r, 9,
@@ -65,8 +109,9 @@ PROBE = r"""
   var stagesWithoutBird = [], minBirds = 99;
   for (var s2 = 0; s2 < S.stageCount(); s2++) {
     var birds = 0, scanned = 0;
+    var goal2 = goalFor(s2), from2 = endgameFromFor(s2);
     for (var tag = 0; tag < 12; tag++) {
-      for (var r2 = endgameFrom; r2 < goal - safeGoal; r2++) {
+      for (var r2 = from2; r2 < goal2 - safeGoal; r2++) {
         var R2 = C.createRng("bird:" + s2 + ":" + tag + ":" + r2);
         var m2 = H.hazardsForRow("bird:" + s2 + ":" + tag + ":" + r2, r2, 9,
                                  4, R2, s2, 0);
@@ -92,8 +137,9 @@ PROBE = r"""
   var HOP = 600;
   for (var s3 = 0; s3 < S.stageCount(); s3++) {
     var st = S.getStage(s3);
+    var goal3 = goalFor(s3), from3 = endgameFromFor(s3);
     for (var tag3 = 0; tag3 < 10; tag3++) {
-      for (var r3 = endgameFrom; r3 < goal - safeGoal; r3++) {
+      for (var r3 = from3; r3 < goal3 - safeGoal; r3++) {
         var R3 = C.createRng("pit:" + s3 + ":" + tag3 + ":" + r3);
         var m3 = H.hazardsForRow("pit:" + s3 + ":" + tag3 + ":" + r3, r3, 9,
                                  4, R3, s3, 0);
@@ -124,7 +170,7 @@ PROBE = r"""
   // about 0.3 (a row could hold at most one hazard).
   var perRow = 0, rowCount = 0;
   for (var s4 = 0; s4 < S.stageCount(); s4++) {
-    for (var r4 = 6; r4 < goal - safeGoal; r4++) {
+    for (var r4 = 6; r4 < goalFor(s4) - safeGoal; r4++) {
       var R4 = C.createRng("cplx:" + s4 + ":" + r4);
       var m4 = H.hazardsForRow("cplx:" + s4 + ":" + r4, r4, 9, 4, R4, s4, 0);
       perRow += m4.length; rowCount++;

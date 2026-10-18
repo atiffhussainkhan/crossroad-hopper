@@ -109,17 +109,20 @@
         }
       }
 
-      /* Also load the 24 character selection images as full-body sprites.
-       * These are individual JPG files stored in assets/characters/. */
+      /* Also load the character selection images as full-body sprites.
+       * These are individual JPG files stored in assets/characters/.
+       *
+       * Only the original 24 have one. Characters 25+ are library 3D models
+       * with no generated 2D sprite, so their fetch is skipped rather than
+       * requesting "assets/characters/null" and taking a 404 per character. */
       var charManifest = m.characters24 || [];
       for (var i = 0; i < charManifest.length; i++) {
         var entry = charManifest[i];
-        (function (key, url) {
-          total++;
-          loadImage(url,
-            function (img) { charImages[key] = img; done++; },
-            function () { delete charImages[key]; done++; });
-        })(entry.id, "assets/characters/" + entry.file);
+        if (!entry.file) continue;
+        total++;
+        loadImage("assets/characters/" + entry.file,
+          function (img) { charImages[entry.id] = img; done++; },
+          function () { delete charImages[entry.id]; done++; });
       }
 
       // A short timer rather than a guess at a count: a browser may coalesce

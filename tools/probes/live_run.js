@@ -38,7 +38,7 @@ print("  t     phase         row  col  lives  live   nearest   score");
 print("  ----- ------------- ---- ---- -----  -----  ---------  ------");
 var rows = [];
 var guard = 0;
-while (el < 90000 && guard < 200000) {
+while (el < Stages.STAGES_CLOCK_MS && guard < 400000) {
   g.tick(DT); el += DT; guard++;
   var snap = snapshot();
   var pl = snap.pl;

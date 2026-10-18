@@ -224,13 +224,28 @@ class Model:
         return len(points), len(self.data.get("animations", []))
 
 
+MIN_ROSTER_SIZE = 24   # the floor below which a roster is treated as truncated
+
+
 def main() -> int:
     failures, files = [], set()
     try:
         manifest = json.loads((MODELS / "manifest.json").read_text())
         ids = [entry["id"] for entry in manifest["characters"]]
-        if sorted(ids) != list(range(1, 25)):
-            failures.append("character IDs must cover 1 through 24 exactly once")
+        # Contiguity AND a floor. The first version of this only checked the
+        # run was contiguous, which silently accepted a truncated import: an
+        # empty or half-copied roster is contiguous. The count floor restores
+        # the property the assertion existed for -- that the roster is not
+        # quietly losing characters.
+        expected = list(range(1, max(ids) + 1)) if ids else []
+        if sorted(ids) != expected:
+            failures.append(
+                "character IDs must cover 1 through %d exactly once, got %d"
+                % (max(ids) if ids else 0, len(ids)))
+        if ids and len(ids) < MIN_ROSTER_SIZE:
+            failures.append(
+                "roster has only %d characters; expected at least %d"
+                % (len(ids), MIN_ROSTER_SIZE))
         source = 'print(JSON.stringify({hazards:Object.keys(Hazards.KINDS), scenery:Stages.STAGES.map(function(s){return s.scenery;})}));'
         result = run_script(source, modules=SIM_MODULES)
         if result.returncode:
