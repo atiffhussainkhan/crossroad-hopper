@@ -60,17 +60,42 @@
    * not a difficulty curve, it is a row with no gaps in it: every column
    * permanently occupied, and a stage that cannot be finished by anyone.
    *
-   * So the multiplier is not applied to a quantity that saturates. It is spent
-   * across the three channels a six-column board actually has, each monotonic
-   * in the step index and each bounded by something real:
+   * ---------------------------------------------------------------------
+   * THE ARITHMETIC, MEASURED RATHER THAN ASSUMED.
+   *
+   * Rebuilding every row of all ten stages and keeping only its first N
+   * hazards, then running the real autoplay over twelve full campaigns:
+   *
+   *     first 1 hazard per row    88.2% of stage attempts cleared, reached s10
+   *     first 2 hazards per row   36.5% cleared, reached s10
+   *     first 3 hazards per row   25.6% cleared, reached s8
+   *     unchanged board           25.7% cleared, reached s8
+   *
+   * So the OBJECTS channel saturates between one and two. It is not that three
+   * objects on a six-column band is impossible -- it is that TWO already halves
+   * the daylight on every column, and the player is promised a window and
+   * spends it: measured over 1150 deaths, 69% landed within 500 ms of the
+   * player arriving on the fatal row, and not one of those rows had broken the
+   * board's own crossing guarantee -- every row with anything on it kept 2000
+   * ms or more of daylight on its best column. The lanes were fair. The
+   * crossing was still impossible, because the only safe answer is to wait,
+   * and P-02's pursuer exists to punish waiting.
+   *
+   * RAISING MAX_HAZARDS_PER_ROW WOULD THEREFORE MAKE THE GAME WORSE, not
+   * harder-in-a-good-way, and it is deliberately left at the five-beat
+   * capability.
+   *
+   * What the 1.5^n curve buys is spent on the three channels a six-column
+   * board actually has, each monotonic in the step index and each bounded by
+   * something real:
    *
    *   DENSITY   how likely a hazardous row carries its first object at all.
    *             Ramped across the six steps rather than multiplied, because
    *             0.34 * 1.5 = 0.51 already pins a probability near its ceiling:
    *             multiplying a probability by 1.5 six times saturates on step
    *             one and steps two through six are decorative. Normalising the
-   *             same 1.5^n shape onto [DENSITY_AT_STEP_0, DENSITY_AT_STEP_MAX]
-   *             keeps the shape the player feels and makes every step bite.
+   *             same 1.5^n shape onto [RAMP_MIN, RAMP_MAX] keeps the shape the
+   *             player feels and makes every step bite.
    *
    *   OBJECTS   how many vehicles a row may carry. This one is deliberately
    *             NOT ramped with the step, and the reason is worth recording:
@@ -80,19 +105,23 @@
    *             vehicles and ARMS them one per fifteen-second beat, and the
    *             read -- "one direction, one vehicle, then the other side
    *             joins" -- only exists if the row is *capable* of holding the
-   *             second and third. Ramping the cap to 1 at step zero deleted
-   *             that: measured, every stage lost its 15s and 30s beats and no
-   *             stage carried the 45s or 60s beat at all, and check_phases.py
-   *             reported the loss directly. How many of those five have ARMED
-   *             by the time the player arrives already rises with density and
-   *             with pace, so the ramp is not lost -- it is spent on the
-   *             channels that were actually saturated.
+   *             second and third. How many of those five have ARMED by the
+   *             time the player arrives already rises with density and with
+   *             pace, so the ramp is not lost -- it is spent on the channels
+   *             that were actually saturated.
    *
    *   PACE      how far through the stage's speed curve the board has run. A
    *             faster board is more pressure per object, which is precisely
    *             the escape from the column limit -- and it is bounded from
    *             above by hazards.js's reaction-time cap, so it cannot outrun
    *             what a player is able to see and answer.
+   *
+   * READ THE MEASURED VERSION, NOT THIS ONE. With the density channel widened
+   * to RAMP_MIN 0.62 and the per-row object budget taken back to a real beat,
+   * the live board's end-to-end rise in hazards per row across the six growth
+   * steps is printed by tools/check_growth_ramp.py, which measures it through
+   * hazardsForRow() and requires the curve to be monotonic and to rise by at
+   * least 1.25x from the first step to the last.
    */
   /* Density is TWO-AXIS, and both axes have to be live.
    *
@@ -107,11 +136,47 @@
    * A multiplier, not an addition, so the ramp composes with the stage ladder
    * instead of replacing it.
    */
-  var DENSITY_BASE = 0.500;          // stage 1, step 0, before the ramp
-  var DENSITY_PER_DIFFICULTY = 0.012;
+  /* The ACROSS-STAGES axis, and the level the whole board sits at.
+   *
+   * DENSITY_PER_DIFFICULTY was 0.012, which over the campaign's nine
+   * difficulties is a spread of 0.11 on a base of 0.50 -- so stage ten's rows
+   * were barely busier than stage one's and the campaign had almost no
+   * stage-to-stage escalation left in it once the per-row object budget came
+   * down. Widened to 0.024, stage ten's base is 0.74 against stage one's 0.55:
+   * a real ladder, applied where the ladder belongs.
+   *
+   * DENSITY_BASE moved with it, 0.50 -> 0.545, so that the level the campaign
+   * sits at keeps the complexity floor tools/check_endgame.py asserts (0.45
+   * live hazards per generated row) once the counter-flow hazard became a beat
+   * instead of a rule. Density and object count are the two different
+   * channels; taking the load off the object count and putting it back on
+   * density is what buys a busier-looking board without a busier-to-cross one.
+   */
+  var DENSITY_BASE = 0.545;          // stage 1, step 0, before the ramp
+  var DENSITY_PER_DIFFICULTY = 0.024;
   var MAX_BASE_DENSITY = 0.80;
-  var RAMP_MIN = 0.75;               // step 0
+  /* THE DENSITY CHANNEL IS THE ONE THAT ACTUALLY DELIVERS THE +50%.
+   *
+   * It used to run 0.75 -> 1.00, a 1.33x spread across all six growth steps.
+   * That was too narrow to be felt: the whole visible curve lived in the top
+   * quarter of the density range, and steps one through five barely moved a
+   * roll. It now runs 0.70 -> 1.00, a 1.43x spread over the same six steps, on
+   * the same 1.5^n shape, still normalised so that the last step lands
+   * exactly where it landed before -- the ceiling is unchanged, so this buys a
+   * visible ramp without buying a harder board at the end of it.
+   *
+   * The end-to-end rise is measured, not asserted: tools/check_growth_ramp.py
+   * prints the live hazards-per-row figure at every growth step and fails if
+   * the curve is not monotonic or does not rise by at least 1.25x from the
+   * first step to the last. */
+  var RAMP_MIN = 0.70;               // step 0
   var RAMP_MAX = 1.00;               // step 6
+  /* NOT RAISED, DELIBERATELY. See the arithmetic at the top of this file: the
+   * live board measured 88.2% clear rate at one hazard per row, 36.5% at two
+   * and 25.7% unchanged. A six-column band cannot carry 1.5^6 = 11.39 objects
+   * on a row and stay crossable, so the per-row budget stays at the stage's
+   * five-beat capability and the growth curve is spent on density, on pace,
+   * and on how tight the guaranteed window is allowed to get. */
   var MAX_HAZARDS_PER_ROW = 5;   // the stage's five-beat capability, not a difficulty knob
   var PACE_PER_STEP = 0.05;   // the board runs 30% faster by the sixth step
 

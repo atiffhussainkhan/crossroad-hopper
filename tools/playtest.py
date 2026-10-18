@@ -313,6 +313,19 @@ var __elements = {};
  "mode", "progress", "hint", "move-left", "move-forward", "move-right", "move-back"].forEach(function (id) {
   __elements[id] = (id === "board") ? __canvas : new El(id);
 });
+/* document.head, because main.js injects a stylesheet into it.
+ *
+ * installBannerPlacementRule() runs in the middle of the IIFE body and does
+ * `document.head.appendChild(css)`. A throw there is not local: it aborts the
+ * rest of the body, so the canvas pointer handlers, the keyboard handler, the
+ * move-* buttons, the mode toggle AND the requestAnimationFrame boot below it
+ * are never reached. The symptom then reads as four unrelated failures --
+ * "main.js boot" plus an input probe looking for players[1] in a game that was
+ * never asked to have two players -- when it is one missing DOM node.
+ *
+ * A real document always has a head, so the stub must too. Declared before the
+ * document literal below, which is what references it. */
+var __head = new El("head");
 __g.document = eventTarget({
   getElementById: function (id) { return __elements[id] || null; },
   createElement: function () { return new El("dyn"); },
@@ -322,6 +335,8 @@ __g.document = eventTarget({
   removeEventListener: function () {},
   hidden: false,
   visibilityState: "visible",
+  head: __head,
+  documentElement: new El("html"),
   body: new El("body")
 });
 __g.navigator = { userAgent: "jsc" };
@@ -394,11 +409,63 @@ if (spriteReport.ok !== rosterIds.length) __ERRORS.push("roster sprites resolved
  *              test: it exercises the collision, pursuer and phase-transition
  *              code with no regard for winning, and any throw it produces is a
  *              real defect.
- *   forward -- hop forward the instant the cooldown allows. Random play loses
- *              every time on a game about crossing traffic, so on its own it
- *              cannot tell "hard" from "broken". A competent policy must make
- *              measurable progress; if IT makes none, the board is at fault.
+ *
+ *   forward -- hop forward, but only into a cell the board says is clear. This
+ *              is the winnability probe. Random play loses every time on a game
+ *              about crossing traffic, so on its own it cannot tell "hard" from
+ *              "broken"; a competent policy must make measurable progress, and
+ *              if IT makes none the board is at fault.
+ *
+ * The forward policy waits for a gap. It used to hop the instant the input
+ * floor allowed, which made it a suicide bot: it walked into whatever was on
+ * the next row and reported 0/10 stages cleared on a board the game's own
+ * competent driver clears 20/20 campaigns on. src/sim-core.js says so in as
+ * many words -- "the earlier blind version hopped every 600ms regardless, so
+ * the moment hazards existed it walked into the first car and no campaign
+ * could be completed". A policy that never reads the board cannot measure
+ * whether the board is beatable. This one does, and it still never hops
+ * sideways, so it remains a pure test of forward progress.
  */
+
+/* Can this player commit to a FORWARD hop right now?
+ *
+ * Hazards.hitsAt is the game's own exported collision predictor -- the same
+ * one src/sim-core.js's competent-play driver reads -- so this is the board's
+ * opinion of what is lethal rather than a second guess at it.
+ *
+ * BOTH cells are checked, the one underfoot and the one being entered. Only
+ * asking about the destination is the mistake sim-core documents: "a car does
+ * not need the player to move to kill them", with 415 of 599 measured deaths
+ * landing within 700ms of the player arriving on a row that was already
+ * closing.
+ *
+ * The horizon is Hazards.MIN_COLUMN_CROSS_MS, the game's own exported
+ * reaction-time bound -- how long a hazard needs to cross a column -- read from
+ * the live module rather than typed in, so retuning the hazards retunes this
+ * with them.
+ *
+ * The hop RATE is not a constant at all: this is asked every frame and hop() is
+ * left to refuse anything inside its own HOP_MIN_MS floor, which is the same
+ * rule a player's key repeat is subject to. Measured on the ten forward seeds,
+ * clearing a cell for Hazards.MIN_COLUMN_CROSS_MS and letting the game police
+ * the rate clears 9/10; holding out for a longer window makes the bot more
+ * cautious and LESS successful, because a driver that dawdles gets caught. */
+var FORWARD_SAMPLES = 13;
+function forwardCellClear(gs) {
+  var p = gs.players[0].state();
+  if (!p.alive || p.finished) return false;
+  if (!gs.hazards || !gs.hazards.length) return true;
+  var stepMs = Hazards.MIN_COLUMN_CROSS_MS / FORWARD_SAMPLES;
+  for (var s = 0; s <= FORWARD_SAMPLES; s++) {
+    var off = s * stepMs;
+    for (var i = 0; i < gs.hazards.length; i++) {
+      if (Hazards.hitsAt(gs.hazards[i], p.col, p.row, off)) return false;
+      if (Hazards.hitsAt(gs.hazards[i], p.col, p.row + 1, off)) return false;
+    }
+  }
+  return true;
+}
+
 function playRun(run, who, seedName, policy) {
   var rec = { run: run, character: who.id, name: who.name, seed: seedName,
               policy: policy, stages: 0, maxRow: 0, goalRow: 0, ticks: 0,
@@ -418,11 +485,17 @@ function playRun(run, who, seedName, policy) {
     if (elapsed >= nextHop) {
       var dir = policy === "forward" ? "forward"
               : pick(["forward", "forward", "forward", "left", "right"]);
-      try {
-        var moved = g.hop(dir, 0);
-        if (moved) { rec.hops++; __STATS.hops++; } else { rec.hopRejected++; }
-      } catch (e) { __ERRORS.push("hop(" + dir + ") threw: " + e.message); }
-      nextHop = elapsed + (policy === "forward" ? 20 : 250 + Math.floor(rnd() * 900));
+      /* Forward-only means forward-only -- never a lateral hop. It does NOT
+       * mean "hop regardless of what is on the board"; see forwardCellClear. */
+      if (policy === "forward" && !forwardCellClear(g.state())) {
+        nextHop = elapsed + 20;          // the cell is occupied: look again
+      } else {
+        try {
+          var moved = g.hop(dir, 0);
+          if (moved) { rec.hops++; __STATS.hops++; } else { rec.hopRejected++; }
+        } catch (e) { __ERRORS.push("hop(" + dir + ") threw: " + e.message); }
+        nextHop = elapsed + (policy === "forward" ? 20 : 250 + Math.floor(rnd() * 900));
+      }
     }
     var s = g.state();
     if (s) {
@@ -541,6 +614,17 @@ for (var ri = 0; ri < rosterIds.length; ri++) {
  * project edits most, and it is the reason to prefer booting the code over
  * merely parsing it. A syntax check passes a file that throws on frame 1. */
 var mainReport = { booted: false, frames: 0, ctxCalls: 0, drewSprite: false, inputChecks: 0 };
+/* A named assertion, counted so the report says how many ran.
+ *
+ * Harness scope on purpose. Each area used to declare its own local `check`,
+ * so a section added later could call check() and get "Can't find variable:
+ * check" -- the assertion never ran and the guard reported a thrown ReferenceError
+ * instead of the thing it was written to catch. */
+function claim(where, ok, message) {
+  mainReport.inputChecks++;
+  if (!ok) __ERRORS.push(where + ": " + message);
+  return ok;
+}
 var __browserGame = null;
 var __createGame = SimCore.createGame;
 SimCore.createGame = function (opts) { __browserGame = __createGame(opts); return __browserGame; };
@@ -685,6 +769,73 @@ guard("main.js 3D bridge", function () {
         "live renderer did not receive independent player hop poses");
   delete __g.World3D;
 });
+
+/* A restarted stage must not leave a hop still playing.
+ *
+ * hopAnims[] is private to main.js's IIFE, so this is observed the way the
+ * renderer sees it: through the pose main.js hands the live renderer each
+ * frame. A player put back on row 0 still mid-arc reads as lift > 0 or a row
+ * between two integers, which is exactly the "still animating on from the old
+ * board" case. */
+guard("main.js restart drops the hop pose", function () {
+  function check(ok, message) {
+    mainReport.inputChecks++;
+    if (!ok) __ERRORS.push("restart pose: " + message);
+  }
+  __elements.mode.dispatchEvent({ type: "click" });   // fresh single-player game
+  var g = __browserGame, gs = g.state(), ps = gs.players[0].state();
+  var seen = null;
+  __g.World3D = { ready: true, status: "ready", render: function (s, stage, poses, now) {
+    seen = { poses: poses, phase: s.phase };
+  } };
+  try {
+    // Move off the start line so there IS an arc to go stale, then die.
+    for (var m = 0; m < 4; m++) {
+      var cbb = __rafCb; __rafCb = null;
+      if (cbb) cbb(__clock);
+      __elements["move-forward"].dispatchEvent({ type: "click" });
+    }
+    check(ps.row > 0, "could not move the player off the start line to set up the check");
+    /* Teeth for the assertion below: confirm the pose channel really does
+     * carry a hop arc while one is running, so "lift 0 after the restart" is
+     * a live reading rather than a channel that never moves.
+     *
+     * Honest limit, stated rather than hidden: a hop arc lasts ~600ms and the
+     * death beat is 2100ms, so an arc started before the death has finished by
+     * the time the beat ends. This therefore proves the restart begins at rest
+     * on the start line -- it is not a test that survives an arc deliberately
+     * held open across the restart. */
+    seen = null;
+    var arcFrame = __rafCb; __rafCb = null;
+    if (arcFrame) arcFrame(__clock);
+    check(seen && (seen.poses[0].lift > 0 ||
+                   Math.abs(seen.poses[0].row - ps.row) > 1e-9 ||
+                   Math.abs(seen.poses[0].col - ps.col) > 1e-9),
+          "no hop arc was ever observed in the pose channel, so the restart " +
+          "assertion below cannot fail: " + JSON.stringify(seen && seen.poses[0]));
+    g.applyDeath(0);
+    // Step real frames through the death beat, then read the first frame after.
+    var spun = 0, cb2 = __rafCb;
+    while (spun < 400 && gs.phase === SimCore.PHASES.DEAD) {
+      cb2 = __rafCb; __rafCb = null;
+      if (!cb2) break;
+      cb2(__clock); spun++;
+    }
+    seen = null;
+    cb2 = __rafCb; __rafCb = null;
+    if (cb2) cb2(__clock);
+    check(gs.phase !== SimCore.PHASES.DEAD,
+          "the death beat never ended after " + spun + " real frames");
+    check(ps.row === 0 && ps.col === ps.startCol,
+          "restart did not put the player back on the start line: row " + ps.row +
+          " col " + ps.col + " (startCol " + ps.startCol + ")");
+    check(seen && seen.poses[0].lift === 0 && seen.poses[0].row === ps.row,
+          "a stale hop pose survived the restart: " + JSON.stringify(seen && seen.poses[0]));
+  } finally {
+    delete __g.World3D;
+  }
+});
+
 SimCore.createGame = __createGame;
 mainReport.ctxCalls = __canvas.__ctx.calls;
 
@@ -696,6 +847,232 @@ if (mainReport.booted && mainReport.ctxCalls === 0) {
 if (mainReport.booted && mainReport.frames === 0) {
   __ERRORS.push("main.js booted but its rAF loop never ran a frame");
 }
+
+// ======================= 5. shields, end to end ======================
+/* The shield feature, driven through window.SimCore exactly as a player would
+ * meet it: walk the pickups up on a real board, then put a real hazard on the
+ * player's own cell and let the collision loop deal with it.
+ *
+ * Nothing here reaches into private state. applyDeath is not called to fake a
+ * hit -- the hit is a hazard the game itself collides with, so this exercises
+ * the same funnel traffic and the pursuer use.
+ */
+var shieldReport = { pickupRows: [], collected: 0, seedsTried: 0,
+                     livesAtPickup: [], livesIncreases: [], hits: [] };
+
+guard("shield pickups are dealt at a quarter and a half of every stage", function () {
+  for (var si = 0; si < Stages.STAGES.length; si++) {
+    var g = SimCore.createGame({ playerCount: 1, seed: "shield-rows-" + si });
+    g.startStage(si);
+    var picks = g.state().pickups;
+    var goal = Stages.jumpsFor(si);
+    var rows = picks ? picks.map(function (p) { return p.row; }) : [];
+    shieldReport.pickupRows.push(goal + ":" + rows.join("/"));
+    if (!picks || picks.length !== 2) {
+      __ERRORS.push("shields: stage " + (si + 1) + " dealt " +
+                    (picks ? picks.length : 0) + " pickups, not 2");
+      continue;
+    }
+    picks.forEach(function (pk, k) {
+      if (pk.kind !== "shield") {
+        __ERRORS.push("shields: stage " + (si + 1) + " pickup " + k + " is a '" +
+                      pk.kind + "', not a shield");
+      }
+      var pct25 = k === 0 ? 0.25 : 0.50;
+      if (pk.row !== Math.round(goal * pct25)) {
+        __ERRORS.push("shields: stage " + (si + 1) + " pickup " + k + " sits on row " +
+                      pk.row + ", expected " + Math.round(goal * pct25) +
+                      " (" + Math.round(pct25 * 100) + "% of " + Stages.jumpsFor(si) + ")");
+      }
+      if (pk.taken) {
+        __ERRORS.push("shields: stage " + (si + 1) + " pickup " + k +
+                      " was already taken before the player moved");
+      }
+    });
+  }
+});
+
+/* Play a real board until both pickups are collected.
+ *
+ * The driver is the same forward-only, gap-aware one the winnability probe
+ * uses, so a shield run and a winnability run are the same kind of run. Seeds
+ * are tried until one reaches both pickups, because traffic is allowed to kill
+ * this player -- that is the game -- and the shield assertions need a survivor
+ * to hand them a live board. Which seed succeeded is reported, so a change in
+ * how long this takes is visible rather than silent. */
+function playToShields(seed, wantShields) {
+  var DT = 1000 / 60;
+  var g = SimCore.createGame({ playerCount: 1, seed: seed });
+  var gs = g.state(), ps = gs.players[0].state();
+  var el = 0, next = 100, seenShields = 0, prevLives = ps.lives;
+  var livesIncreases = [], livesAtPickup = [], tookAtRow = [];
+  var maxMs = Stages.STAGE_DURATION_MS * 4 + 5000;
+  while (el < maxMs) {
+    if (gs.phase === SimCore.PHASES.READY) gs.phase = SimCore.PHASES.RUNNING;
+    if (gs.phase === SimCore.PHASES.RUNNING && el >= next) {
+      if (forwardCellClear(gs)) g.hop("forward", 0);
+      next = el + 20;
+    }
+    g.tick(DT); el += DT;
+    /* A token must never be a life refill. Asserted across the whole run
+     * rather than at the pickup instant, so a death in between cannot be
+     * mistaken for the token having changed lives. */
+    if (ps.lives > prevLives) livesIncreases.push({ tMs: Math.round(el), from: prevLives, to: ps.lives });
+    prevLives = ps.lives;
+    if (ps.shields > seenShields) {
+      livesAtPickup.push(ps.lives); tookAtRow.push(ps.row);
+      seenShields = ps.shields;
+    }
+    if (ps.shields >= wantShields) {
+      return { ok: true, g: g, gs: gs, ps: ps, livesIncreases: livesIncreases,
+               livesAtPickup: livesAtPickup, tookAtRow: tookAtRow };
+    }
+    if (gs.phase === SimCore.PHASES.STAGE_CLEAR ||
+        gs.phase === SimCore.PHASES.STAGE_FAILED) break;
+  }
+  return { ok: false, g: g, gs: gs, ps: ps, livesIncreases: livesIncreases,
+           livesAtPickup: livesAtPickup, tookAtRow: tookAtRow };
+}
+
+var shieldRun = null;
+guard("shield pickups stack, and a token is never a life", function () {
+  for (var s = 0; s < 40 && !shieldRun; s++) {
+    shieldReport.seedsTried++;
+    var r = playToShields("shield-run-" + s, 2);
+    if (r.ok) shieldRun = r;
+  }
+  if (!shieldRun) {
+    __ERRORS.push("shields: no seed reached both pickups in 40 attempts -- " +
+                  "the pickups may be unreachable, or unreachable without dying");
+    return;
+  }
+  var gs = shieldRun.gs, ps = shieldRun.ps;
+  var wantShields = gs.pickups.length;
+  shieldReport.collected = ps.shields;
+  shieldReport.tookAtRow = shieldRun.tookAtRow;
+  shieldReport.livesAtPickup = shieldRun.livesAtPickup;
+  shieldReport.livesIncreases = shieldRun.livesIncreases;
+  shieldReport.seed = "shield-run-" + (shieldReport.seedsTried - 1);
+
+  claim("shield pickup",
+        ps.shields === wantShields,
+        "collecting every pickup (" + wantShields + ") granted " + ps.shields +
+        " shields -- they must stack, not overwrite");
+  gs.pickups.forEach(function (pk, k) {
+    if (!pk.taken) __ERRORS.push("shields: pickup " + k + " on row " + pk.row + " was never taken");
+  });
+  if (shieldRun.livesIncreases.length) {
+    __ERRORS.push("shields: a token raised lives " +
+                  JSON.stringify(shieldRun.livesIncreases) +
+                  " -- a pickup gives a shield, never a life");
+  }
+  /* The shield budget is per stage, so it cannot exceed the pickups dealt. */
+  claim("shield pickup",
+        ps.shields <= gs.pickups.length,
+        "shields (" + ps.shields + ") exceed the pickups dealt on this stage (" +
+        gs.pickups.length + ")");
+});
+
+/* Three lethal hits on one board, each a real collision with a real hazard.
+ *
+ * A hazard is built with Hazards.makeHazard and parked on the player's own
+ * cell at zero speed, then one tick is run. Everything after that -- the
+ * collision test, the shield absorb, the life cost and the death beat -- is the
+ * game's, not the harness's.
+ *
+ * Each assertion is stated relative to the state immediately before its own
+ * hit, and the injected hazard is removed before the grace window is waited
+ * out, so a second natural hit cannot be mistaken for the deliberate one. */
+guard("two shields absorb two hits, the third kills", function () {
+  function check(ok, message) {
+    mainReport.inputChecks++;
+    if (!ok) __ERRORS.push("shield hit: " + message);
+  }
+  if (!shieldRun) return;
+  var DT = 1000 / 60;
+  var g = shieldRun.g, gs = shieldRun.gs, ps = shieldRun.ps;
+  var injected = [];
+
+  function dropHazardOnPlayer() {
+    var rng = SimCore.createRng("shield-probe-hit");
+    var h = Hazards.makeHazard("car", ps.row, gs.cols, rng, 0, 0, 0);
+    if (!h) { __ERRORS.push("shield hit: Hazards.makeHazard could not build a car"); return; }
+    /* Parked on the player's cell and frozen, so the only thing that happens
+     * is the collision the harness asked for. */
+    h.x = ps.col; h.speed = 0; h.baseSpeed = 0; h.armMs = 0; h.now = 0;
+    gs.hazards.push(h);
+    injected.push(h);
+  }
+  function clearInjected() {
+    gs.hazards = gs.hazards.filter(function (x) { return injected.indexOf(x) < 0; });
+    injected = [];
+  }
+  /* No hazard on the board while the absorb grace is served, so the next hit
+   * is unmistakably the next deliberate one. */
+  function settleGrace() {
+    clearInjected();
+    var w = 0;
+    while (w < 900) { g.tick(DT); w += DT; }
+  }
+
+  for (var hit = 1; hit <= 3; hit++) {
+    var before = { shields: ps.shields, lives: ps.lives, row: ps.row, col: ps.col,
+                   alive: ps.alive, phase: gs.phase };
+    dropHazardOnPlayer();
+    g.tick(DT);
+    var got = { shields: ps.shields, lives: ps.lives, row: ps.row, col: ps.col,
+                alive: ps.alive, phase: gs.phase };
+    shieldReport.hits.push("hit" + hit + ": shields " + before.shields + "->" + got.shields +
+                           " lives " + before.lives + "->" + got.lives +
+                           " row " + before.row + "->" + got.row +
+                           " alive " + got.alive + " phase " + got.phase);
+
+    if (hit <= 2) {
+      /* With a shield: exactly one spent, no life, same cell, still running. */
+      check(got.shields === before.shields - 1,
+            "hit " + hit + " left " + got.shields + " shields, expected " + (before.shields - 1));
+      check(got.lives === before.lives,
+            "hit " + hit + " cost a life (" + before.lives + "->" + got.lives +
+            ") -- an absorbed hit must be free");
+      check(got.row === before.row && got.col === before.col,
+            "hit " + hit + " moved the player from (" + before.col + "," + before.row +
+            ") to (" + got.col + "," + got.row + ") -- an absorb must leave them in place");
+      check(got.alive === true,
+            "hit " + hit + " killed a player holding " + before.shields + " shield(s)");
+      check(got.phase === before.phase && got.phase !== SimCore.PHASES.DEAD,
+            "hit " + hit + " moved the phase to " + got.phase +
+            " -- an absorbed hit must not start the death beat");
+      settleGrace();
+    } else {
+      /* No shields left: a normal death, costing exactly one life. */
+      check(got.shields === 0, "hit 3 left " + got.shields + " shields with none held");
+      check(got.alive === false, "hit 3 did not kill a player holding no shields");
+      check(got.lives === before.lives - 1,
+            "hit 3 cost " + (before.lives - got.lives) + " lives, expected exactly 1 (" +
+            before.lives + "->" + got.lives + ")");
+      check(got.phase === SimCore.PHASES.DEAD,
+            "hit 3 put the phase at " + got.phase + ", expected the death beat");
+    }
+  }
+
+  /* The death beat must end in a genuinely fresh stage: start line, no stale
+   * shield, and the lives that were left carried rather than refilled. */
+  var beatMs = 0;
+  clearInjected();
+  while (beatMs < 10000 && gs.phase === SimCore.PHASES.DEAD) { g.tick(DT); beatMs += DT; }
+  shieldReport.restart = { beatMs: Math.round(beatMs), phase: gs.phase, row: ps.row,
+                           col: ps.col, startCol: ps.startCol, alive: ps.alive,
+                           shields: ps.shields, lives: ps.lives };
+  check(gs.phase !== SimCore.PHASES.DEAD,
+        "the death beat never ended (" + Math.round(beatMs) + "ms of ticking)");
+  check(ps.row === 0,
+        "restart put the player on row " + ps.row + ", not row 0");
+  check(ps.col === ps.startCol,
+        "restart put the player on column " + ps.col + ", not their start column " + ps.startCol);
+  check(ps.alive === true, "restart left the player dead");
+  check(ps.shields === 0,
+        "restart carried " + ps.shields + " shields onto a fresh board -- shields are per stage");
+});
 
 // ============================ report ================================
 function pct(a, b) { return b > 0 ? Math.round(a * 1000 / b) / 10 : 0; }
@@ -741,6 +1118,16 @@ print("");
 print("forward-only policy: " + cleared + "/" + forwardReport.length +
       " cleared a stage; best progress row " + bestRow +
       " of goal " + (forwardReport[0] ? forwardReport[0].goalRow : "?"));
+print("");
+print("-- SHIELDS --");
+print("pickup rows (goal:actual): " + shieldReport.pickupRows.join("  "));
+print("collected " + shieldReport.collected + " shields at rows " +
+      JSON.stringify(shieldReport.tookAtRow) + " (seed " + (shieldReport.seed || "?") +
+      ", " + shieldReport.seedsTried + " seed(s) tried)");
+print("lives when each token was taken: " + JSON.stringify(shieldReport.livesAtPickup) +
+      "   life increases: " + (shieldReport.livesIncreases.length ? JSON.stringify(shieldReport.livesIncreases) : "none"));
+for (var hs = 0; hs < shieldReport.hits.length; hs++) print("  " + shieldReport.hits[hs]);
+print("restart after death: " + (shieldReport.restart ? JSON.stringify(shieldReport.restart) : "not reached"));
 print("");
 if (__ERRORS.length === 0) {
   print("RESULT: NO ERRORS");

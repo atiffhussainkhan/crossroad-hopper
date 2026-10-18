@@ -408,6 +408,12 @@
       g.goalRow = Stages.jumpsFor(index);
       g.pursuer.reset();
       g.lastShieldAbsorbMs = -1;
+      /* The pickup clock is stage-scoped for the same reason the absorb clock
+       * is: it dates a token on THIS board. lastShieldPickupMs is written on
+       * every pickup and read by nothing yet, so this has no effect today --
+       * it is here so a fresh start really is fresh, and so the first reader
+       * of that field does not inherit the dead attempt's token. */
+      g.lastShieldPickupMs = -1;
       g.rng = createRng(seed + ":" + index);
       // A fresh stage starts with an empty hazard window; it is rebuilt
       // on the first tick, so nothing can spawn on top of a player.
@@ -496,6 +502,7 @@
       }
       g.pursuer.reset();
       g.lastShieldAbsorbMs = -1;
+      g.lastShieldPickupMs = -1;
       g.rng = createRng(seed + ":endless:" + g.endlessAttempt);
       g.hazards = [];
       g.hazardRow0 = null;
@@ -557,6 +564,32 @@
       if (idx < 0 || idx >= g.players.length) return false;
       var moveDirection = direction || "forward";
 
+      /* A restart is a PHASE TRANSITION, not a hop, so it is resolved before
+       * the input floor below. It used to be resolved after it, and the floor
+       * ate it.
+       *
+       * The floor measures `elapsedInStageMs - lastHopAtMs`, and the stage clock
+       * is FROZEN for the whole death beat -- that freeze is the point of the
+       * beat. So the gap is pinned at whatever it was when the player died,
+       * and if that is under HOP_MIN_MS it can never grow: the tap that the
+       * "Tap to skip and restart" banner is asking for is refused for every
+       * remaining millisecond of the beat.
+       *
+       * This is the common case, not an edge. The player is killed on the row
+       * they just hopped to, so they usually die a frame or two after their own
+       * hop and the gap is tens of milliseconds. Measured in the browser, dying
+       * 17ms after the last hop: the tap at 867ms into the beat left the phase
+       * on DEAD and the row at 14, and the beat only ended on its own timer.
+       *
+       * Ordering it first also makes the restart read correctly for the view:
+       * the fresh board clears lastHopAtRow, so the hop that the restart also
+       * performs is measured from a cleared clock rather than from the corpse
+       * of the last attempt. */
+      if (g.phase === PHASES.DEAD) {
+        finishDeathBeat();
+        if (g.phase === PHASES.READY) g.phase = PHASES.RUNNING;
+      }
+
       /* One hop per HOP_MIN_MS.
        *
        * hop() had no rate limit at all, so the game accepted 500 forward hops
@@ -583,13 +616,6 @@
          * stage clock instead. */
         if (sinceRow === 0 && sinceCol === 0 &&
             (g.elapsedInStageMs - (g.lastHopAtMs || 0)) < HOP_MIN_MS) return false;
-      }
-
-      // Skipping the animation follows the same restart as waiting for it;
-      // otherwise a quick tap retained a failed attempt's score and clock.
-      if (g.phase === PHASES.DEAD) {
-        finishDeathBeat();
-        if (g.phase === PHASES.READY) g.phase = PHASES.RUNNING;
       }
 
       if (g.phase === PHASES.ENDLESS) {

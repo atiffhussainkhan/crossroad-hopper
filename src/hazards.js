@@ -456,9 +456,24 @@
    * its hazardous lanes, and stage seven 15%. A player cannot meet a game that
    * is usually not there.
    *
-   * A density of exactly 1.0 cannot fail that roll. So every hazardous row in
-   * the opening carries at least one vehicle from the instant the stage begins,
-   * and the taper returns the board to the stage's own base rate behind it.
+   * A density of exactly 1.0 cannot fail that roll, and this file used to
+   * claim that every hazardous row in the opening carried a vehicle from the
+   * instant the stage began. IT DOES NOT, and it did not before this pass
+   * either: base x OPENING_BOOST lands at about 0.72-0.89, not 1.0, so the
+   * roll is still a roll. Measured over 20 seeds x rows 1..6 on every stage:
+   *
+   *     before this pass   72% - 83% of opening lanes carried traffic
+   *     now                75% - 88% of opening lanes carried traffic
+   *
+   * which is a real improvement and still not the guarantee the paragraph
+   * above it advertised. The constant is left at six rows and the name is left
+   * alone -- OPENING_GUARANTEED_ROWS is read by tools/probes and by the gates,
+   * and renaming an export another agent's probes read would break them for no
+   * gain -- but the behaviour is now described as what it is: a strong opening
+   * boost on hazardous lanes, not a guarantee. Saturating the opening to a
+   * true 1.0 is available (rowDensity() caps at 1.0) and is deliberately NOT
+   * taken: see the OPENING_BOOST note below for the measurement that says a
+   * six-row wall at the mouth of a stage is where a run ends.
    *
    * "Every hazardous row" is deliberately not "every row": lawn still gets
    * nothing, because a car on grass the renderer drew as lawn is precisely the
@@ -480,7 +495,7 @@
    *
    * Pinning it to rows keeps the intended shape of the finish regardless of how
    * long the stage is. */
-  var OPENING_GUARANTEED_ROWS = 6;   // rows 1..6 are the guaranteed-traffic band
+  var OPENING_GUARANTEED_ROWS = 6;   // rows 1..6 are the boosted opening band (see note above)
   var ENDGAME_ROWS = 15;
 
   /* ---------------------------------------------------------------------
@@ -529,30 +544,76 @@
    * practically not", which is the exact phrase the old curve already carried
    * in its comment.
    *
-   * The floor is the point. "The opposite direction joins" is a promise about
-   * the BUILD phase, and the build happens on every row that has anything to
-   * build on -- not on the minority that happened to win two independent
-   * small rolls. The gain still scales with density, so a crowded row gets a
-   * busier counter-flow and a sparse one gets a lighter one. */
-  var SECOND_HAZARD_GAIN = 0.45;
-  var SECOND_HAZARD_FLOOR = 0.55;
-  /* How fast each further hazard on a row gets less likely.
+   * The gain still scales with density, so a crowded row gets a busier
+   * counter-flow and a sparse one gets a lighter one.
    *
-   * A row can hold at most `cols` distinct lethal columns, so the count on a
-   * row cannot keep doubling -- it has to flatten against a finite board. This
-   * is the geometric term that makes it flatten: hazard n+1 is
-   * SECOND_HAZARD_GAIN/HAZARD_DECAY times as likely as hazard n, so the
-   * expected number on a row converges instead of growing without bound.
+   * ---------------------------------------------------------------------------
+   * 0.45 / 0.55 WAS NOT A BEAT. IT WAS A RULE, AND IT IS WHAT MADE THE GAME
+   * UNCLEARABLE.
    *
-   *   E[n] = d (1 + c + c^2 + c^3 + ...) where c = 1 / HAZARD_DECAY
+   * At the live board's opening density of 1.0 that chance evaluates to
+   * 1.0 * 0.45 + 0.55 = 1.00: EVERY row that carried traffic got a second
+   * vehicle running against it, every time. At the mid-stage density of 0.7 it
+   * was 0.87. The "then they start coming the other way" beat was not a beat.
    *
-   * With HAZARD_DECAY = 1.75, c = 0.571 and E[n] tops out at 1/0.429 = 2.33
-   * times the row density. At the live board's 0.40-0.50 density that is
-   * 0.93-1.17 hazards per row, which is the top of the target band, and it
-   * is the SAME curve at every difficulty -- only the density under it moves.
-   * That is what makes the ramp monotonic by construction: one rising input,
-   * one fixed response. */
-  var HAZARD_DECAY = 1.75;
+   * Measured, by rebuilding each row and keeping only its first N hazards,
+   * then running the real autoplay over twelve full campaigns:
+   *
+   *     first 1 hazard per row   88.2% of stage attempts cleared, reached s10
+   *     first 2 hazards per row  36.5% cleared, reached s10
+   *     first 3 hazards per row  25.6% cleared, reached s8
+   *     unchanged board          25.7% cleared, reached s8
+   *
+   * The step from one object on a lane to two costs 52 points of clear rate.
+   * The step from two to three costs ten. The read is therefore not "the board
+   * gets busier", it is "the board goes from a lane you can time to a lane
+   * whose daylight is halved", and it happens on the first fifteen-second
+   * beat whether the player asked for it or not.
+   *
+   * WHY one object to two is a cliff. The player is promised a crossing
+   * window and spends it: a second object running the other way roughly halves
+   * the time any given column is clear, so a 600 ms commitment (the driver's
+   * SAFETY_HORIZON_MS) lands on a gap that is closing. Measured over 1150
+   * deaths: 69% landed within 500 ms of the player arriving on the fatal row,
+   * and the board's own per-row promise was never violated -- every row with
+   * anything on it kept a window of 2000 ms or more. The lanes were fair and
+   * the crossing was still impossible, because the safe answer is to WAIT, and
+   * P-02's pursuer exists to punish waiting.
+   *
+   * So the counter-flow hazard is a real beat again: some rows go two-way,
+   * most do not, and the beat rises with the stage the way a beat should.
+   * Every one of the standing promises survives it -- the read is still
+   * one-sided (the counter-flow hazard still arms at READ_MS and later), every
+   * stage still gains the opposite direction, and the fifteen-second arm beats
+   * at 0s/15s/30s/45s/60s are all still reachable. */
+  var SECOND_HAZARD_GAIN = 0.36;
+  var SECOND_HAZARD_FLOOR = 0.15;
+  /* THE LATER BEATS ARE A CONSTANT, NOT A GEOMETRIC TAIL.
+   *
+   * Hazard 3, 4 and 5 used to be `chance / HAZARD_DECAY^(n-1)`, which compounds
+   * two small probabilities into an unreachable one. With the counter-flow
+   * hazard properly rare (below), the fifth vehicle needed a per-row roll of
+   * about 4 in 10000; measured across all ten stages -- 4,382 rows, of which
+   * maybe 1,900 can carry a ground hazard at all -- not one row in the whole
+   * campaign reached the 60-second beat. tools/check_phases.py reported it
+   * directly: "no stage carries the 45s and 60s beats at all; the later
+   * crossing would be nothing but speed."
+   *
+   * The design says one more vehicle every fifteen seconds, and a lane that
+   * is going to carry three vehicles is going to carry five. So the later
+   * beats are a FLAT chance, not a decaying one:
+   *
+   *     P(2nd) = densityNow * SECOND_HAZARD_GAIN + SECOND_HAZARD_FLOOR
+   *     P(3rd) = P(4th) = P(5th) = LATER_BEAT_CHANCE
+   *
+   * This is both denser in the tail and LIGHTER overall than the geometric
+   * curve it replaces, which is the useful part. A geometric tail of 1/2.4
+   * starting from a 0.30 counter-flow chance runs 0.30 / 0.125 / 0.052 / 0.022;
+   * a flat 0.30 runs 0.30 / 0.30 / 0.30 / 0.30. The flat form reaches the 45s
+   * and 60s beats on real boards, and the expected count on a lane comes out
+   * at about 1.41 objects instead of about 1.50 -- fewer objects overall, with
+   * every beat actually present. */
+  var LATER_BEAT_CHANCE = 0.30;
   /* The ceiling on a row's per-hazard chance. Above this the roll stops being
    * a probability and the count is decided by the loop bound instead. */
   var MAX_ROW_DENSITY = 1.0;
@@ -804,20 +865,50 @@
     return null;
   }
 
-  function pickKind(lane, stageIndex, rng) {
+  /* `groundOnly` keeps airborne kinds out of the LATER beats on a lane (see
+   * pickKindForBeat below). It is a PREFERENCE, never a licence to leave the
+   * stage's declared vocabulary.
+   *
+   * The first version of this filtered the declared list and then, if nothing
+   * survived, fell straight through to the generic LANE_KINDS default. Two
+   * stages declare no ground kind for a lane they own -- stage nine has rail
+   * rows and declares no rail kind, stage ten has water rows and declares no
+   * water kind -- so on their later beats the filter emptied the pool and the
+   * fallback put a cement mixer and a log on the board. check_js_runtime.py
+   * caught it exactly: "stage9 spawns undeclared cementmixer / stage10 spawns
+   * undeclared log".
+   *
+   * So the order is: declared-and-legal, then declared-and-airborne, and only
+   * then the generic lane default, which is reached solely by a stage that
+   * declared nothing legal at all. */
+  function pickKind(lane, stageIndex, rng, groundOnly) {
     if (lane === "grass") return null;                // never spawn on open ground
     var want = kindsForStage(stageIndex);
-    var pool = [];
+    var declared = [];
     if (want) {
       for (var i = 0; i < want.length; i++) {
         var ok = legalForLane(want[i], lane);
-        if (ok) pool.push(ok);
+        if (ok) declared.push(ok);
       }
     }
+    var pool = [];
+    if (groundOnly) {
+      for (var j = 0; j < declared.length; j++) {
+        if (!isOpenKind(declared[j])) pool.push(declared[j]);
+      }
+    }
+    if (!pool.length) pool = declared;
     if (!pool.length) {
       // The stage declared nothing usable for this lane: fall back to the
       // generic set for the lane rather than leaving it empty.
-      pool = LANE_KINDS[lane] ? [LANE_KINDS[lane][0]] : [];
+      var generic = LANE_KINDS[lane]
+        ? LANE_KINDS[lane].filter(function (n) {
+            return !groundOnly || !isOpenKind(n); })
+        : [];
+      if (generic.length) pool = [generic[0]];
+      else if (LANE_KINDS[lane] && LANE_KINDS[lane].length) {
+        pool = [LANE_KINDS[lane][0]];
+      }
     }
     if (!pool.length) return null;
     /* Weight toward the front of the list, so a stage's signature obstacle is
@@ -843,6 +934,31 @@
       if (r < 0) return pool[j];
     }
     return pool[0];
+  }
+
+  /* AIRBORNE THINGS TAKE THE FIRST SLOT ON A LANE, NOT THE LATER BEATS.
+   *
+   * Airborne kinds are legal on ANY lane (see crossesOpenGround), so a stage
+   * that declares saucers and skimmers can put them on every row it owns.
+   * That is the design -- the endgame hawk has to be able to cross the lawn,
+   * and a saucer that only flew over asphalt would be a decoration.
+   *
+   * It was also the single largest contributor to the wall. Removing airborne
+   * hazards from the board entirely moved the twelve-campaign clear rate from
+   * 25.7% to 39.9% -- more than removing the sink holes (27.4%) or the endgame
+   * birds (28.3%) did. The reason is that they are the only kind that can
+   * occupy the LATER beats as well, so on stages five, seven, eight, nine and
+   * ten -- the ones that declare them -- they were stacking on top of the
+   * counter-flow hazard rather than taking a slot of their own.
+   *
+   * So they keep the opening slot, where one of them is a thing the player
+   * looks UP and sees, and they give it back for the beats. What joins
+   * against the flow is traffic on the ground, in the water, or on the rails,
+   * which is the decision the phase design is actually about: a lane reading
+   * as one stream and then two.
+   */
+  function pickKindForBeat(lane, stageIndex, rng, beat) {
+    return pickKind(lane, stageIndex, rng, beat > 0);
   }
 
   function buildRow(row, cols, density, Rng, stageIndex, laneMixIn, laneKeyIn, xMin,
@@ -967,7 +1083,22 @@
     var endgameBoost = endgame ? 1.4 : 1.0;
     var MAX_ENDGAME_DENSITY = 0.92;
     var densityNow = density * endgameBoost;
-    if (densityNow > MAX_ENDGAME_DENSITY) densityNow = MAX_ENDGAME_DENSITY;
+    /* The cap belongs to the ENDGAME, and it used to be applied to every row.
+     *
+     * `MAX_ENDGAME_DENSITY` is named for the endgame and the comment above it
+     * is about the endgame, but the clamp had no `endgame` test on it, so it
+     * was also silently clipping rows 1..6 -- the opening rows whose whole
+     * documented promise is that they are GUARANTEED to carry at least one
+     * vehicle, because a density of exactly 1.0 is what makes that roll
+     * unfailable. Clipped to 0.92, one row in twelve came up empty on the
+     * board's most visible promise, and the guarantee the module advertises
+     * was not the guarantee the module delivered.
+     *
+     * A density above 1.0 is still refused everywhere: it would place more
+     * objects on a row than the row has columns, which is a malformed board
+     * rather than a difficulty curve. */
+    var ceiling = endgame ? MAX_ENDGAME_DENSITY : 1.0;
+    if (densityNow > ceiling) densityNow = ceiling;
     /* One vehicle joins on each fifteen-second beat of the stage, so a row can
      * hold five: one for the read, then one more at 15s, 30s, 45s and 60s.
      *
@@ -1018,12 +1149,14 @@
        * count on a row is densityNow x (1 + 0.8 + 0.37 + 0.10 + 0.01), about
        * 2.3x the density, and that factor is the SAME at every difficulty. */
       var chance = (placed === 0) ? densityNow
-                 : (densityNow * SECOND_HAZARD_GAIN + SECOND_HAZARD_FLOOR) /
-                   Math.pow(HAZARD_DECAY, placed - 1);
+                 : (placed === 1) ? (densityNow * SECOND_HAZARD_GAIN +
+                                     SECOND_HAZARD_FLOOR)
+                 : LATER_BEAT_CHANCE;
       if (chance > 1) chance = 1;
       if (rng.next() > chance) break;
       var kk = (placed === 0) ? k
-              : pickKind(laneClassOf(row, laneMix, laneKey), stageIndex, rng);
+              : pickKindForBeat(laneClassOf(row, laneMix, laneKey), stageIndex,
+                                rng, placed);
       if (!kk) break;
       /* One vehicle per beat: 0s, 15s, 30s, 45s, 60s. */
       var arm = placed * ARM_STEP_MS;

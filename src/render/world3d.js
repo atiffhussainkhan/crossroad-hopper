@@ -22,7 +22,9 @@ const rows = new Map();
 let shieldMesh = null;
 let shieldInstance = null;
 let shieldGlow = null;
-const shieldAuras = [];        // one shimmer per player, not one per game
+let shieldTarget = null;      // the pickup this frame is drawing; positioned last
+const shieldAuras = [];        // one shimmer STACK per player, not one per game
+const shieldBursts = [];       // the "one shield just went off" flashes
 const hazards = new Map();
 const materialCache = new Map();
 const instancePool = new Map();
@@ -86,20 +88,96 @@ function ring(parent, color) {
  * player, so "shielded" and "not shielded" produced the same picture -- and
  * the two coincident surfaces fought for the depth buffer. Two rings at a
  * different radius and height, the outer one breathing, read as a different
- * state from across the board, which is the whole job of the effect. */
-function aura(parent, color) {
-  const group = new THREE.Group();
-  const inner = new THREE.Mesh(geometry.ring, material('#cff2ff', true));
-  inner.rotation.x = -Math.PI / 2;
-  inner.scale.setScalar(1.18);
-  const outer = new THREE.Mesh(geometry.ring, material(color, true));
-  outer.rotation.x = -Math.PI / 2;
-  outer.scale.setScalar(1.62);
-  group.add(inner, outer);
-  group.position.y = 0.03;
-  group.userData.outer = outer;
-  parent.add(group);
-  return group;
+ * state from across the board, which is the whole job of the effect.
+ *
+ * COUNT is the job, though. The brief is "2 shields, then each hit kills ONE
+ * shield", so a single shimmer for one shield or two was the same picture: the
+ * player could not see how many they were carrying, and an absorbed hit either
+ * removed everything or nothing. Each held shield therefore gets its OWN
+ * concentric shell, further out and in its own colour, so the number of rings
+ * around the avatar IS the number of lives the next hit will not take.
+ *
+ * Layer 0 is the cyan shell. Layer 1 is violet, wider and lifted a little
+ * clear of the ground so the two shells cannot z-fight into one shape. The
+ * stage budget is two shields (SimCore.SHIELDS_PER_STAGE), so two layers
+ * cover every state the simulation can reach; a count above that is clamped
+ * rather than drawn as extra geometry nobody asked for. */
+const SHIELD_LAYERS = [
+  { inner: '#dff8ff', outer: '#7fdcff', innerScale: 1.18, outerScale: 1.62,
+    y: 0, pulse: 0.10, rate: 240, burst: '#7fdcff' },
+  { inner: '#e8d6ff', outer: '#b98cff', innerScale: 2.04, outerScale: 2.56,
+    y: 0.022, pulse: 0.14, rate: 165, burst: '#b98cff' },
+];
+/* How long a spent shield stays on screen as a flash. Long enough to be seen
+ * in peripheral vision -- the player is looking at the lane ahead, not at their
+ * own feet -- and short enough that it is never mistaken for a fourth shield. */
+const SHIELD_BREAK_MS = 420;
+
+function aura(parent) {
+  const root = new THREE.Group();
+  const layers = SHIELD_LAYERS.map(spec => {
+    const layer = new THREE.Group();
+    const inner = new THREE.Mesh(geometry.ring, material(spec.inner, true));
+    inner.rotation.x = -Math.PI / 2;
+    inner.scale.setScalar(spec.innerScale);
+    const outer = new THREE.Mesh(geometry.ring, material(spec.outer, true));
+    outer.rotation.x = -Math.PI / 2;
+    outer.scale.setScalar(spec.outerScale);
+    layer.add(inner, outer);
+    layer.position.y = spec.y;
+    layer.userData.inner = inner;
+    layer.userData.outer = outer;
+    root.add(layer);
+    return layer;
+  });
+  root.position.y = 0.03;
+  parent.add(root);
+  return { root, layers, shown: 0 };
+}
+
+/* The flash of a shield that was just spent.
+ *
+ * Without it, the count simply changes: a shell is not there any more and
+ * nothing says WHY. The player has to see a shield break, so the layer that
+ * turned off throws a ring of its own colour outwards and fades in under half
+ * a second. Pooled and capped -- an absorbed hit can only ever pop one, and a
+ * two player board pops at most two. */
+function popShieldBurst(col, row, nowMs, layerIndex) {
+  const spec = SHIELD_LAYERS[layerIndex];
+  if (!spec) return;
+  let entry = shieldBursts.find(item => !item.active);
+  if (!entry) {
+    if (shieldBursts.length >= 6) return;
+    const mesh = new THREE.Mesh(geometry.ring,
+      new THREE.MeshBasicMaterial({ color: spec.burst, transparent: true,
+        opacity: 0, depthWrite: false, toneMapped: false }));
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.visible = false;
+    avatarLayer.add(mesh);
+    entry = { mesh, active: false, startMs: 0, layer: 0 };
+    shieldBursts.push(entry);
+  }
+  entry.active = true;
+  entry.startMs = nowMs;
+  entry.layer = layerIndex;
+  entry.mesh.visible = true;
+  entry.mesh.position.set(col, 0.05, -row);
+  entry.mesh.scale.setScalar(spec.outerScale * 0.45);
+}
+
+function updateShieldBursts(nowMs) {
+  for (const entry of shieldBursts) {
+    if (!entry.active) continue;
+    const t = (nowMs - entry.startMs) / SHIELD_BREAK_MS;
+    if (!(t >= 0) || t >= 1) {
+      entry.active = false;
+      entry.mesh.visible = false;
+      continue;
+    }
+    const spec = SHIELD_LAYERS[entry.layer];
+    entry.mesh.scale.setScalar(spec.outerScale * (0.45 + t * 0.85));
+    entry.mesh.material.opacity = 0.9 * (1 - t) * (1 - t);
+  }
 }
 
 function modelURL(entry) {
@@ -318,9 +396,24 @@ function resetWorld(s, stage) {
    * The instance goes back through release() on every rebuild, so a stage
    * change takes the pooled clone instead of cloning the whole node hierarchy
    * -- and building a fresh AnimationMixer for it -- on every attempt. */
+  /* Shield auras belong to the attempt that earned them.
+   *
+   * The layers live in avatarLayer, which is never rebuilt, so a stage change
+   * used to leave the previous attempt's shimmer in the scene -- visible over
+   * the start line of a fresh board that the player had not earned anything
+   * on. The pool is emptied here, and the burst pool is deactivated rather than
+   * removed: six parked invisible meshes that cost nothing beat allocating six
+   * new materials on every retry. */
+  for (const stack of shieldAuras) if (stack) stack.root.removeFromParent();
+  shieldAuras.length = 0;
+  for (const entry of shieldBursts) {
+    entry.active = false;
+    entry.mesh.visible = false;
+  }
   if (shieldInstance) { release(shieldInstance); shieldInstance = null; }
   shieldMesh = null;
   shieldGlow = null;          // a child of the instance; release() drops it
+  shieldTarget = null;
   const pending = (s.pickups || []).filter(p => p.kind === 'shield' && !p.taken);
   if (pending.length && manifest.pickups && manifest.pickups.shield) {
     const entry = manifest.pickups.shield;
@@ -516,6 +609,64 @@ function horizontalCameraCenter(focusCol, s, halfWidth) {
   return Math.max(minimum, Math.min(maximum, focusCol));
 }
 
+/* The next shield the player has still to walk into, or null.
+ *
+ * Only an UNTaken pickup qualifies. The array was captured at resetWorld, and
+ * reading `p.row` alone kept re-selecting a shield the player had already
+ * collected, so it stayed on screen after being picked up. */
+function selectPickup(mesh, pose) {
+  if (!mesh) return null;
+  const row = pose ? (pose.row || 0) : 0;
+  let target = null;
+  for (const p of mesh.userData.pickups || []) {
+    if (p.taken) continue;
+    if (p.row > row - 2 && (!target || p.row < target.row)) target = p;
+  }
+  return target;
+}
+
+/* The furthest row the camera can actually show.
+ *
+ * The board is BUILT out to focus.row + 22, but an orthographic frustum is far
+ * shorter than that: on the board's own proportions the top edge of the screen
+ * sits about twelve rows above the focus, not twenty two. Stage one's first
+ * shield is dealt on row 23, so parking the token on its real row drew it
+ * roughly eight rows ABOVE the top of the screen -- in the scene graph, on
+ * screen nowhere. Confirmed in the browser, not inferred: a real game sitting
+ * in READY with an uncollected shield on row 23 showed no token at all.
+ *
+ * Solving dot(groundPoint - camera, up) = camera.top for the row gives the edge
+ * exactly, from the live camera, so it stays right if the pitch or the board's
+ * proportions ever change. */
+function visibleTopRow() {
+  // The camera's own up axis, so this follows any future change of pitch.
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+  if (!(up.z < -1e-4)) return Infinity;
+  const camPos = camera.position;
+  return -(camera.top + up.y * -camPos.y + up.z * -camPos.z) / up.z;
+}
+
+/* Draw the pickup token, kept inside the frame.
+ *
+ * When the real pickup row is on screen the token sits on it. When it is not,
+ * the token is pinned just inside the top edge: it is a marker for a shield that
+ * is still ahead, and a marker the player cannot see is not one. One row of
+ * margin keeps the floating model and its glow ring off the crop. */
+function placePickup(pickup, pose, nowMs) {
+  if (!shieldMesh) return;
+  if (!pickup) {
+    shieldMesh.visible = false;
+    return;
+  }
+  const top = visibleTopRow() - 1.1;
+  const row = Math.min(pickup.row, Math.max(top, pose ? (pose.row || 0) + 2 : top));
+  const lift = 0.72 + Math.sin(nowMs / 320) * 0.06;
+  shieldMesh.visible = true;
+  shieldMesh.position.set((pose ? pose.col : 0) + 0.5, lift, -row);
+  shieldMesh.rotation.y = nowMs / 900;
+  if (shieldGlow) shieldGlow.position.y = 0.02 - lift;
+}
+
 function render(s, stage, poses, nowMs) {
   if (!api.ready) return false;
   try {
@@ -527,46 +678,49 @@ function render(s, stage, poses, nowMs) {
     const active = Math.min(s.activePlayer || 0, poses.length - 1);
 
     /* Park the shield on the NEXT pickup row in front of the player and spin
-     * it. It is drawn at the player's own column so it is always reachable. */
-    if (shieldMesh) {
-      const pk = shieldMesh.userData.pickups || [];
-      let target = null;
-      /* Only an UNTaken pickup draws. The array was captured at resetWorld,
-         * and reading `p.row` alone kept re-selecting a shield the player had
-         * already collected, so it stayed on screen after being picked up. */
-        for (const p of pk) {
-          if (p.taken) continue;
-          if (p.row > (poses[active].row || 0) - 2 && (!target || p.row < target.row)) target = p;
-        }
-      if (target) {
-        shieldMesh.visible = true;
-        shieldMesh.position.set(poses[active].col + 0.5, 0.72 + Math.sin(nowMs / 320) * 0.06, -target.row);
-        shieldMesh.rotation.y = nowMs / 900;
-        if (shieldGlow) { shieldGlow.position.y = -0.70 - Math.sin(nowMs / 320) * 0.06; }
-      } else {
-        shieldMesh.visible = false;
-      }
-    }
-
-    /* A shielded player shines. This is the whole feedback loop: the player
-     * must be able to SEE that the hit they just took cost a shield and not a
-     * life, without reading a number. The state is read from the simulation
-     * every frame and the shimmer is removed in that same frame, so it cannot
-     * outlive the shield that paid for it by even one frame.
+     * it. It is drawn at the player's own column so it is always reachable.
      *
-     * One shimmer per PLAYER. A single global ring followed the active player,
-     * so in two-player mode the player who was not driving got no shield
-     * feedback at all while their life string still read "3 🛡1" in the HUD. */
-    while (shieldAuras.length > s.players.length) shieldAuras.pop().removeFromParent();
+     * WHERE it is parked is decided at the very end of this frame, once the
+     * camera has been placed, because a row the camera cannot see is a row the
+     * player cannot see either -- see visibleTopRow(). */
+    const pickup = selectPickup(shieldMesh, poses[active]);
+    shieldTarget = pickup;
+
+    /* A shielded player shines -- ONE shell per shield held.
+     *
+     * This is the whole feedback loop: the player must be able to SEE how many
+     * hits they can still walk into, and SEE one of them go when they do, without
+     * reading a number. The state is read from the simulation every frame, so the
+     * shells cannot outlive the shield that paid for them by even one frame, and a
+     * drop from two to one takes exactly one shell with it.
+     *
+     * One stack per PLAYER. A single global ring followed the active player, so in
+     * two-player mode the player who was not driving got no shield feedback at all
+     * while their life string still read "3 🛡1" in the HUD. */
+    while (shieldAuras.length > s.players.length) {
+      const dropped = shieldAuras.pop();
+      if (dropped) dropped.root.removeFromParent();
+    }
     for (let pi = 0; pi < s.players.length; pi++) {
       const player = s.players[pi], pose = poses[pi];
-      const holding = !!(player && pose && player.state().shields > 0);
-      if (holding && !shieldAuras[pi]) shieldAuras[pi] = aura(avatarLayer, '#7fdcff');
-      else if (!holding && shieldAuras[pi]) {
-        shieldAuras[pi].removeFromParent();
-        shieldAuras[pi] = null;
+      const held = player && pose ? Math.max(0, player.state().shields | 0) : 0;
+      const shown = Math.min(held, SHIELD_LAYERS.length);
+      let stack = shieldAuras[pi];
+      if (!stack) {
+        if (shown === 0) continue;
+        stack = shieldAuras[pi] = aura(avatarLayer);
       }
-      /* The aura is parked under the player EVERY frame.
+      /* The layer count dropped: that is an absorbed hit, and the shell that
+       * went off throws its own flash. Index `shown` is the layer that just
+       * turned off -- 2 to 1 pops the violet outer one, 1 to 0 the cyan one. */
+      if (shown < stack.shown) popShieldBurst(pose.col, pose.row, nowMs, shown);
+      stack.shown = shown;
+      if (shown === 0) {
+        stack.root.removeFromParent();
+        shieldAuras[pi] = null;
+        continue;
+      }
+      /* The stack is parked under the player EVERY frame.
        *
        * Created in place it stays at the layer origin -- world (0, 0.025, 0),
        * which is beside the start line and behind the camera -- so a player
@@ -579,11 +733,21 @@ function render(s, stage, poses, nowMs) {
        * cancels it out because that ring is a child of the avatar group -- drove
        * the shimmer half a tile UNDERGROUND for the whole of every hop: the
        * shield feedback blinked out on take-off and popped back on landing. */
-      const shimmer = shieldAuras[pi];
-      if (!shimmer) continue;
-      shimmer.position.set(pose.col, 0.03, -pose.row);
-      shimmer.userData.outer.scale.setScalar(1.62 + Math.sin(nowMs / 240 + pi * 1.7) * 0.10);
+      stack.root.position.set(pose.col, 0.03, -pose.row);
+      for (let li = 0; li < stack.layers.length; li++) {
+        const layer = stack.layers[li];
+        layer.visible = li < shown;
+        if (!layer.visible) continue;
+        const spec = SHIELD_LAYERS[li];
+        // Each layer breathes on its own rate and out of phase with the others,
+        // so two shields never look like one thick ring pulsing as one object.
+        const wobble = Math.sin(nowMs / spec.rate + pi * 1.7 + li * 2.1);
+        layer.position.y = spec.y;
+        layer.userData.inner.scale.setScalar(spec.innerScale + wobble * spec.pulse);
+        layer.userData.outer.scale.setScalar(spec.outerScale + wobble * spec.pulse * 1.35);
+      }
     }
+    updateShieldBursts(nowMs);
 
     let focus = poses[active];
     if (poses.length > 1 && Math.abs(poses[0].row - poses[1].row) < 5) {
@@ -617,6 +781,9 @@ function render(s, stage, poses, nowMs) {
     const target = new THREE.Vector3(cameraX, 0, -focus.row - 4);
     camera.position.copy(target).add(new THREE.Vector3(0, 14, 16));
     camera.lookAt(target);
+    // Last, because it needs to know where the camera ended up: the token is
+    // pinned inside the frame, not on a row the frustum never reaches.
+    placePickup(shieldTarget, poses[active], nowMs);
     sunlight.position.copy(target).add(new THREE.Vector3(-9, 17, 9));
     sunlight.target.position.copy(target);
     sunlight.target.updateMatrixWorld();
