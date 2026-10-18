@@ -658,8 +658,26 @@ function placePickup(pickup, pose, nowMs) {
     shieldMesh.visible = false;
     return;
   }
+  const playerRow = pose ? (pose.row || 0) : 0;
+  /* Only show the token once the player is actually approaching it.
+   *
+   * This used to be `Math.min(pickup.row, Math.max(top, playerRow + 2))`,
+   * which clamped the token to two rows ahead of the player from the very
+   * first frame. The stage-1 token sits at row 23 and the camera only shows
+   * about twelve rows ahead, so at row 0 it was pinned to row 12 -- visible,
+   * and apparently reachable, for the entire opening. Players read it as a
+   * shield they carry from the start rather than one they collect at 25%.
+   *
+   * The token is an invitation at a specific place in the crossing, so it is
+   * hidden until the approach begins and only clamped while it is genuinely
+   * near. */
+  const APPROACH_ROWS = 10;
+  if (pickup.row - playerRow > APPROACH_ROWS) {
+    shieldMesh.visible = false;
+    return;
+  }
   const top = visibleTopRow() - 1.1;
-  const row = Math.min(pickup.row, Math.max(top, pose ? (pose.row || 0) + 2 : top));
+  const row = Math.min(pickup.row, Math.max(top, playerRow + 2));
   const lift = 0.72 + Math.sin(nowMs / 320) * 0.06;
   shieldMesh.visible = true;
   shieldMesh.position.set((pose ? pose.col : 0) + 0.5, lift, -row);
