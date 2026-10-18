@@ -676,8 +676,19 @@ function placePickup(pickup, pose, nowMs) {
     shieldMesh.visible = false;
     return;
   }
-  const top = visibleTopRow() - 1.1;
-  const row = Math.min(pickup.row, Math.max(top, playerRow + 2));
+  /* Sit at the pickup's OWN row.
+   *
+   * The clamp is `Math.min(pickup.row, top)`: if the token's real row is
+   * already on screen it is used untouched, and only when it is beyond the
+   * camera's top edge does it get pulled down to that edge so it is visible
+   * as you approach.
+   *
+   * There used to be a `Math.max(top, playerRow + 2)` term as well, and that
+   * is what made the token ride along: it kept the token pinned two rows in
+   * front of the player for as long as it was visible, so it looked like it
+   * was following them rather than waiting to be reached. A pickup must be
+   * stationary. There is nothing here that moves with the player. */
+  const row = Math.min(pickup.row, visibleTopRow() - 1.1);
   const lift = 0.72 + Math.sin(nowMs / 320) * 0.06;
   shieldMesh.visible = true;
   shieldMesh.position.set((pose ? pose.col : 0) + 0.5, lift, -row);
